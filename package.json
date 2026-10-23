@@ -1,0 +1,6 @@
+{
+  "name": "world-alert-data",
+  "private": true,
+  "type": "module",
+  "dependencies": { "fast-xml-parser": "4.5.0" }
+}

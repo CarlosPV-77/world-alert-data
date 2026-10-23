@@ -1,0 +1,32 @@
+name: Fetch alerts
+on:
+  workflow_dispatch:
+    inputs:
+      sources:
+        description: "Comma-separated sources (usgs,gdacs,tsunami,nhc,navarea,volcanes,nws) or all"
+        default: "all"
+permissions:
+  contents: write
+concurrency:
+  group: fetch-${{ inputs.sources }}
+  cancel-in-progress: false
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm install --no-audit --no-fund
+      - run: node scripts/fetch.mjs
+        env: { SOURCES: "${{ inputs.sources }}" }
+      - name: Commit data
+        run: |
+          git config user.name "world-alert-bot"
+          git config user.email "world-alert-bot@users.noreply.github.com"
+          git add data
+          git diff --cached --quiet && exit 0
+          git commit -m "data: ${{ inputs.sources }}"
+          for i in 1 2 3 4; do git pull --rebase -X theirs && git push && exit 0; sleep $((i*3)); done
+          exit 1
