@@ -4,8 +4,10 @@ import { XMLParser } from "fast-xml-parser";
 const UA = "WorldAlert/1.0 (personal hazard map)";
 const xml = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "@", removeNSPrefix: false });
 
+const BROWSER_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36";
+
 async function get(url, type = "json") {
-  const r = await fetch(url, { headers: { "User-Agent": UA, Accept: type === "json" ? "application/json, application/geo+json" : "application/xml, text/xml, */*" }, signal: AbortSignal.timeout(12000) });
+  const r = await fetch(url, { headers: { "User-Agent": url.includes("volcano.si.edu") ? BROWSER_UA : UA, Accept: type === "json" ? "application/json, application/geo+json" : "application/xml, text/xml, */*" }, signal: AbortSignal.timeout(12000) });
   if (!r.ok) throw new Error(`${r.status} ${url}`);
   return type === "json" ? r.json() : xml.parse(await r.text());
 }

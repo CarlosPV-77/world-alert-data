@@ -6,7 +6,7 @@ const wanted = (process.env.SOURCES || "all").trim() || "all";
 const feed = await collect({ src: wanted });
 mkdirSync("data", { recursive: true });
 for (const [src, st] of Object.entries(feed.status)) {
-  const events = feed.events.filter((e) => e.id && sourceOf(e) === src);
+  const events = feed.events.filter((e) => e.id && sourceOf(e) === src).map((e) => (e.desc ? { ...e, desc: e.desc.slice(0, 220) } : e));
   writeFileSync(`data/${src}.json`, JSON.stringify({ generated: feed.generated, status: { [src]: st }, events }));
   console.log(src, st.ok ? `${events.length} events` : `ERROR ${st.error}`);
 }
