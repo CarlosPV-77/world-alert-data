@@ -1,0 +1,18 @@
+name: Probe endpoints
+on:
+  workflow_dispatch:
+    inputs:
+      urls:
+        description: "Space-separated URLs"
+        required: true
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - run: |
+          for u in ${{ inputs.urls }}; do
+            echo "== $u"
+            curl -sS -m 30 -L -o body -w "HTTP %{http_code} %{size_download}B %{time_total}s\n" "$u" || true
+            head -c 600 body; echo
+          done

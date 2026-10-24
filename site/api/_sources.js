@@ -133,7 +133,7 @@ export async function collect(q = {}) {
   const status = {}, events = [];
   results.forEach((r, i) => {
     if (r.status === "fulfilled") { status[wanted[i]] = { ok: true, n: r.value.length }; events.push(...r.value.map((e) => ({ verified: true, ...e }))); }
-    else status[wanted[i]] = { ok: false, error: String(r.reason?.message || r.reason).slice(0, 200) };
+    else status[wanted[i]] = { ok: false, error: [r.reason?.message || r.reason, r.reason?.cause?.code || r.reason?.cause?.message].filter(Boolean).join(": ").slice(0, 200) };
   });
   return { generated: new Date().toISOString(), status, events };
 }
