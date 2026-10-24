@@ -2,6 +2,7 @@
 import { XMLParser } from "fast-xml-parser";
 import { inflateRawSync, gunzipSync } from "node:zlib";
 import { social } from "./_social.js";
+import { teletexto } from "./_teletexto.js";
 import { accidents } from "./_accidents.js";
 import { notAlert, slugText } from "./_notalert.js";
 import { SPAIN_SOURCES } from "./_spain.js";
@@ -315,6 +316,7 @@ const SOURCES = {
   async mastodon(q) { return social("mastodon", q); },
   async bluesky(q) { return social("bluesky", q); },
   async telegram(q) { return social("telegram", q); },
+  async teletexto() { return teletexto(); },
 
   async aereos() { return accidents("aereo"); },
   async maritimos() { return accidents("naval"); },

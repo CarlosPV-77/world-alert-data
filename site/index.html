@@ -660,6 +660,7 @@ const CATS = {
   aereo:      { name: "Accidentes aéreos", pic: "plane", group: "accidentes" },
   naval:      { name: "Accidentes marítimos", pic: "wreck", group: "accidentes" },
   redes:      { name: "Publicaciones en redes", pic: "chat", group: "redes" },
+  teletexto:  { name: "Teletexto de RTVE", pic: "tv", group: "redes" },
 };
 // Pictograms on a 24 px grid, drawn as 2 px strokes: one per kind of event, so the map says what happened.
 const PICS = {
@@ -682,6 +683,7 @@ const PICS = {
   ship:    "M2.5 15h19l-2.5 5H5z M12 15V3 M12 4.5 18 13h-6",
   clash:   "M4 4l16 16 M20 4 4 20 M4 4h4.5 M4 4v4.5 M20 4h-4.5 M20 4v4.5 M15 17l2-2 M7 15l2 2",
   chat:    "M4 4.5h16v11H11l-5 4v-4H4z M8 9h8 M8 12h5",
+  tv:      "M3 7h18v12H3z M8 3l4 4 4-4 M7 11h6 M7 14.5h10",
   plane:   "M12 2.5c.8 0 1.5.7 1.5 1.5v5l7 4v2l-7-2v4.5l2.2 1.7V21L12 20l-3.7 1v-1.8l2.2-1.7V13l-7 2v-2l7-4V4c0-.8.7-1.5 1.5-1.5z",
   car:     "M5 11l1.6-4.4A2 2 0 0 1 8.5 5.2h7a2 2 0 0 1 1.9 1.4L19 11 M3.5 11h17v6h-17z M6.5 17v2.5 M17.5 17v2.5 M7 14h.01 M17 14h.01",
   road:    "M8 3 4 21 M16 3l4 18 M12 4v3 M12 10.5v3 M12 17v3",
@@ -700,6 +702,7 @@ const WEATHER_WORDS = [
 ];
 function picOf(e) {
   if (e.cat === "redes") return PICS[e.pic] ? e.pic : "chat";   // social posts carry the topic they talk about
+  if (e.cat === "teletexto") return PICS[e.pic] ? e.pic : "tv";
   const base = CATS[e.cat]?.pic || "quake";
   if (String(e.cat).startsWith("es_") && PICS[e.pic]) return e.pic;   // official Spanish alerts say what they are about
   if (e.cat !== "meteo" && e.cat !== "aviso_es" && !String(e.cat).startsWith("es_")) return base;
@@ -749,6 +752,7 @@ const SOURCES = {
   mastodon:   { name: "Mastodon · etiquetas públicas (#terremoto, #wildfire…)", def: 10, opts: [5, 10, 15, 30, 60] },
   bluesky:    { name: "Bluesky · búsqueda pública", def: 10, opts: [5, 10, 15, 30, 60] },
   telegram:   { name: "Telegram · canales públicos", def: 10, opts: [5, 10, 15, 30, 60] },
+  teletexto:  { name: "Teletexto RTVE · noticias nacionales e internacionales (Información de rtve.es)", def: 10, opts: [5, 10, 15, 30, 60] },
 };
 // Public Telegram channels read by default; Ajustes lets you change the list.
 const TG_DEFAULT = "euronews, france24_en, elpais, insiderpaper, WorldNews, wartranslated, CIG_telegram, warmonitors, Middle_East_Spectator, KyivIndependent_official";
@@ -759,7 +763,7 @@ const SOURCE_CATS = {
   ign: ["es_nac"], dgt: ["es_nac"], catalunya: ["es_aut"], canarias: ["es_aut"], meteogalicia: ["es_aut"], euskadi: ["es_aut"], madrid: ["es_loc"],
   conflictos: ["conflicto"], atentados: ["atentado"],
   aereos: ["aereo"], maritimos: ["naval"],
-  mastodon: ["redes"], bluesky: ["redes"], telegram: ["redes"],
+  mastodon: ["redes"], bluesky: ["redes"], telegram: ["redes"], teletexto: ["teletexto"],
 };
 // The ticker also needs these, whatever layers are on: world disasters and news, plus Spain's top official alerts.
 const TICKER_SOURCES = ["usgs", "gdacs", "tsunami", "nhc", "conflictos", "atentados", "aereos", "maritimos", "aemet", "ign", "catalunya", "canarias"];
@@ -1466,7 +1470,7 @@ const ICO_NEWS = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9 2.5h4.
 const isNews = (e) => e.verified === false || !!e.vlabel;
 function vmark(e) {
   const ok = e.verified !== false;
-  return `<div class="vmark ${ok ? "yes" : "no"}">${VICO[ok ? "yes" : "no"]}${!ok ? (e.social ? "Sin contrastar · publicaciones en redes" : "Sin contrastar · un solo medio") : e.vlabel ? `Noticia contrastada · ${esc(e.vlabel)}` : "Fuente oficial"}</div>`;
+  return `<div class="vmark ${ok ? "yes" : "no"}">${VICO[ok ? "yes" : "no"]}${!ok ? (e.social ? "Sin contrastar · publicaciones en redes" : e.caution ? `Sin contrastar · ${esc(e.caution)}` : "Sin contrastar · un solo medio") : e.cat === "teletexto" ? `Fuente fiable · ${esc(e.vlabel)}` : e.vlabel ? `Noticia contrastada · ${esc(e.vlabel)}` : "Fuente oficial"}</div>`;
 }
 function newsBtn(e) {
   return e.url ? `<a class="btn" href="${esc(e.url)}" target="_blank" rel="noopener">${ICO_NEWS}${e.social ? "Ver publicación" : isNews(e) ? "Ir a la noticia" : "Ver en la fuente"}</a>` : "";
@@ -1721,6 +1725,8 @@ function detailHtml(e) {
     e.src === "GDELT (prensa)" ? ["Aviso", "Ubicación y clasificación automáticas a partir de la prensa; pueden ser imprecisas."] : null,
     e.social ? ["Publicaciones", `${e.npost} de ${e.nauthor} ${e.nauthor === 1 ? "cuenta" : "cuentas"}`] : null,
     e.social ? ["Aviso", "Lugar y tema deducidos del texto de las publicaciones; pueden ser erróneos. No es información contrastada."] : null,
+    e.section ? ["Sección", e.section] : null,
+    e.cat === "teletexto" ? ["Aviso", `Lugar deducido del texto; puede ser aproximado.${e.caution ? " Noticia sobre el presidente del Gobierno: contrástala con otros medios." : ""} Información de rtve.es.`] : null,
     ["Fuente", e.src],
   ].filter(Boolean);
   return `
@@ -1976,7 +1982,7 @@ const dayOf = (e) => (e.time || e.updated || new Date().toISOString()).slice(0, 
 const keyOf = (id) => id.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 120);
 function compact(e) {
   const o = {};
-  for (const k of ["id", "cat", "title", "lat", "lon", "time", "updated", "until", "sev", "mag", "depth", "tsunami", "level", "country", "url", "src", "approx", "verified", "vlabel", "articles", "outlets", "prob", "poly", "pic", "topic", "social", "npost", "nauthor", "posts", "headlines", "headline", "hlang", "headlineEs"]) if (e[k] != null && e[k] !== "") o[k] = e[k];
+  for (const k of ["id", "cat", "title", "lat", "lon", "time", "updated", "until", "sev", "mag", "depth", "tsunami", "level", "country", "url", "src", "approx", "verified", "vlabel", "articles", "outlets", "prob", "poly", "pic", "topic", "social", "npost", "nauthor", "posts", "headlines", "headline", "hlang", "headlineEs", "section", "place", "caution"]) if (e[k] != null && e[k] !== "") o[k] = e[k];
   if (e.desc) o.desc = String(e.desc).slice(0, 300);
   return o;
 }
@@ -2065,7 +2071,7 @@ async function tick(force = false) {
     banner(`No se pudieron traer las alertas: ${esc(why)}.`, "warn", { label: "Reintentar", onClick: () => tick(true) });
   } finally { running = false; setRefreshing(false); renderStatus(); if (again) { again = false; tick(); } }
 }
-function sourceOf(e) { if (String(e.id).startsWith("gdelt:")) return e.cat === "atentado" ? "atentados" : "conflictos"; return { usgs: "usgs", gdacs: "gdacs", tsunami: "tsunami", nhc: "nhc", nga: "navarea", gvp: "volcanes", nws: "nws", aemet: "aemet", mastodon: "mastodon", bluesky: "bluesky", telegram: "telegram", aereo: "aereos", naval: "maritimos", ign: "ign", dgt: "dgt", cat: "catalunya", canarias: "canarias", meteogalicia: "meteogalicia", euskadi: "euskadi", madrid: "madrid" }[String(e.id).split(":")[0]]; }
+function sourceOf(e) { if (String(e.id).startsWith("gdelt:")) return e.cat === "atentado" ? "atentados" : "conflictos"; return { usgs: "usgs", gdacs: "gdacs", tsunami: "tsunami", nhc: "nhc", nga: "navarea", gvp: "volcanes", nws: "nws", aemet: "aemet", mastodon: "mastodon", bluesky: "bluesky", telegram: "telegram", teletexto: "teletexto", aereo: "aereos", naval: "maritimos", ign: "ign", dgt: "dgt", cat: "catalunya", canarias: "canarias", meteogalicia: "meteogalicia", euskadi: "euskadi", madrid: "madrid" }[String(e.id).split(":")[0]]; }
 function setRefreshing(on) {
   const b = document.getElementById("refreshBtn");
   b.disabled = on; b.innerHTML = on ? "Actualizando…" : 'Actualizar<span class="lbl-long"> ahora</span>';
@@ -2192,8 +2198,9 @@ const PAPER_SECTIONS = [
   { key: "espana", name: "España", kick: "Todo lo que pasa aquí", cats: ["aviso_es", "es_nac", "es_aut", "es_loc"] },
   { key: "mar", name: "Mar", kick: "Navegantes y naufragios", cats: ["maritimo", "naval"] },
   { key: "accidentes", name: "Accidentes", kick: "Aéreos", cats: ["aereo"] },
+  { key: "teletexto", name: "Teletexto", kick: "RTVE · nacional e internacional", cats: ["teletexto"] },
 ];
-const PAPER_GROUP = { naturales: "naturales", meteo: "meteo", espana: "meteo", mar: "mar", seguridad: "seguridad", accidentes: "accidentes" };
+const PAPER_GROUP = { naturales: "naturales", meteo: "meteo", espana: "meteo", mar: "mar", seguridad: "seguridad", accidentes: "accidentes", teletexto: "redes" };
 const PAPER_MAX = 8;
 const LANG_NAME = { en: "inglés", fr: "francés", pt: "portugués", de: "alemán", it: "italiano", es: "castellano" };
 state.mode = "map";
@@ -2231,7 +2238,7 @@ function ruleEs(e) {
   return null;
 }
 // Headline of an event as {text in its own language, language, Spanish text or null}.
-const SPANISH_SRC = new Set(["AEMET"]);
+const SPANISH_SRC = new Set(["AEMET", "Teletexto RTVE"]);
 function paperHead(e) {
   if (e.headline) return { orig: e.headline, lang: e.hlang || "en", es: e.headlineEs || browserEs.get(e.headline) || null };
   const h = e.headlines?.[0];
@@ -2359,6 +2366,7 @@ function paperWhere(e) {
   // GDELT places repeat the country: "Hebron, Israel (general), Israel" -> "Hebron, Israel".
   if (e.src === "GDELT (prensa)") return [...new Set(String(e.title).split(": ").slice(1).join(": ").replace(/ \(general\)/g, "").split(", "))].join(", ");
   if (e.cat === "aereo" || e.cat === "naval") return String(e.title).split(" · ")[1] || e.country || "";
+  if (e.cat === "teletexto") return e.place || e.country || "";
   return e.country || "";
 }
 const MAD_DAY = new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit" });
@@ -2373,8 +2381,8 @@ function paperWhen(t) {
 }
 const SEAL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 2l2.6 2.2 3.4-.4.9 3.3 3 1.7-1.2 3.2 1.2 3.2-3 1.7-.9 3.3-3.4-.4L12 22l-2.6-2.2-3.4.4-.9-3.3-3-1.7L3.3 12 2.1 8.8l3-1.7.9-3.3 3.4.4z"/><path d="M8 12l3 3 5-6"/></svg>`;
 function paperTrust(e) {
-  if (!trusted(e)) return `<span class="punv">? Sin contrastar · ${e.social ? "redes" : "1 medio"}</span>`;
-  return `<span class="pok">${SEAL}${e.vlabel ? `Contrastada · ${esc(e.vlabel)}` : `Fuente oficial · ${esc(e.src)}`}</span>`;
+  if (!trusted(e)) return `<span class="punv">? Sin contrastar · ${e.social ? "redes" : e.caution ? esc(e.caution) : "1 medio"}</span>`;
+  return `<span class="pok">${SEAL}${e.cat === "teletexto" ? `Fiable · ${esc(e.vlabel)}` : e.vlabel ? `Contrastada · ${esc(e.vlabel)}` : `Fuente oficial · ${esc(e.src)}`}</span>`;
 }
 function paperItem(e, size) {
   const h = paperHead(e), foreign = h.lang !== "es";
@@ -2403,7 +2411,7 @@ function renderPaper() {
   const onCats = Object.keys(state.cats).filter((c) => state.cats[c] && c !== "redes");
   const now = new Date();
   const secs = PAPER_SECTIONS.map((s) => {
-    const items = rest.filter((e) => s.key === "espana" ? inSpainEv(e) : s.cats.includes(e.cat) && !inSpainEv(e));
+    const items = rest.filter((e) => s.key === "espana" ? inSpainEv(e) && e.cat !== "teletexto" : s.cats.includes(e.cat) && (e.cat === "teletexto" || !inSpainEv(e)));
     const on = s.key === "espana" ? onCats.length : s.cats.some((c) => state.cats[c]);
     const more = state.paperMore.has(s.key), shown = more ? items : items.slice(0, PAPER_MAX);
     const body = !on ? `<p class="ptext pempty">Esta sección está vacía porque sus capas están apagadas. Actívalas en el mapa y sus noticias aparecerán aquí.</p><div class="pacts"><button type="button" class="pbtn" data-players="${PAPER_GROUP[s.key]}">Ir a las capas</button></div>`
