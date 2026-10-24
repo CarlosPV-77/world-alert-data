@@ -1,36 +1,14 @@
-// Throwaway probe: Spanish weather warnings (Meteoalarm/AEMET) and OpenFreeMap vector tiles.
-import { execSync } from "node:child_process";
-execSync("npm i --no-save --no-audit --no-fund @mapbox/vector-tile@2.0.3 pbf@4.0.1", { stdio: "inherit" });
-const { VectorTile } = await import("@mapbox/vector-tile");
-const Pbf = (await import("pbf")).default;
-
-async function show(url, n = 1500) {
-  try { const r = await fetch(url, { headers: { "User-Agent": "WorldAlert/1.0" } }); const t = await r.text(); console.log("==", url, r.status, r.headers.get("content-type"), t.length); console.log(t.slice(0, n)); return t; }
-  catch (e) { console.log("==", url, "ERR", e.message, e.cause?.code); }
+// Throwaway probe: where to get Spanish warning zones and warnings without an API key.
+const UA = { "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36" };
+async function grab(url) { try { const r = await fetch(url, { headers: UA }); const t = await r.text(); console.log("==", url, r.status, t.length); return t; } catch (e) { console.log("==", url, "ERR", e.message); return ""; } }
+for (const br of ["main", "master"]) for (const f of ["aemet_alerts.R", "aemet_alert_zones.R"]) {
+  const t = await grab(`https://raw.githubusercontent.com/rOpenSpain/climaemet/${br}/R/${f}`);
+  if (t.length > 100) console.log(t.split("\n").filter((l) => /http|url|api|key|geojson|cap|tar|zip|GET|request/i.test(l)).slice(0, 40).join("\n"));
 }
-
-const ma = await show("https://feeds.meteoalarm.org/api/v1/warnings/feeds-spain", 2500);
-try {
-  const j = JSON.parse(ma); const w = j.warnings || [];
-  console.log("warnings", w.length);
-  const a = w[0]?.alert; console.log(JSON.stringify(a, null, 1).slice(0, 3000));
-  const withPoly = w.filter((x) => JSON.stringify(x).includes('"polygon"')).length; console.log("with polygon", withPoly);
-} catch (e) { console.log("parse", e.message); }
-await show("https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-spain", 1500);
-
-const tj = await show("https://tiles.openfreemap.org/planet", 1200);
-const tiles = JSON.parse(tj).tiles[0];
-for (const [z, x, y] of [[6, 31, 24], [10, 502, 388], [13, 4017, 3103]]) { // Spain around Madrid
-  const url = tiles.replace("{z}", z).replace("{x}", x).replace("{y}", y);
-  const r = await fetch(url); const buf = Buffer.from(await r.arrayBuffer());
-  console.log("== tile", z, x, y, r.status, buf.length, r.headers.get("content-encoding"));
-  const vt = new VectorTile(new Pbf(buf));
-  for (const name of Object.keys(vt.layers)) {
-    const L = vt.layers[name]; const ex = [];
-    for (let i = 0; i < Math.min(L.length, 400); i++) { const p = L.feature(i).properties; if (name === "place" || name === "boundary") ex.push(p); }
-    console.log(" layer", name, L.length);
-    if (name === "place") { const cls = {}; ex.forEach((p) => cls[p.class] = (cls[p.class] || 0) + 1); console.log("  classes", JSON.stringify(cls)); console.log("  sample", JSON.stringify(ex.slice(0, 3))); }
-    if (name === "boundary") { const lv = {}; ex.forEach((p) => lv[p.admin_level] = (lv[p.admin_level] || 0) + 1); console.log("  levels", JSON.stringify(lv)); console.log("  sample", JSON.stringify(ex.slice(0, 2))); }
-  }
-}
-const fr = await fetch("https://tiles.openfreemap.org/fonts/Noto%20Sans%20Regular/0-255.pbf"); console.log("font", fr.status, (await fr.arrayBuffer()).byteLength);
+const page = await grab("https://www.aemet.es/es/eltiempo/prediccion/avisos");
+console.log([...new Set(page.match(/(href|src|data-[a-z]+)="[^"]*(geojson|cap|tar|xml|json|rss|descarga|download)[^"]*"/gi) || [])].slice(0, 40).join("\n"));
+const z = await fetch("https://www.aemet.es/documentos/es/eltiempo/prediccion/avisos/plan_meteoalerta/AEMET-meteoalerta-delimitacion-zonas.zip", { headers: UA });
+const buf = Buffer.from(await z.arrayBuffer()); console.log("zones zip", z.status, buf.length);
+// list zip entries from the central directory
+let off = buf.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06])); const n = buf.readUInt16LE(off + 10); let p = buf.readUInt32LE(off + 16);
+for (let i = 0; i < n; i++) { const nl = buf.readUInt16LE(p + 28), el = buf.readUInt16LE(p + 30), cl = buf.readUInt16LE(p + 32); console.log(" ", buf.toString("utf8", p + 46, p + 46 + nl), buf.readUInt32LE(p + 24)); p += 46 + nl + el + cl; }
