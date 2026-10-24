@@ -156,7 +156,10 @@ main { display: grid; grid-template-columns: 1fr minmax(320px, 380px); min-heigh
 .maplibregl-ctrl-bottom-right { bottom: var(--tick-h, 0px); right: 56px; }
 .maplibregl-ctrl-bottom-left { bottom: var(--tick-h, 0px); }
 /* Breaking-news ticker along the foot of the wall: the most relevant alerts of the world and of Spain, whatever the filters. */
-.mapwrap.ticking { --tick-h: 44px; }
+.mapwrap.ticking:not(.ttop) { --tick-h: 44px; }
+.mapwrap.ttop .ticker { top: 0; bottom: auto; border-top: 0; border-bottom: 1px solid var(--line-2); box-shadow: 0 8px 24px rgba(0,0,0,.45); }
+.mapwrap.ttop .wallnote, .mapwrap.ttop .banner { top: 54px; }
+.mapwrap.ttop .dock { top: 44px; }
 .ticker { position: absolute; left: 0; right: 0; bottom: env(safe-area-inset-bottom, 0px); height: 44px; z-index: 4; display: flex; align-items: stretch; background: color-mix(in srgb, var(--panel) 96%, transparent); border-top: 1px solid var(--line-2); box-shadow: 0 -8px 24px rgba(0,0,0,.45); }
 .tlabel { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: var(--s4); color: var(--ink); font-family: var(--font-sign); font-weight: 700; font-size: 14px; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
 .tlabel i { width: 8px; height: 8px; border-radius: 50%; background: var(--ink); animation: blink 1.2s steps(2) infinite; }
@@ -366,6 +369,8 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 .srcrow .sub { grid-column: 2 / 4; font-size: 12px; color: var(--muted); font-family: var(--font-data); }
 .srcrow .sub.err { color: var(--s3); }
 .tgrow { display: grid; gap: 6px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.tickset { display: grid; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.tickset .sub { font-size: 13px; color: var(--muted); }
 .tgrow label { font-weight: 500; }
 .tgrow .sub { font-size: 12px; color: var(--muted); }
 .posts { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
@@ -600,6 +605,17 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
       <input type="text" id="tgChans" spellcheck="false" autocomplete="off" aria-describedby="tgHint">
       <span class="sub" id="tgHint">Nombres de canales públicos separados por comas, tal como aparecen en t.me/nombre. Máximo 20.</span>
     </div>
+    <div class="tickset">
+      <div class="label">Rótulo de última hora</div>
+      <div class="frow" style="align-items:center"><label for="tkPos" class="sub" style="flex:0 0 110px">Posición</label>
+        <select id="tkPos"><option value="bottom">Abajo</option><option value="top">Arriba</option></select></div>
+      <div class="frow" style="align-items:center"><label for="tkSpeed" class="sub" style="flex:0 0 110px">Velocidad</label>
+        <select id="tkSpeed"><option value="35">Lenta</option><option value="70">Normal</option><option value="120">Rápida</option></select></div>
+      <div class="frow" style="align-items:center"><label for="tkShow" class="sub" style="flex:0 0 110px">Qué muestra</label>
+        <select id="tkShow"><option value="all">Todo lo relevante</option><option value="p12">Solo P1 y P2</option><option value="ok">Solo contrastadas</option></select></div>
+      <div class="frow" style="align-items:center"><label for="tkSpain" class="sub" style="flex:0 0 110px">España</label>
+        <select id="tkSpain"><option value="1">Incluir alertas nacionales</option><option value="0">Solo el resto del mundo</option></select></div>
+    </div>
     <div id="falseZone"></div>
     <div class="frow" style="align-items:center">
       <label for="retention" class="label" style="flex:0 0 auto">Conservar el histórico</label>
@@ -776,7 +792,7 @@ const state = {
   ov: { ...Object.fromEntries(Object.keys(OVERLAYS).map((k) => [k, false])), ships: false },
   countries: new Set(),        // ISO3 codes the viewer is following; empty = whole world
   open: { naturales: true, meteo: true, mar: false, seguridad: true, mapa: true },
-  settings: { intervals: Object.fromEntries(Object.entries(SOURCES).map(([k, v]) => [k, v.def])), enabled: Object.fromEntries(Object.keys(SOURCES).map((k) => [k, !SOURCES[k].off])), retention: 90, tg: TG_DEFAULT },
+  settings: { intervals: Object.fromEntries(Object.entries(SOURCES).map(([k, v]) => [k, v.def])), enabled: Object.fromEntries(Object.keys(SOURCES).map((k) => [k, !SOURCES[k].off])), retention: 90, tg: TG_DEFAULT, ticker: { pos: "bottom", speed: 70, show: "all", spain: true } },
   lastUpdate: null,
 };
 const store = {
@@ -797,6 +813,7 @@ function mergeSettings(s) {
   Object.assign(state.settings.enabled, s.enabled || {});
   if (s.retention != null) state.settings.retention = s.retention;
   if (typeof s.tg === "string") state.settings.tg = s.tg;
+  if (s.ticker) Object.assign(state.settings.ticker, s.ticker);
 }
 
 // ---------- map ----------
@@ -2094,6 +2111,9 @@ function openSettings() {
   }).join("");
   document.getElementById("retention").value = String(state.settings.retention);
   document.getElementById("tgChans").value = state.settings.tg;
+  const tks = state.settings.ticker;
+  document.getElementById("tkPos").value = tks.pos; document.getElementById("tkSpeed").value = String(tks.speed);
+  document.getElementById("tkShow").value = tks.show; document.getElementById("tkSpain").value = tks.spain ? "1" : "0";
   renderFalseZone();
   document.getElementById("clearZone").innerHTML = `<button class="btn" type="button" id="clearBtn">Borrar histórico</button>`;
   document.getElementById("clearBtn").onclick = askClear;
@@ -2151,6 +2171,8 @@ document.getElementById("setSave").onclick = async () => {
     state.settings.intervals[k] = +document.getElementById("iv_" + k).value;
   }
   state.settings.retention = +document.getElementById("retention").value;
+  state.settings.ticker = { pos: document.getElementById("tkPos").value, speed: +document.getElementById("tkSpeed").value,
+    show: document.getElementById("tkShow").value, spain: document.getElementById("tkSpain").value === "1" };
   const tg = document.getElementById("tgChans").value.split(/[\s,]+/).map((c) => c.replace(/^@|^https?:\/\/t\.me\/(s\/)?/, "")).filter((c) => /^\w{4,64}$/.test(c));
   if (tg.join(", ") !== state.settings.tg) { state.settings.tg = tg.length ? tg.join(", ") : TG_DEFAULT; delete lastRun.telegram; delete state.live.telegram; }
   store.set("settings", state.settings);
@@ -2248,7 +2270,7 @@ const canTranslate = (lang) => "Translator" in self && translators.get(lang) !==
 // ---------- ticker ----------
 // "Última hora" runs along the foot of the map with the most relevant live alerts of the whole world and of Spain.
 // It ignores the layer switches, the chosen countries and the side filters; only alerts marked false stay out.
-const TICK_WORLD = 24, TICK_SPAIN = 10, TICK_SPEED = 70;   // items kept from each pool; pixels per second
+const TICK_WORLD = 24, TICK_SPAIN = 10;   // items kept from each pool
 const ICO_PAUSE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3v10M11 3v10" stroke="currentColor" stroke-width="2.2"/></svg>';
 const ICO_PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.5v11l9-5.5z" fill="currentColor"/></svg>';
 const tk = { sig: "", offset: 0, paused: false, hover: false, raf: 0, last: 0 };
@@ -2257,13 +2279,14 @@ const TICK_CAT = { sismo: "Terremoto", volcan: "Volcán", tsunami: "Tsunami", ci
   conflicto: "Conflicto", atentado: "Atentado", aereo: "Accidente aéreo", naval: "Accidente marítimo" };
 const inSpainTick = (e) => e.cat === "aviso_es" || String(e.cat).startsWith("es_") || countriesOf(e).has("ESP");
 function tickerItems() {
-  const now = Date.now(), from = now - 24 * HOUR, world = [], spain = [];
+  const now = Date.now(), from = now - 24 * HOUR, world = [], spain = [], opt = state.settings.ticker;
   for (const e of state.events.values()) {
     if (e.social || e.cat === "redes" || isFalse(e) || !isLive(e)) continue;
     if (Math.max(Date.parse(e.time) || 0, Date.parse(e.updated) || 0) < from) continue;
     const sev = e.sev || 1;
+    if ((opt.show === "p12" && sev < 3) || (opt.show === "ok" && e.verified === false)) continue;
     // Spain: orange and red weather warnings, and from the other official sources anything above low.
-    if (inSpainTick(e)) { if (sev >= (e.cat === "aviso_es" ? 3 : 2)) spain.push(e); }
+    if (inSpainTick(e)) { if (opt.spain && sev >= (e.cat === "aviso_es" ? 3 : 2)) spain.push(e); }
     else if (sev >= 3) world.push(e);
   }
   return [...world.sort(paperRank).slice(0, TICK_WORLD), ...spain.sort(paperRank).slice(0, TICK_SPAIN)].sort(paperRank);
@@ -2282,10 +2305,10 @@ function tickerItem(e) {
 function renderTicker() {
   const box = document.getElementById("ticker"), wrap = document.getElementById("mapwrap");
   const on = !!state.ov.ticker;
-  box.hidden = !on; wrap.classList.toggle("ticking", on);
+  box.hidden = !on; wrap.classList.toggle("ticking", on); wrap.classList.toggle("ttop", on && state.settings.ticker.pos === "top");
   if (!on) return;   // the frame loop sees the switch is off and stops; this also runs before the ticker code is set up
   const items = tickerItems(), track = document.getElementById("ttrack");
-  const sig = items.map((e) => `${e.id}|${e.sev}|${e.verified}|${paperHead(e).es || ""}`).join(",");
+  const sig = state.settings.ticker.show + items.map((e) => `${e.id}|${e.sev}|${e.verified}|${paperHead(e).es || ""}`).join(",");
   if (sig !== tk.sig) {
     tk.sig = sig;
     if (!items.length) track.innerHTML = `<span class="tempty">${Object.keys(state.live).length ? "Sin alertas destacadas en las últimas 24 horas." : "Cargando las alertas más relevantes…"}</span>`;
@@ -2303,7 +2326,7 @@ function tickerFrame(now) {
   const still = tk.paused || tk.hover || matchMedia("(prefers-reduced-motion: reduce)").matches || state.mode === "paper";
   if (!still && track.children.length > 1) {
     const half = track.scrollWidth / 2 || 1;
-    tk.offset = (tk.offset + TICK_SPEED * dt) % half;
+    tk.offset = (tk.offset + state.settings.ticker.speed * dt) % half;
   }
   track.style.transform = `translateX(${-tk.offset}px)`;
   tk.raf = requestAnimationFrame(tickerFrame);
