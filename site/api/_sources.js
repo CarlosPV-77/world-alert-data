@@ -66,6 +66,16 @@ const gdeltTime = (s) => iso(`${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}
 
 // CAMEO codes: 18 assault (attacks, bombings), 19 fight (armed clashes), 20 mass violence.
 const isAtentado = (e) => e.root === "18";
+
+// Wording that matches what the CAMEO code actually says, so a generic code is not read as a battle.
+const CAMEO_LABEL = {
+  "180": "Violencia", "181": "Secuestro", "182": "Agresión", "183": "Atentado con explosivos",
+  "184": "Rehenes", "185": "Asesinato selectivo", "186": "Atentado suicida",
+  "190": "Actividad militar", "191": "Bloqueo", "192": "Ocupación de territorio",
+  "193": "Combates con armas ligeras", "194": "Fuego de artillería o blindados", "195": "Ataque aéreo o con misiles",
+  "196": "Alto el fuego roto", "200": "Violencia masiva", "201": "Represión masiva", "202": "Matanza",
+  "203": "Arma de destrucción masiva",
+};
 const isConflicto = (e) => e.root === "19" || e.root === "20";
 
 async function gdeltNews(cat, keep, files = 4) {
@@ -79,17 +89,19 @@ async function gdeltNews(cat, keep, files = 4) {
   const groups = new Map();
   for (const e of rows.filter(keep)) {
     const key = `${e.place}|${e.lat.toFixed(1)}|${e.lon.toFixed(1)}`;
-    const g = groups.get(key) || { place: e.place, cc: e.cc, lat: e.lat, lon: e.lon, n: 0, articles: 0, time: null, domains: new Set(), url: null };
+    const g = groups.get(key) || { place: e.place, cc: e.cc, lat: e.lat, lon: e.lon, n: 0, articles: 0, time: null, domains: new Set(), url: null, codes: new Map() };
     g.n++; g.articles += e.articles;
+    g.codes.set(e.code, (g.codes.get(e.code) || 0) + e.articles);
     const t = gdeltTime(e.added);
     if (t && (!g.time || t > g.time)) g.time = t;
     const d = domainOf(e.url);
     if (d) { g.domains.add(d); if (!g.url) g.url = e.url; }
     groups.set(key, g);
   }
-  const label = cat === "atentado" ? "Ataques y atentados" : "Choques armados";
   return [...groups.values()].map((g) => {
     const outlets = [...g.domains];
+    const top = [...g.codes.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+    const label = CAMEO_LABEL[top] || CAMEO_LABEL[top.slice(0, 3)] || (cat === "atentado" ? "Ataque violento" : "Actividad militar");
     return {
       id: `gdelt:${cat}:${g.place}:${g.lat.toFixed(1)},${g.lon.toFixed(1)}`, cat,
       title: `${label}: ${clip(g.place, 90)}`,
