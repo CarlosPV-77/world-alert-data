@@ -1,1 +1,1 @@
-{"generated":"2026-10-24T00:23:14.411Z","status":{"conflictos":{"ok":false,"error":"404 https://api.gdeltproject.org/api/v2/geo/geo?query=theme%3AARMEDCONFLICT&mode=PointData&format=GeoJSON&timespan=24h&maxpoints=500"}},"events":[]}
+{"generated":"2026-10-24T00:27:01.731Z","status":{"conflictos":{"ok":true,"n":0}},"events":[]}
