@@ -50,8 +50,19 @@ function gdeltRows(stamp) {
   return gdeltCache.get(stamp);
 }
 
+// Some cloud hosts get a 404 for a file another host can read, so try the other scheme and a browser agent too.
+async function gdeltZip(stamp) {
+  const path = `${stamp}.export.CSV.zip`, errs = [];
+  for (const [base, ua] of [[GDELT_BASE, UA], [GDELT_BASE.replace("http:", "https:"), UA], [GDELT_BASE, BROWSER_UA]]) {
+    const r = await fetch(base + path, { headers: { "User-Agent": ua }, signal: AbortSignal.timeout(12000) }).catch((e) => ({ ok: false, status: e.message }));
+    if (r.ok) return Buffer.from(await r.arrayBuffer());
+    errs.push(`${r.status}${base.startsWith("https") ? " https" : ""}${ua === BROWSER_UA ? " browser" : ""}`);
+  }
+  throw new Error(errs.join(", "));
+}
+
 async function loadGdelt(stamp) {
-  return unzipOne(await get(`${GDELT_BASE}${stamp}.export.CSV.zip`, "buffer"))
+  return unzipOne(await gdeltZip(stamp))
     .split("\n").filter(Boolean).map((l) => l.split("\t"))
     .map((f) => ({
       root: f[28], code: f[26], articles: num(f[33]) || 1, tone: num(f[34]),
