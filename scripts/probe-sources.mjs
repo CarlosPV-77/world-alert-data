@@ -1,14 +1,20 @@
-// Throwaway probe: where to get Spanish warning zones and warnings without an API key.
+// Throwaway probe: contents of AEMET's public GeoJSON warnings download.
+import { gunzipSync } from "node:zlib";
 const UA = { "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36" };
-async function grab(url) { try { const r = await fetch(url, { headers: UA }); const t = await r.text(); console.log("==", url, r.status, t.length); return t; } catch (e) { console.log("==", url, "ERR", e.message); return ""; } }
-for (const br of ["main", "master"]) for (const f of ["aemet_alerts.R", "aemet_alert_zones.R"]) {
-  const t = await grab(`https://raw.githubusercontent.com/rOpenSpain/climaemet/${br}/R/${f}`);
-  if (t.length > 100) console.log(t.split("\n").filter((l) => /http|url|api|key|geojson|cap|tar|zip|GET|request/i.test(l)).slice(0, 40).join("\n"));
+const page = await (await fetch("https://www.aemet.es/es/eltiempo/prediccion/avisos", { headers: UA })).text();
+const links = [...new Set(page.match(/\/es\/geojson\/download\/avisos\/[^"]+/g) || [])];
+console.log("links", links);
+const plain = await fetch("https://www.aemet.es/es/eltiempo/prediccion/avisos", { headers: { "User-Agent": "WorldAlert/1.0" } }); console.log("plain UA page", plain.status);
+const r = await fetch("https://www.aemet.es" + links[0], { headers: UA });
+const gz = Buffer.from(await r.arrayBuffer()); console.log("tar.gz", r.status, r.headers.get("content-type"), gz.length);
+const tar = gunzipSync(gz);
+for (let o = 0; o + 512 <= tar.length;) {
+  const name = tar.toString("utf8", o, o + 100).replace(/\0.*$/s, ""); if (!name) break;
+  const size = parseInt(tar.toString("utf8", o + 124, o + 136).replace(/\0.*$/s, "").trim() || "0", 8);
+  const body = tar.subarray(o + 512, o + 512 + size).toString("utf8");
+  console.log("--", name, size);
+  if (name.endsWith("json")) { try { const j = JSON.parse(body); console.log(" features", j.features?.length, "keys", Object.keys(j)); const f = j.features?.[0]; if (f) { console.log(" geom", f.geometry?.type, JSON.stringify(f.geometry?.coordinates)?.slice(0, 120)); console.log(" props", JSON.stringify(f.properties).slice(0, 1500)); } } catch (e) { console.log(" parse", e.message, body.slice(0, 300)); } }
+  o += 512 + Math.ceil(size / 512) * 512;
 }
-const page = await grab("https://www.aemet.es/es/eltiempo/prediccion/avisos");
-console.log([...new Set(page.match(/(href|src|data-[a-z]+)="[^"]*(geojson|cap|tar|xml|json|rss|descarga|download)[^"]*"/gi) || [])].slice(0, 40).join("\n"));
-const z = await fetch("https://www.aemet.es/documentos/es/eltiempo/prediccion/avisos/plan_meteoalerta/AEMET-meteoalerta-delimitacion-zonas.zip", { headers: UA });
-const buf = Buffer.from(await z.arrayBuffer()); console.log("zones zip", z.status, buf.length);
-// list zip entries from the central directory
-let off = buf.lastIndexOf(Buffer.from([0x50, 0x4b, 0x05, 0x06])); const n = buf.readUInt16LE(off + 10); let p = buf.readUInt32LE(off + 16);
-for (let i = 0; i < n; i++) { const nl = buf.readUInt16LE(p + 28), el = buf.readUInt16LE(p + 30), cl = buf.readUInt16LE(p + 32); console.log(" ", buf.toString("utf8", p + 46, p + 46 + nl), buf.readUInt32LE(p + 24)); p += 46 + nl + el + cl; }
+// try the static "latest" names too
+for (const p of ["/es/geojson/download/avisos", "/es/eltiempo/prediccion/avisos?w=hoy&datos=geojson"]) { const x = await fetch("https://www.aemet.es" + p, { headers: UA, redirect: "manual" }); console.log(p, x.status, x.headers.get("location"), x.headers.get("content-type")); }
