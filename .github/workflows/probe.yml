@@ -8,6 +8,8 @@ on:
       script:
         description: "Node script to run from the repo"
         default: ""
+permissions:
+  contents: write
 jobs:
   probe:
     runs-on: ubuntu-latest
