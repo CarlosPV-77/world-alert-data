@@ -249,6 +249,9 @@ const HOUR = 3600e3;
 const poly = (pts) => ({ draw(ctx, size) { const r = Math.sqrt(size / 2.6); pts.forEach(([a, k], i) => { const x = Math.sin(a) * r * k, y = -Math.cos(a) * r * k; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.closePath(); } });
 const symHex = poly(d3.range(6).map((i) => [i * Math.PI / 3 + Math.PI / 6, 1]));
 const symDown = poly([[Math.PI, 1.25], [Math.PI / 3, 1.25], [-Math.PI / 3, 1.25]]);
+// Conflict: a thick X. Attack: an eight-point burst.
+const symX = poly(d3.range(12).map((i) => [Math.PI / 4 + i * Math.PI / 6 - (i % 3 === 1 ? 0 : 0), [1.35, 0.55, 0.55][i % 3]]).map(([a, k], i) => [Math.PI / 4 * Math.round((i - 1) / 3) * 2 + [0, -0.38, 0.38][i % 3], k]));
+const symBurst = poly(d3.range(16).map((i) => [i * Math.PI / 8, i % 2 ? 0.55 : 1.3]));
 const CATS = {
   sismo:      { name: "Terremotos",   sym: d3.symbolCircle },
   volcan:     { name: "Volcanes",     sym: d3.symbolTriangle },
@@ -259,6 +262,8 @@ const CATS = {
   maritimo:   { name: "Marítimo",     sym: d3.symbolCross },
   incendio:   { name: "Incendios",    sym: symDown },
   sequia:     { name: "Sequías",      sym: symHex },
+  conflicto:  { name: "Conflictos",   sym: symX },
+  atentado:   { name: "Atentados",    sym: symBurst },
 };
 const SOURCES = {
   usgs:     { name: "USGS · terremotos M2,5+", def: 2, opts: [1, 2, 5, 10, 15, 30] },
@@ -268,6 +273,8 @@ const SOURCES = {
   navarea:  { name: "NGA · avisos a navegantes", def: 60, opts: [15, 30, 60, 180] },
   volcanes: { name: "Smithsonian GVP · volcanes (semanal; ahora bloquea las descargas automáticas, los volcanes llegan por GDACS)", def: 720, opts: [180, 360, 720, 1440], off: true },
   nws:      { name: "NOAA NWS · avisos graves EE. UU.", def: 10, opts: [5, 10, 15, 30, 60] },
+  conflictos: { name: "GDELT · noticias de conflictos armados", def: 15, opts: [15, 30, 60] },
+  atentados:  { name: "GDELT · noticias de atentados", def: 15, opts: [15, 30, 60] },
 };
 const SEV = ["", "Baja", "Media", "Alta", "Crítica"];
 const sevColor = (s) => `var(--s${Math.min(4, Math.max(1, s || 1))})`;
@@ -325,13 +332,16 @@ const empty = { type: "FeatureCollection", features: [] };
 // One icon per category and severity, drawn with the same d3 symbols as the legend.
 function addIcons() {
   const px = 2, size = 26;
-  for (const [cat, c] of Object.entries(CATS)) for (const sev of [1, 2, 3, 4]) {
+  // Unverified items ("-u") are drawn hollow: colored outline on a dark fill.
+  for (const [cat, c] of Object.entries(CATS)) for (const sev of [1, 2, 3, 4]) for (const unv of [false, true]) {
     const cv = document.createElement("canvas"); cv.width = cv.height = size * px;
     const ctx = cv.getContext("2d"); ctx.translate(size * px / 2, size * px / 2); ctx.scale(px, px);
     ctx.beginPath(); d3.symbol(c.sym, 150).context(ctx)();
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue(`--s${sev}`).trim();
-    ctx.strokeStyle = "rgba(5,12,20,.9)"; ctx.lineWidth = 1.6; ctx.fill(); ctx.stroke();
-    map.addImage(`${cat}-${sev}`, ctx.getImageData(0, 0, cv.width, cv.height), { pixelRatio: px });
+    const col = getComputedStyle(document.documentElement).getPropertyValue(`--s${sev}`).trim();
+    if (unv) { ctx.fillStyle = "rgba(5,12,20,.75)"; ctx.strokeStyle = col; ctx.lineWidth = 2.2; ctx.setLineDash([2.5, 1.5]); }
+    else { ctx.fillStyle = col; ctx.strokeStyle = "rgba(5,12,20,.9)"; ctx.lineWidth = 1.6; }
+    ctx.fill(); ctx.stroke();
+    map.addImage(`${cat}-${sev}${unv ? "-u" : ""}`, ctx.getImageData(0, 0, cv.width, cv.height), { pixelRatio: px });
   }
 }
 map.on("load", () => {
@@ -461,7 +471,7 @@ function renderMarkers() {
   const features = visible().map((e) => {
     const sev = Math.min(4, Math.max(1, e.sev || 1)), live = isLive(e);
     return { type: "Feature", geometry: { type: "Point", coordinates: [+e.lon, +e.lat] }, properties: {
-      id: e.id, sev, icon: `${CATS[e.cat] ? e.cat : "sismo"}-${sev}`, scale: Math.sqrt(markerSize(e) / 150) * 1.15, op: live ? 0.95 : 0.5,
+      id: e.id, sev, icon: `${CATS[e.cat] ? e.cat : "sismo"}-${sev}${e.verified === false ? "-u" : ""}`, scale: Math.sqrt(markerSize(e) / 150) * 1.15, op: live ? 0.95 : 0.5,
       pulse: sev >= 4 && live && Date.now() - Date.parse(e.time) < 24 * HOUR ? 1 : 0 } };
   });
   src.setData({ type: "FeatureCollection", features });
@@ -532,7 +542,9 @@ function renderList() {
     </button>`).join("") + (v.length > 400 ? `<div class="empty">Se muestran las 400 más recientes de ${v.length}. Usa los filtros para acotar.</div>` : "");
 }
 function badge(e) {
-  const v = e.verified === false ? `<span class="badge unv" title="Sin verificar">Sin verificar</span>` : `<span class="badge ok" title="Fuente oficial">Oficial</span>`;
+  const v = e.verified === false ? `<span class="badge unv" title="Una sola fuente, sin confirmar">Sin verificar</span>`
+    : e.vlabel ? `<span class="badge ok" title="Confirmado por varios medios">Verificado · ${esc(e.vlabel)}</span>`
+    : `<span class="badge ok" title="Fuente oficial">Oficial</span>`;
   return v + (isLive(e) ? "" : `<span class="badge old">Histórico</span>`);
 }
 document.getElementById("list").addEventListener("click", (ev) => {
@@ -559,6 +571,8 @@ function renderDetail() {
     e.tsunami ? ["Tsunami", "Posible, revisa los avisos de tsunami"] : null,
     e.level ? ["Nivel", e.level] : null,
     e.country ? ["País", e.country] : null,
+    e.articles ? ["Noticias", `${e.articles} artículos en 24 h`] : null,
+    e.outlets?.length ? ["Medios", e.outlets.join(", ")] : null,
     ["Fuente", e.src],
   ].filter(Boolean);
   el.innerHTML = `
@@ -721,7 +735,7 @@ async function tick(force = false) {
     banner(`No se pudieron traer las alertas: ${esc(err.message || err)}`, "warn", { label: "Reintentar", onClick: () => tick(true) });
   } finally { running = false; setRefreshing(false); renderStatus(); }
 }
-function sourceOf(e) { return { usgs: "usgs", gdacs: "gdacs", tsunami: "tsunami", nhc: "nhc", nga: "navarea", gvp: "volcanes", nws: "nws" }[String(e.id).split(":")[0]]; }
+function sourceOf(e) { if (String(e.id).startsWith("gdelt:")) return e.cat === "atentado" ? "atentados" : "conflictos"; return { usgs: "usgs", gdacs: "gdacs", tsunami: "tsunami", nhc: "nhc", nga: "navarea", gvp: "volcanes", nws: "nws" }[String(e.id).split(":")[0]]; }
 function setRefreshing(on) {
   const b = document.getElementById("refreshBtn");
   b.disabled = on; b.textContent = on ? "Actualizando…" : "Actualizar ahora";
