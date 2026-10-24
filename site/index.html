@@ -286,11 +286,12 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
     <div class="mapwrap" id="mapwrap">
       <div id="map" role="region" aria-label="Mapa del mundo con alertas"></div>
       <div class="banner" id="banner" hidden></div>
-      <div class="dock" id="dock" hidden aria-live="assertive">
+      <div class="dock" id="dock" hidden>
         <button type="button" class="atab" id="atab" aria-expanded="false" aria-controls="asheet"></button>
         <div class="asheet" id="asheet"><div><div class="body" id="abody"></div></div></div>
       </div>
       <div class="tip" id="tip" hidden></div>
+      <div class="sr" id="announcer" role="status" aria-live="polite"></div>
       <div class="legend" aria-label="Leyenda">
         <div class="row cats" id="legendCats"></div>
         <div class="row">
@@ -336,14 +337,14 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
         <div class="summary" id="summary"></div>
         <div class="savedbar" id="savedbar"></div>
       </div>
-      <div class="list" id="list" aria-live="polite"></div>
+      <div class="list" id="list"></div>
     </aside>
   </main>
 </div>
 
 <div class="overlay" id="settings" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="setTitle">
-    <h2 id="setTitle">Ajustes</h2>
+    <h2 id="setTitle" tabindex="-1">Ajustes</h2>
     <p class="hint">Cada fuente solo se consulta mientras tienes el mapa abierto y alguna de sus capas activada. Al abrir la página todas las capas empiezan apagadas. Elige cada cuánto consulta cada fuente.</p>
     <div id="srcRows"></div>
     <div class="frow" style="align-items:center">
@@ -750,9 +751,17 @@ function counts() {
   return n;
 }
 const sw = '<span class="tg" aria-hidden="true"></span>';
+// Redraws replace the buttons; keep keyboard focus on the same control afterwards.
+const FOCUS_KEYS = ["data-cat", "data-group", "data-open", "data-ov", "data-id", "data-save", "data-act", "data-del", "id"];
+function keepFocus(box, redraw) {
+  const f = document.activeElement;
+  const key = f && box.contains(f) ? FOCUS_KEYS.map((a) => f.getAttribute(a) && `[${a}="${CSS.escape(f.getAttribute(a))}"]`).find(Boolean) : null;
+  redraw();
+  if (key && !box.contains(document.activeElement)) box.querySelector(key)?.focus({ preventScroll: true });
+}
 function renderLayers() {
   const n = counts(), box = document.getElementById("layers"), top = box.scrollTop;
-  box.innerHTML = Object.entries(GROUPS).map(([g, gname]) => {
+  keepFocus(box, () => box.innerHTML = Object.entries(GROUPS).map(([g, gname]) => {
     const open = !!state.open[g];
     let head, items;
     if (g === "mapa") {
@@ -773,7 +782,7 @@ function renderLayers() {
     return `<div class="lgroup">
       <div class="lghead">${head}<button type="button" class="gname" data-open="${g}" aria-expanded="${open}"><span class="chev" aria-hidden="true">›</span>${gname}</button></div>
       <div class="lgitems"${open ? "" : " hidden"}>${items}</div></div>`;
-  }).join("");
+  }).join(""));
   box.scrollTop = top;
   document.getElementById("legendCats").innerHTML = Object.entries(CATS).map(([k, c]) => `<span class="sw">${legendShape(k, "var(--muted)").replace("<svg", '<svg width="11" height="11"')}${c.name}</span>`).join("");
 }
@@ -914,6 +923,7 @@ function notify(e, old) {
   shown.unshift({ id: e.id, up: !!old, at: Date.now() });
   if (shown.length > 30) shown.length = 30;
   aIdx = 0;
+  document.getElementById("announcer").textContent = `${old ? `Sube a ${prioOf(e.sev)}` : `Incidencia entrante, ${prioOf(e.sev)}`}: ${e.title}`;
   const dock = document.getElementById("dock");
   dock.classList.remove("new"); void dock.offsetWidth; dock.classList.add("new");
   renderAlerts();
@@ -948,7 +958,8 @@ function renderAlerts() {
     e.articles ? ["Noticias", `${e.articles} ${+e.articles === 1 ? "artículo" : "artículos"}`] : null,
     e.outlets?.length ? ["Medios", e.outlets.join(", ")] : null,
   ].filter(Boolean);
-  document.getElementById("abody").innerHTML = `
+  const abody = document.getElementById("abody");
+  keepFocus(abody, () => abody.innerHTML = `
     <div class="head">${sevIcon(e.sev, e.sev >= 4 ? "pulse" : "")}<div>
       <div class="lvl">${prioOf(e.sev)} · ${cur.up && aOpen ? "Sube a gravedad" : "Gravedad"} ${SEV[e.sev || 1].toLowerCase()} · ${esc(CATS[e.cat]?.name || e.cat)}</div>
       <h2>${esc(e.title)}</h2>${vmark(e)}</div></div>
@@ -959,7 +970,7 @@ function renderAlerts() {
       ${newsBtn(e)}${saveBtn(e.id)}
       <button type="button" class="btn" data-act="dismiss">Descartar</button>
       ${list.length > 1 ? `<span class="pager"><button type="button" class="btn" data-act="prev" aria-label="Aviso anterior">‹</button>${aIdx + 1} / ${list.length}<button type="button" class="btn" data-act="next" aria-label="Aviso siguiente">›</button></span>` : ""}
-    </div>`;
+    </div>`);
 }
 document.getElementById("atab").addEventListener("click", () => {
   aOpen = !aOpen;
@@ -1020,7 +1031,8 @@ function renderList() {
   renderSavedBar();
   if (state.showSaved) {
     const v = [...state.saved.values()].sort((a, b) => (b.savedAt || "").localeCompare(a.savedAt || ""));
-    document.getElementById("list").innerHTML = v.length ? v.map((e) => evRow(e, true)).join("") : `<div class="empty">No tienes alertas guardadas. Pulsa «Guardar alerta» en un aviso o en su ficha.</div>`;
+    const box = document.getElementById("list");
+    keepFocus(box, () => box.innerHTML = v.length ? v.map((e) => evRow(e, true)).join("") : `<div class="empty">No tienes alertas guardadas. Pulsa «Guardar alerta» en un aviso o en su ficha.</div>`);
     return;
   }
   const v = visible();
@@ -1033,7 +1045,7 @@ function renderList() {
     list.innerHTML = `<div class="empty">${!anyOn ? "Todas las capas están apagadas. Activa en el panel de arriba las que quieras ver." : state.events.size ? "No hay alertas con estos filtros. Prueba a ampliar el periodo o a bajar la gravedad mínima." : "Aún no hay alertas cargadas. Cuando el mapa conecte con las fuentes aparecerán aquí, ordenadas de la más reciente a la más antigua."}</div>`;
     return;
   }
-  list.innerHTML = v.slice(0, 400).map((e) => evRow(e)).join("") + (v.length > 400 ? `<div class="empty">Se muestran las 400 más recientes de ${v.length}. Usa los filtros para acotar.</div>` : "");
+  keepFocus(list, () => list.innerHTML = v.slice(0, 400).map((e) => evRow(e)).join("") + (v.length > 400 ? `<div class="empty">Se muestran las 400 más recientes de ${v.length}. Usa los filtros para acotar.</div>` : ""));
 }
 function badge(e) {
   const v = e.verified === false ? `<span class="badge unv" title="Una sola fuente, sin confirmar">Sin verificar</span>`
@@ -1071,7 +1083,7 @@ function renderDetail() {
     e.src === "GDELT (prensa)" ? ["Aviso", "Ubicación y clasificación automáticas a partir de la prensa; pueden ser imprecisas."] : null,
     ["Fuente", e.src],
   ].filter(Boolean);
-  el.innerHTML = `
+  keepFocus(el, () => el.innerHTML = `
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <span class="sevpill" style="background:${sevColor(e.sev)}">${prioOf(e.sev)} · ${SEV[e.sev || 1]}</span>
       <span class="label">${esc(CATS[e.cat]?.name || e.cat)}</span>${badge(e)}
@@ -1081,7 +1093,7 @@ function renderDetail() {
     ${e.desc ? `<p>${esc(e.desc)}</p>` : ""}
     <dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
     ${vmark(e)}
-    <div class="aacts">${newsBtn(e)}${saveBtn(e.id)}</div>`;
+    <div class="aacts">${newsBtn(e)}${saveBtn(e.id)}</div>`);
   document.getElementById("closeDetail").onclick = () => { state.selected = null; render(); };
   el.querySelector("[data-save]").onclick = (ev) => toggleSave(ev.currentTarget.dataset.save);
 }
@@ -1248,7 +1260,11 @@ async function tick(force = false) {
       ingest(s, { status: feed.status, events: feed.events.filter((e) => sourceOf(e) === s) }, at);
     }
   } catch (err) {
-    banner(`No se pudieron traer las alertas: ${esc(err.message || err)}`, "warn", { label: "Reintentar", onClick: () => tick(true) });
+    const why = !navigator.onLine ? "no hay conexión a internet"
+      : err?.name === "TimeoutError" ? "las fuentes tardaron más de 30 segundos en responder"
+      : err instanceof TypeError ? "no se pudo contactar con el servidor"
+      : err.message || String(err);
+    banner(`No se pudieron traer las alertas: ${esc(why)}.`, "warn", { label: "Reintentar", onClick: () => tick(true) });
   } finally { running = false; setRefreshing(false); renderStatus(); if (again) { again = false; tick(); } }
 }
 function sourceOf(e) { if (String(e.id).startsWith("gdelt:")) return e.cat === "atentado" ? "atentados" : "conflictos"; return { usgs: "usgs", gdacs: "gdacs", tsunami: "tsunami", nhc: "nhc", nga: "navarea", gvp: "volcanes", nws: "nws", aemet: "aemet" }[String(e.id).split(":")[0]]; }
@@ -1257,6 +1273,8 @@ function setRefreshing(on) {
   b.disabled = on; b.textContent = on ? "Actualizando…" : "Actualizar ahora";
 }
 document.getElementById("refreshBtn").onclick = () => tick(true);
+window.addEventListener("offline", () => banner("Sin conexión a internet. Las alertas se actualizarán solas cuando vuelva.", "warn"));
+window.addEventListener("online", () => { banner(null); tick(true); });
 
 // History lives in this browser (IndexedDB), behind the same small interface the page uses.
 function localDb() {
@@ -1296,21 +1314,35 @@ function openSettings() {
   document.getElementById("retention").value = String(state.settings.retention);
   document.getElementById("clearZone").innerHTML = `<button class="btn" type="button" id="clearBtn">Borrar histórico</button>`;
   document.getElementById("clearBtn").onclick = askClear;
-  sheet.hidden = false;
+  if (sheet.hidden) { settingsReturn = document.activeElement; sheet.hidden = false; document.getElementById("setTitle").focus(); }
 }
+let settingsReturn = null;
+function closeSettings() {
+  if (sheet.hidden) return;
+  sheet.hidden = true;
+  (settingsReturn && document.contains(settingsReturn) ? settingsReturn : document.getElementById("settingsBtn")).focus();
+}
+// Keep Tab inside the dialog while it is open.
+sheet.addEventListener("keydown", (e) => {
+  if (e.key !== "Tab") return;
+  const f = [...sheet.querySelectorAll("button, input, select")].filter((x) => !x.disabled && x.offsetParent);
+  if (!f.length) return;
+  if (e.shiftKey && (document.activeElement === f[0] || document.activeElement.id === "setTitle")) { e.preventDefault(); f[f.length - 1].focus(); }
+  else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+});
 function askClear() {
   document.getElementById("clearZone").innerHTML = `<div class="confirm">Se borrarán todas las alertas guardadas. ¿Seguro? <button class="btn" type="button" id="clearNo">No</button><button class="btn primary" type="button" id="clearYes">Sí, borrar</button></div>`;
   document.getElementById("clearNo").onclick = openSettings;
   document.getElementById("clearYes").onclick = async () => {
     if (db) { try { const s = await db.collection("dias").get(); for (const d of s.docs) await db.doc("dias/" + d.id).delete(); } catch (e) { console.warn(e); } }
     for (const [id, e] of state.events) if (!isLive(e)) state.events.delete(id);
-    sheet.hidden = true; render();
+    closeSettings(); render();
   };
 }
 document.getElementById("settingsBtn").onclick = openSettings;
-document.getElementById("setCancel").onclick = () => (sheet.hidden = true);
-sheet.addEventListener("click", (e) => { if (e.target === sheet) sheet.hidden = true; });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") sheet.hidden = true; });
+document.getElementById("setCancel").onclick = closeSettings;
+sheet.addEventListener("click", (e) => { if (e.target === sheet) closeSettings(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSettings(); });
 document.getElementById("setSave").onclick = async () => {
   for (const k of Object.keys(SOURCES)) {
     state.settings.enabled[k] = document.getElementById("en_" + k).checked;
@@ -1318,7 +1350,7 @@ document.getElementById("setSave").onclick = async () => {
   }
   state.settings.retention = +document.getElementById("retention").value;
   store.set("settings", state.settings);
-  sheet.hidden = true;
+  closeSettings();
   if (db) { try { await db.doc("config/ajustes").set(state.settings); } catch (e) { console.warn(e); } }
   watchAll(); pruneHistory();
 };
