@@ -97,6 +97,26 @@ aside.side { background: var(--panel); border-left: 1px solid var(--line); displ
 .filters { padding: 12px 16px; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
 .label { font-family: var(--font-display); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cpick { display: grid; gap: 6px; position: relative; }
+.cpick input { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; width: 100%; }
+.cpick .opts { position: absolute; top: 100%; left: 0; right: 0; margin-top: 2px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; z-index: 8; max-height: 240px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,.45); }
+.cpick .opts button { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 7px 10px; font-size: 13px; }
+.cpick .opts button:hover, .cpick .opts button.on { background: var(--panel-2); }
+.cpick .sel { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.cchip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 9px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 20%, var(--panel-2)); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); font-size: 12px; }
+.cchip button { background: none; border: 0; color: var(--muted); font-size: 14px; line-height: 1; padding: 0 4px; }
+.linkbtn { background: none; border: 0; color: var(--accent); font-size: 12px; padding: 2px 0; }
+.alerts { position: absolute; top: 12px; right: 12px; z-index: 7; display: grid; gap: 8px; width: min(340px, calc(100% - 24px)); max-height: calc(100% - 90px); overflow-y: auto; }
+.acard { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--s2); border-radius: 8px; padding: 10px 12px; display: grid; gap: 6px; box-shadow: 0 10px 28px rgba(0,0,0,.5); animation: slidein .25s ease-out; }
+.acard .top { display: flex; gap: 8px; align-items: center; font-size: 11px; color: var(--muted); }
+.acard .top .x { margin-left: auto; background: none; border: 0; color: var(--muted); font-size: 18px; line-height: 1; }
+.acard b { font-size: 14px; line-height: 1.3; }
+.acard p { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.45; max-height: 5.8em; overflow: hidden; }
+.acard .foot { display: flex; gap: 8px; align-items: center; font-size: 11px; color: var(--muted); font-family: var(--font-data); flex-wrap: wrap; }
+.acard .foot .btn { margin-left: auto; padding: 3px 10px; font-size: 12px; font-family: var(--font-body); }
+.alerts .more { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+@keyframes slidein { from { transform: translateY(-8px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .acard { animation: none; } }
 .layers { display: grid; gap: 6px; max-height: 44vh; overflow-y: auto; overscroll-behavior: contain; }
 .lgroup { border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); }
 .lghead { display: flex; align-items: center; gap: 8px; padding: 6px 10px; }
@@ -191,6 +211,7 @@ aside.side { background: var(--panel); border-left: 1px solid var(--line); displ
     <div class="mapwrap" id="mapwrap">
       <div id="map" role="region" aria-label="Mapa del mundo con alertas"></div>
       <div class="banner" id="banner" hidden></div>
+      <div class="alerts" id="alerts" aria-live="assertive"></div>
       <div class="tip" id="tip" hidden></div>
       <div class="legend" aria-label="Leyenda">
         <div class="row cats" id="legendCats"></div>
@@ -207,6 +228,12 @@ aside.side { background: var(--panel); border-left: 1px solid var(--line); displ
     </div>
     <aside class="side">
       <section class="filters">
+        <div class="label">Países</div>
+        <div class="cpick" id="cpick">
+          <input type="search" id="cq" placeholder="Buscar país y pulsar para añadirlo…" autocomplete="off" aria-label="Buscar país" aria-controls="copts" aria-expanded="false">
+          <div class="opts" id="copts" role="listbox" hidden></div>
+          <div class="sel" id="csel"></div>
+        </div>
         <div class="label">Capas</div>
         <div class="layers" id="layers"></div>
         <div class="frow">
@@ -331,6 +358,7 @@ const state = {
   cats: Object.fromEntries(Object.keys(CATS).map((c) => [c, false])),
   period: 24, minSev: 1, selected: null, base: "s2", globe: false,
   ov: Object.fromEntries(Object.keys(OVERLAYS).map((k) => [k, false])),
+  countries: new Set(),        // ISO3 codes the viewer is following; empty = whole world
   open: { naturales: true, meteo: true, mar: false, seguridad: true, mapa: true },
   settings: { intervals: Object.fromEntries(Object.entries(SOURCES).map(([k, v]) => [k, v.def])), enabled: Object.fromEntries(Object.keys(SOURCES).map((k) => [k, !SOURCES[k].off])), retention: 90 },
   lastUpdate: null,
@@ -342,6 +370,7 @@ const store = {
 const savedUi = store.get("ui");
 if (savedUi) {
   Object.assign(state.open, savedUi.open || {});
+  (savedUi.countries || []).forEach((c) => state.countries.add(c));
   state.period = savedUi.period ?? 24; state.minSev = savedUi.minSev ?? 1; state.base = savedUi.base || "s2"; state.globe = !!savedUi.globe;
 }
 const localSettings = store.get("settings");
@@ -359,6 +388,38 @@ const world = await fetch(WORLD_URL).then((r) => { if (!r.ok) throw r; return r.
   .catch(() => fetch(WORLD_URL.replace("https://cdn.jsdelivr.net/gh/CarlosPV-77/world-alert-data@", "https://raw.githubusercontent.com/CarlosPV-77/world-alert-data/")).then((r) => r.json()));
 const countries = topojson.feature(world, world.objects.countries);
 const disputed = topojson.feature(world, world.objects.disputed);
+// Country lookup for alerts. Each country keeps its bounding box for a quick first test
+// (boxes that cross the antimeridian have west > east).
+const COUNTRY = countries.features.filter((f) => f.properties.a && f.properties.a !== "-99")
+  .map((f) => ({ f, iso: f.properties.a, name: f.properties.n, b: d3.geoBounds(f) }))
+  .sort((x, y) => x.name.localeCompare(y.name, "es"));
+const BY_ISO = new Map(COUNTRY.map((c) => [c.iso, c]));
+for (const c of [...state.countries]) if (!BY_ISO.has(c)) state.countries.delete(c);
+function countryAt(lon, lat) {
+  for (const c of COUNTRY) {
+    const [[w, s], [e, n]] = c.b;
+    if (lat < s || lat > n || (w <= e ? lon < w || lon > e : lon < w && lon > e)) continue;
+    if (d3.geoContains(c.f, [lon, lat])) return c.iso;
+  }
+  return null;
+}
+// Alerts at sea (offshore quakes, coastal warnings) count for every country within about 50 km.
+const isoCache = new Map();
+function countriesOf(e) {
+  const key = `${e.id}|${e.lat}|${e.lon}`;
+  if (isoCache.has(key)) return isoCache.get(key);
+  const lon = +e.lon, lat = +e.lat, out = new Set();
+  const here = countryAt(lon, lat);
+  if (here) out.add(here);
+  else for (let i = 0; i < 8; i++) {
+    const a = i * Math.PI / 4, d = 0.45;
+    const iso = countryAt(lon + Math.sin(a) * d / Math.max(0.2, Math.cos(lat * Math.PI / 180)), lat + Math.cos(a) * d);
+    if (iso) out.add(iso);
+  }
+  isoCache.set(key, out);
+  return out;
+}
+const inCountries = (e) => !state.countries.size || [...countriesOf(e)].some((c) => state.countries.has(c));
 const tip = document.getElementById("tip");
 const BASES = {
   s2: { name: "Satélite · Sentinel-2", tiles: ["https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg"], maxzoom: 15,
@@ -438,6 +499,8 @@ map.on("load", () => {
   map.addSource("disputed", { type: "geojson", data: disputed });
   map.addLayer({ id: "land", type: "fill", source: "countries", layout: { visibility: "none" }, paint: { "fill-color": "#2f4559" } });
   map.addLayer({ id: "country-hit", type: "fill", source: "countries", paint: { "fill-color": "#000", "fill-opacity": 0 } });
+  map.addLayer({ id: "country-sel-fill", type: "fill", source: "countries", filter: ["in", ["get", "a"], ["literal", []]], paint: { "fill-color": "#8cc4e8", "fill-opacity": 0.1 } });
+  map.addLayer({ id: "country-sel-line", type: "line", source: "countries", filter: ["in", ["get", "a"], ["literal", []]], paint: { "line-color": "#8cc4e8", "line-width": 2.2 } });
   map.addLayer({ id: "borders", type: "line", source: "countries", paint: { "line-color": "rgba(235,242,248,.6)", "line-width": ["interpolate", ["linear"], ["zoom"], 1, 0.5, 6, 1.4], "line-opacity": ["interpolate", ["linear"], ["zoom"], 4, 1, 5, 0.15] } });
   map.addLayer({ id: "disputed-fill", type: "fill", source: "disputed", paint: { "fill-color": "#d6a24a", "fill-opacity": 0.28 } });
   map.addLayer({ id: "disputed-line", type: "line", source: "disputed", paint: { "line-color": "#f0bd5c", "line-width": 1.4, "line-dasharray": [2, 1.5] } });
@@ -459,7 +522,7 @@ map.on("load", () => {
   map.addLayer({ id: "sel", type: "circle", source: "events", filter: ["==", ["get", "id"], ""], paint: { "circle-radius": 13, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#ffffff", "circle-stroke-width": 2.5 } });
   // Place names sit above the night shading and alert zones, below the alert markers.
   for (const id of LABEL_LAYERS) if (map.getLayer(id)) map.moveLayer(id, "crit");
-  applyBase(); applyOverlays(); renderNight(); renderMarkers();
+  applyBase(); applyOverlays(); applyCountries(false); renderNight(); renderMarkers();
 });
 
 function applyOverlays() {
@@ -556,15 +619,16 @@ function markerSize(e) {
   if (e.cat === "aviso_es") return 30 + (e.sev || 1) * 14;
   return 40 + (e.sev || 1) * 22;
 }
+function passes(e) {
+  if (!state.cats[e.cat]) return false;
+  if ((e.sev || 1) < state.minSev) return false;
+  const from = state.period ? Date.now() - state.period * HOUR : 0;
+  const t = Math.max(Date.parse(e.time) || 0, Date.parse(e.updated) || 0);
+  if (from && t < from) return false;
+  return inCountries(e);
+}
 function visible() {
-  const now = Date.now(), from = state.period ? now - state.period * HOUR : 0;
-  return [...state.events.values()].filter((e) => {
-    if (!state.cats[e.cat]) return false;
-    if ((e.sev || 1) < state.minSev) return false;
-    const t = Math.max(Date.parse(e.time) || 0, Date.parse(e.updated) || 0);
-    if (from && t < from) return false;
-    return true;
-  }).sort((a, b) => (Date.parse(b.time) || 0) - (Date.parse(a.time) || 0));
+  return [...state.events.values()].filter(passes).sort((a, b) => (Date.parse(b.time) || 0) - (Date.parse(a.time) || 0));
 }
 const isLive = (e) => Object.values(state.live).some((s) => s.has(e.id));
 
@@ -642,7 +706,92 @@ document.getElementById("fPeriod").value = String(state.period);
 document.getElementById("fSev").value = String(state.minSev);
 document.getElementById("fPeriod").onchange = (e) => { state.period = +e.target.value; saveUi(); render(); };
 document.getElementById("fSev").onchange = (e) => { state.minSev = +e.target.value; saveUi(); render(); };
-function saveUi() { store.set("ui", { open: state.open, period: state.period, minSev: state.minSev, base: state.base, globe: state.globe }); }
+function saveUi() { store.set("ui", { open: state.open, countries: [...state.countries], period: state.period, minSev: state.minSev, base: state.base, globe: state.globe }); }
+
+// ---------- countries ----------
+const cq = document.getElementById("cq"), copts = document.getElementById("copts");
+const fold = (t) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+let optIdx = 0;
+function renderCountryOptions() {
+  const q = fold(cq.value.trim());
+  const hits = q ? COUNTRY.filter((c) => !state.countries.has(c.iso) && fold(c.name).includes(q))
+    .sort((a, b) => fold(a.name).startsWith(q) === fold(b.name).startsWith(q) ? 0 : fold(a.name).startsWith(q) ? -1 : 1).slice(0, 10) : [];
+  optIdx = Math.min(optIdx, Math.max(0, hits.length - 1));
+  copts.innerHTML = hits.map((c, i) => `<button type="button" role="option" data-iso="${c.iso}" class="${i === optIdx ? "on" : ""}" aria-selected="${i === optIdx}">${esc(c.name)}</button>`).join("")
+    || (q ? `<div class="empty" style="padding:8px 10px">Ningún país coincide</div>` : "");
+  copts.hidden = !q; cq.setAttribute("aria-expanded", String(!!q));
+}
+function renderCountrySel() {
+  const sel = [...state.countries].map((c) => BY_ISO.get(c)).filter(Boolean).sort((a, b) => a.name.localeCompare(b.name, "es"));
+  document.getElementById("csel").innerHTML = sel.length
+    ? sel.map((c) => `<span class="cchip">${esc(c.name)}<button type="button" data-del="${c.iso}" aria-label="Quitar ${esc(c.name)}">×</button></span>`).join("")
+      + `<button type="button" class="linkbtn" data-del="*">Quitar todos</button>`
+    : `<span style="font-size:12px;color:var(--muted)">Todo el mundo. Elige países para seguir solo sus alertas y recibir avisos de las nuevas.</span>`;
+}
+function setCountries(change) {
+  change(); isoCache.size > 20000 && isoCache.clear();
+  saveUi(); renderCountrySel(); applyCountries(true); render();
+}
+function applyCountries(fly) {
+  if (!map.getLayer("country-sel-fill")) return;
+  const list = ["literal", [...state.countries]];
+  map.setFilter("country-sel-fill", ["in", ["get", "a"], list]);
+  map.setFilter("country-sel-line", ["in", ["get", "a"], list]);
+  if (!fly || !state.countries.size) return;
+  const fc = { type: "FeatureCollection", features: [...state.countries].map((c) => BY_ISO.get(c)?.f).filter(Boolean) };
+  const [[w, s], [e, n]] = d3.geoBounds(fc);
+  if (w <= e) map.fitBounds([[w, Math.max(s, -80)], [e, Math.min(n, 82)]], { padding: 50, maxZoom: 6.5, duration: 900 });
+  else map.flyTo({ center: d3.geoCentroid(fc), zoom: 2.2, duration: 900 });
+}
+cq.addEventListener("input", () => { optIdx = 0; renderCountryOptions(); });
+cq.addEventListener("keydown", (ev) => {
+  const n = copts.querySelectorAll("button").length;
+  if (ev.key === "ArrowDown" && n) { optIdx = (optIdx + 1) % n; renderCountryOptions(); ev.preventDefault(); }
+  else if (ev.key === "ArrowUp" && n) { optIdx = (optIdx - 1 + n) % n; renderCountryOptions(); ev.preventDefault(); }
+  else if (ev.key === "Enter") { const b = copts.querySelectorAll("button")[optIdx]; if (b) b.click(); ev.preventDefault(); }
+  else if (ev.key === "Escape") { cq.value = ""; renderCountryOptions(); }
+});
+copts.addEventListener("mousedown", (ev) => ev.preventDefault());
+copts.addEventListener("click", (ev) => {
+  const b = ev.target.closest("[data-iso]"); if (!b) return;
+  setCountries(() => state.countries.add(b.dataset.iso));
+  cq.value = ""; renderCountryOptions(); cq.focus();
+});
+cq.addEventListener("blur", () => { copts.hidden = true; cq.setAttribute("aria-expanded", "false"); });
+document.getElementById("csel").addEventListener("click", (ev) => {
+  const b = ev.target.closest("[data-del]"); if (!b) return;
+  setCountries(() => (b.dataset.del === "*" ? state.countries.clear() : state.countries.delete(b.dataset.del)));
+});
+renderCountrySel();
+
+// Pop-up cards for new alerts (or alerts that go up a level) inside the followed countries.
+const shown = [];
+function notify(e, old) {
+  if (shown.some((x) => x.id === e.id)) shown.splice(shown.findIndex((x) => x.id === e.id), 1);
+  shown.unshift({ id: e.id, up: !!old, at: Date.now() });
+  if (shown.length > 30) shown.length = 30;
+  renderAlerts();
+}
+function renderAlerts() {
+  const box = document.getElementById("alerts"), max = 4;
+  const cards = shown.slice(0, max).map(({ id, up }) => {
+    const e = state.events.get(id); if (!e) return "";
+    const where = [...countriesOf(e)].map((c) => BY_ISO.get(c)?.name).filter(Boolean).join(", ");
+    return `<div class="acard" style="border-left-color:${sevColor(e.sev)}" role="alert">
+      <div class="top"><span class="sevpill" style="background:${sevColor(e.sev)}">${SEV[e.sev || 1]}</span><span>${up ? "Sube de nivel" : "Nueva alerta"} · ${esc(CATS[e.cat]?.name || e.cat)}</span>
+        <button type="button" class="x" data-close="${esc(id)}" aria-label="Cerrar aviso">×</button></div>
+      <b>${esc(e.title)}</b>
+      ${e.desc ? `<p>${esc(e.desc)}</p>` : ""}
+      <div class="foot"><span>${esc(where || "")}</span><span>${fmt(e.time)}</span><span>${esc(e.src)}</span>${badge(e)}
+        <button type="button" class="btn" data-see="${esc(id)}">Ver en el mapa</button></div></div>`;
+  }).join("");
+  box.innerHTML = cards + (shown.length > max ? `<div class="more">${shown.length - max} avisos más<button type="button" class="linkbtn" data-close="*" style="margin-left:auto">Cerrar todos</button></div>` : "");
+}
+document.getElementById("alerts").addEventListener("click", (ev) => {
+  const c = ev.target.closest("[data-close]"), v = ev.target.closest("[data-see]");
+  if (c) { if (c.dataset.close === "*") shown.length = 0; else shown.splice(shown.findIndex((x) => x.id === c.dataset.close), 1); renderAlerts(); }
+  if (v) { const id = v.dataset.see; shown.splice(shown.findIndex((x) => x.id === id), 1); renderAlerts(); select(id, true); }
+});
 
 function rel(t) {
   const ms = Date.now() - Date.parse(t);
@@ -770,14 +919,19 @@ function extractFeed(payload) {
 }
 function ingest(src, feed, at) {
   const ids = new Set();
+  // The first answer from a source only sets the baseline; later answers can raise pop-up alerts.
+  const baseline = !(src in state.live);
+  const fresh = [];
   for (const e of feed.events || []) {
     if (!Number.isFinite(+e.lat) || !Number.isFinite(+e.lon)) continue;
     ids.add(e.id);
     const old = state.events.get(e.id);
     state.events.set(e.id, e);
     if (!old || old.sev !== e.sev || old.updated !== e.updated || old.title !== e.title) markDirty(e);
+    if (!baseline && (!old || (e.sev || 1) > (old.sev || 1))) fresh.push([e, old]);
   }
   state.live[src] = ids;
+  if (state.countries.size) for (const [e, old] of fresh) if (passes(e)) notify(e, old);
   const st = feed.status?.[src];
   state.srcStatus[src] = st?.ok === false ? { ok: false, at, error: st.error } : { ok: true, at, n: ids.size };
   state.lastUpdate = new Date(at).toISOString();
