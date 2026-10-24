@@ -167,6 +167,7 @@ aside.side { background: var(--panel); border-left: 1px solid var(--line-2); dis
 .label::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .cpick { display: grid; gap: 6px; position: relative; }
 .cpick input { background: var(--room); border: 1px solid var(--line-2); border-radius: var(--r); padding: 7px 9px; width: 100%; }
+.tgrow input { background: var(--room); border: 1px solid var(--line-2); border-radius: var(--r); padding: 7px 9px; width: 100%; font-family: var(--font-data); font-size: 13px; }
 .cpick input::placeholder { color: var(--muted); }
 .cpick .opts { position: absolute; top: 100%; left: 0; right: 0; margin-top: 2px; background: var(--panel); border: 1px solid var(--line-2); border-radius: var(--r); z-index: 8; max-height: 240px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
 .cpick .opts button { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 7px 10px; font-size: 13px; }
@@ -263,6 +264,14 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 .srcrow .nm { font-weight: 500; }
 .srcrow .sub { grid-column: 2 / 4; font-size: 11px; color: var(--muted); font-family: var(--font-data); }
 .srcrow .sub.err { color: var(--s3); }
+.tgrow { display: grid; gap: 6px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.tgrow label { font-weight: 500; }
+.tgrow .sub { font-size: 11px; color: var(--muted); }
+.posts { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
+.posts li { border-left: 2px dashed var(--s3); padding: 2px 0 2px 10px; }
+.posts .pmeta { font-family: var(--font-data); font-size: 11px; color: var(--muted); }
+.posts p { margin: 3px 0; font-size: 13px; overflow-wrap: anywhere; }
+.posts a { font-size: 12px; color: var(--accent); }
 .sheet .foot { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 .confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--s3); }
 
@@ -273,8 +282,8 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 
 /* Touch screens: every control at least 44 px, text fields at 16 px so iOS does not zoom. */
 @media (pointer: coarse) {
-  .btn, select, .cpick input { min-height: 44px; }
-  select, .cpick input { font-size: 16px; }
+  .btn, select, .cpick input, .tgrow input { min-height: 44px; }
+  select, .cpick input, .tgrow input { font-size: 16px; }
   .litem, .lghead { min-height: 44px; }
   .gname, .gtoggle { min-height: 40px; }
   .zoom button { width: 44px; height: 44px; }
@@ -393,6 +402,11 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
     <h2 id="setTitle" tabindex="-1">Ajustes</h2>
     <p class="hint">Cada fuente solo se consulta mientras tienes el mapa abierto y alguna de sus capas activada. Al abrir la página todas las capas empiezan apagadas. Elige cada cuánto consulta cada fuente.</p>
     <div id="srcRows"></div>
+    <div class="tgrow">
+      <label for="tgChans">Canales de Telegram</label>
+      <input type="text" id="tgChans" spellcheck="false" autocomplete="off" aria-describedby="tgHint">
+      <span class="sub" id="tgHint">Nombres de canales públicos separados por comas, tal como aparecen en t.me/nombre. Máximo 20.</span>
+    </div>
     <div class="frow" style="align-items:center">
       <label for="retention" class="label" style="flex:0 0 auto">Conservar el histórico</label>
       <select id="retention">
@@ -430,6 +444,7 @@ const CATS = {
   maritimo:   { name: "Avisos a navegantes", pic: "ship", group: "mar" },
   conflicto:  { name: "Conflictos",   pic: "clash",   group: "seguridad" },
   atentado:   { name: "Atentados",    pic: "blast",   group: "seguridad" },
+  redes:      { name: "Publicaciones en redes", pic: "chat", group: "redes" },
 };
 // Pictograms on a 24 px grid, drawn as 2 px strokes: one per kind of event, so the map says what happened.
 const PICS = {
@@ -451,6 +466,7 @@ const PICS = {
   tornado: "M3 4h18 M5 8h14 M7.5 12h10 M10 16h6 M12 20h2",
   ship:    "M2.5 15h19l-2.5 5H5z M12 15V3 M12 4.5 18 13h-6",
   clash:   "M4 4l16 16 M20 4 4 20 M4 4h4.5 M4 4v4.5 M20 4h-4.5 M20 4v4.5 M15 17l2-2 M7 15l2 2",
+  chat:    "M4 4.5h16v11H11l-5 4v-4H4z M8 9h8 M8 12h5",
   blast:   "M12 2l1.9 5.1 4.9-2.2-2.2 4.9L21.7 12l-5.1 1.9 2.2 4.9-4.9-2.2L12 21.7l-1.9-5.1-4.9 2.2 2.2-4.9L2.3 12l5.1-1.9-2.2-4.9 4.9 2.2z",
 };
 // The pictogram for one event: the category's own, refined by the warning's wording for weather.
@@ -463,6 +479,7 @@ const WEATHER_WORDS = [
   [/wind|viento/i, "wind"], [/rain|lluvia|precipit/i, "rain"],
 ];
 function picOf(e) {
+  if (e.cat === "redes") return PICS[e.pic] ? e.pic : "chat";   // social posts carry the topic they talk about
   const base = CATS[e.cat]?.pic || "quake";
   if (e.cat !== "meteo" && e.cat !== "aviso_es") return base;
   const t = `${e.title || ""} ${e.desc || ""}`;
@@ -474,6 +491,7 @@ const GROUPS = {
   meteo:     "Meteorología",
   mar:       "Mar",
   seguridad: "Conflictos y seguridad",
+  redes:     "Redes sociales",
   mapa:      "Mapa",
 };
 // Map overlays that are not alerts, shown in the "Mapa" group.
@@ -495,12 +513,18 @@ const SOURCES = {
   aemet:    { name: "AEMET · avisos meteorológicos de España", def: 10, opts: [5, 10, 15, 30, 60] },
   conflictos: { name: "GDELT · noticias de conflictos armados", def: 15, opts: [15, 30, 60] },
   atentados:  { name: "GDELT · noticias de atentados", def: 15, opts: [15, 30, 60] },
+  mastodon:   { name: "Mastodon · etiquetas públicas (#terremoto, #wildfire…)", def: 10, opts: [5, 10, 15, 30, 60] },
+  bluesky:    { name: "Bluesky · búsqueda pública", def: 10, opts: [5, 10, 15, 30, 60] },
+  telegram:   { name: "Telegram · canales públicos", def: 10, opts: [5, 10, 15, 30, 60] },
 };
+// Public Telegram channels read by default; Ajustes lets you change the list.
+const TG_DEFAULT = "euronews, france24_en, elpais, insiderpaper, WorldNews, wartranslated, CIG_telegram, warmonitors, Middle_East_Spectator, KyivIndependent_official";
 // Layers each source feeds. A source is only queried while at least one of its layers is on.
 const SOURCE_CATS = {
   usgs: ["sismo"], gdacs: ["sismo", "volcan", "tsunami", "ciclon", "inundacion", "incendio", "sequia"], tsunami: ["tsunami"],
   nhc: ["ciclon"], navarea: ["maritimo"], volcanes: ["volcan"], nws: ["meteo"], aemet: ["aviso_es"],
   conflictos: ["conflicto"], atentados: ["atentado"],
+  mastodon: ["redes"], bluesky: ["redes"], telegram: ["redes"],
 };
 const wanted = (k) => state.settings.enabled[k] && SOURCE_CATS[k].some((c) => state.cats[c]);
 const SEV = ["", "Baja", "Media", "Alta", "Crítica"];
@@ -531,7 +555,7 @@ const state = {
   ov: Object.fromEntries(Object.keys(OVERLAYS).map((k) => [k, false])),
   countries: new Set(),        // ISO3 codes the viewer is following; empty = whole world
   open: { naturales: true, meteo: true, mar: false, seguridad: true, mapa: true },
-  settings: { intervals: Object.fromEntries(Object.entries(SOURCES).map(([k, v]) => [k, v.def])), enabled: Object.fromEntries(Object.keys(SOURCES).map((k) => [k, !SOURCES[k].off])), retention: 90 },
+  settings: { intervals: Object.fromEntries(Object.entries(SOURCES).map(([k, v]) => [k, v.def])), enabled: Object.fromEntries(Object.keys(SOURCES).map((k) => [k, !SOURCES[k].off])), retention: 90, tg: TG_DEFAULT },
   lastUpdate: null,
 };
 const store = {
@@ -551,6 +575,7 @@ function mergeSettings(s) {
   Object.assign(state.settings.intervals, s.intervals || {});
   Object.assign(state.settings.enabled, s.enabled || {});
   if (s.retention != null) state.settings.retention = s.retention;
+  if (typeof s.tg === "string") state.settings.tg = s.tg;
 }
 
 // ---------- map ----------
@@ -989,10 +1014,15 @@ const ICO_NEWS = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9 2.5h4.
 const isNews = (e) => e.verified === false || !!e.vlabel;
 function vmark(e) {
   const ok = e.verified !== false;
-  return `<div class="vmark ${ok ? "yes" : "no"}">${VICO[ok ? "yes" : "no"]}${!ok ? "Sin contrastar · un solo medio" : e.vlabel ? `Noticia contrastada · ${esc(e.vlabel)}` : "Fuente oficial"}</div>`;
+  return `<div class="vmark ${ok ? "yes" : "no"}">${VICO[ok ? "yes" : "no"]}${!ok ? (e.social ? "Sin contrastar · publicaciones en redes" : "Sin contrastar · un solo medio") : e.vlabel ? `Noticia contrastada · ${esc(e.vlabel)}` : "Fuente oficial"}</div>`;
 }
 function newsBtn(e) {
-  return e.url ? `<a class="btn" href="${esc(e.url)}" target="_blank" rel="noopener">${ICO_NEWS}${isNews(e) ? "Ir a la noticia" : "Ver en la fuente"}</a>` : "";
+  return e.url ? `<a class="btn" href="${esc(e.url)}" target="_blank" rel="noopener">${ICO_NEWS}${e.social ? "Ver publicación" : isNews(e) ? "Ir a la noticia" : "Ver en la fuente"}</a>` : "";
+}
+// The latest posts behind a social marker, each linking to the original.
+function postList(e) {
+  if (!e.posts?.length) return "";
+  return `<ol class="posts">${e.posts.map((p) => `<li><div class="pmeta">${esc(p.net)} · ${esc(p.author)} · ${esc(rel(p.time))}</div><p>${esc(p.text)}</p>${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">Abrir publicación</a>` : ""}</li>`).join("")}</ol>`;
 }
 function saveBtn(id) {
   const on = state.saved.has(id);
@@ -1177,6 +1207,8 @@ function renderDetail() {
     e.articles ? ["Noticias", `${e.articles} ${+e.articles === 1 ? "artículo" : "artículos"}`] : null,
     e.outlets?.length ? ["Medios", e.outlets.join(", ")] : null,
     e.src === "GDELT (prensa)" ? ["Aviso", "Ubicación y clasificación automáticas a partir de la prensa; pueden ser imprecisas."] : null,
+    e.social ? ["Publicaciones", `${e.npost} de ${e.nauthor} ${e.nauthor === 1 ? "cuenta" : "cuentas"}`] : null,
+    e.social ? ["Aviso", "Lugar y tema deducidos del texto de las publicaciones; pueden ser erróneos. No es información contrastada."] : null,
     ["Fuente", e.src],
   ].filter(Boolean);
   keepFocus(el, () => el.innerHTML = `
@@ -1188,6 +1220,7 @@ function renderDetail() {
     <h2>${esc(e.title)}</h2>
     ${e.desc ? `<p>${esc(e.desc)}</p>` : ""}
     <dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
+    ${postList(e)}
     ${vmark(e)}
     <div class="aacts">${newsBtn(e)}${saveBtn(e.id)}</div>`);
   document.getElementById("closeDetail").onclick = () => { state.selected = null; render(); };
@@ -1278,7 +1311,7 @@ const dayOf = (e) => (e.time || e.updated || new Date().toISOString()).slice(0, 
 const keyOf = (id) => id.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 120);
 function compact(e) {
   const o = {};
-  for (const k of ["id", "cat", "title", "lat", "lon", "time", "updated", "until", "sev", "mag", "depth", "tsunami", "level", "country", "url", "src", "approx", "verified", "vlabel", "articles", "outlets", "prob", "poly"]) if (e[k] != null && e[k] !== "") o[k] = e[k];
+  for (const k of ["id", "cat", "title", "lat", "lon", "time", "updated", "until", "sev", "mag", "depth", "tsunami", "level", "country", "url", "src", "approx", "verified", "vlabel", "articles", "outlets", "prob", "poly", "pic", "topic", "social", "npost", "nauthor", "posts"]) if (e[k] != null && e[k] !== "") o[k] = e[k];
   if (e.desc) o.desc = String(e.desc).slice(0, 300);
   return o;
 }
@@ -1349,7 +1382,8 @@ async function tick(force = false) {
   if (!due.length) return;
   running = true; setRefreshing(true);
   try {
-    const r = await fetch(`${BRIDGE}?src=${due.join(",")}`, { signal: AbortSignal.timeout(30000) });
+    const tg = due.includes("telegram") ? `&tg=${encodeURIComponent(state.settings.tg.replace(/\s+/g, ""))}` : "";
+    const r = await fetch(`${BRIDGE}?src=${due.join(",")}${tg}`, { signal: AbortSignal.timeout(30000) });
     if (!r.ok) throw new Error(`el servidor de alertas respondió con un error (${r.status})`);
     const feed = await r.json();
     const at = Date.parse(feed.generated) || Date.now();
@@ -1366,7 +1400,7 @@ async function tick(force = false) {
     banner(`No se pudieron traer las alertas: ${esc(why)}.`, "warn", { label: "Reintentar", onClick: () => tick(true) });
   } finally { running = false; setRefreshing(false); renderStatus(); if (again) { again = false; tick(); } }
 }
-function sourceOf(e) { if (String(e.id).startsWith("gdelt:")) return e.cat === "atentado" ? "atentados" : "conflictos"; return { usgs: "usgs", gdacs: "gdacs", tsunami: "tsunami", nhc: "nhc", nga: "navarea", gvp: "volcanes", nws: "nws", aemet: "aemet" }[String(e.id).split(":")[0]]; }
+function sourceOf(e) { if (String(e.id).startsWith("gdelt:")) return e.cat === "atentado" ? "atentados" : "conflictos"; return { usgs: "usgs", gdacs: "gdacs", tsunami: "tsunami", nhc: "nhc", nga: "navarea", gvp: "volcanes", nws: "nws", aemet: "aemet", mastodon: "mastodon", bluesky: "bluesky", telegram: "telegram" }[String(e.id).split(":")[0]]; }
 function setRefreshing(on) {
   const b = document.getElementById("refreshBtn");
   b.disabled = on; b.innerHTML = on ? "Actualizando…" : 'Actualizar<span class="lbl-long"> ahora</span>';
@@ -1411,6 +1445,7 @@ function openSettings() {
       <span class="sub${st && !st.ok ? " err" : ""}">${esc(sub)}</span></div>`;
   }).join("");
   document.getElementById("retention").value = String(state.settings.retention);
+  document.getElementById("tgChans").value = state.settings.tg;
   document.getElementById("clearZone").innerHTML = `<button class="btn" type="button" id="clearBtn">Borrar histórico</button>`;
   document.getElementById("clearBtn").onclick = askClear;
   if (sheet.hidden) { settingsReturn = document.activeElement; sheet.hidden = false; document.getElementById("setTitle").focus(); }
@@ -1448,6 +1483,8 @@ document.getElementById("setSave").onclick = async () => {
     state.settings.intervals[k] = +document.getElementById("iv_" + k).value;
   }
   state.settings.retention = +document.getElementById("retention").value;
+  const tg = document.getElementById("tgChans").value.split(/[\s,]+/).map((c) => c.replace(/^@|^https?:\/\/t\.me\/(s\/)?/, "")).filter((c) => /^\w{4,64}$/.test(c));
+  if (tg.join(", ") !== state.settings.tg) { state.settings.tg = tg.length ? tg.join(", ") : TG_DEFAULT; delete lastRun.telegram; delete state.live.telegram; }
   store.set("settings", state.settings);
   closeSettings();
   if (db) { try { await db.doc("config/ajustes").set(state.settings); } catch (e) { console.warn(e); } }

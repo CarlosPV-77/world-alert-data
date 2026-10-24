@@ -1,6 +1,7 @@
 // World Alert sources: official hazard feeds and geolocated news, normalized to one event shape.
 import { XMLParser } from "fast-xml-parser";
 import { inflateRawSync, gunzipSync } from "node:zlib";
+import { social } from "./_social.js";
 
 const UA = "WorldAlert/1.0 (personal hazard map)";
 const xml = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "@", removeNSPrefix: false });
@@ -294,6 +295,10 @@ const SOURCES = {
 
   async conflictos() { return news("conflictos", "conflicto", isConflicto); },
   async atentados() { return news("atentados", "atentado", isAtentado); },
+
+  async mastodon(q) { return social("mastodon", q); },
+  async bluesky(q) { return social("bluesky", q); },
+  async telegram(q) { return social("telegram", q); },
 };
 
 export async function collect(q = {}) {
