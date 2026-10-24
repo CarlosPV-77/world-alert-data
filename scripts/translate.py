@@ -111,5 +111,7 @@ for f in files:
             if t:
                 e["headlineEs"] = t[0].upper() + t[1:]
                 done += 1
+                if done <= 5:  # a few in the log, to keep an eye on the quality
+                    print(f"  {lang}: {e['headline']}\n  es: {e['headlineEs']}")
     f.write_text(json.dumps(data, ensure_ascii=False))
     print(f"{f.name}: {done} new translations, {len(cache)} known from the earlier copy")
