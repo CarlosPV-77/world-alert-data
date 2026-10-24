@@ -1,0 +1,33 @@
+name: GDELT news
+# GDELT refuses Vercel's servers, so this job reads it every 15 minutes and publishes
+# conflictos.json and atentados.json on the "live" branch, which the map's bridge reads.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: gdelt
+  cancel-in-progress: false
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm install --no-audit --no-fund
+      - run: node scripts/fetch.mjs
+        env: { SOURCES: "conflictos,atentados" }
+      # One orphan commit, force-pushed, so the branch never grows a history.
+      - name: Publish to live branch
+        run: |
+          mkdir -p /tmp/live && cp data/conflictos.json data/atentados.json /tmp/live/
+          cd /tmp/live
+          git init -q -b live
+          git config user.name "world-alert-bot"
+          git config user.email "world-alert-bot@users.noreply.github.com"
+          git add . && git commit -qm "GDELT $(date -u +%FT%TZ)"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" live

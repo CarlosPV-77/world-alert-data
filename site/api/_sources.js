@@ -93,10 +93,12 @@ async function gdeltNews(cat, keep, files = 4) {
   const latest = await get(`${GDELT_BASE}lastupdate.txt`, "text");
   const stamps = gdeltStamps(latest, files);
   const rows = [], errs = [];
+  let loaded = 0;
   for (const s of stamps) {
-    try { rows.push(...(await gdeltRows(s))); } catch (e) { errs.push(`${s}: ${e.message}`); }
+    try { rows.push(...(await gdeltRows(s))); loaded++; } catch (e) { errs.push(`${s}: ${e.message}`); }
   }
-  if (!rows.length && errs.length) throw new Error(errs.join(" / "));
+  if (!loaded) throw new Error(errs.join(" / "));
+  const window = loaded * 15 >= 60 ? "la última hora" : `los últimos ${loaded * 15} min`;
   const groups = new Map();
   for (const e of rows.filter(keep)) {
     const key = `${e.place}|${e.lat.toFixed(1)}|${e.lon.toFixed(1)}`;
@@ -116,13 +118,25 @@ async function gdeltNews(cat, keep, files = 4) {
     return {
       id: `gdelt:${cat}:${g.place}:${g.lat.toFixed(1)},${g.lon.toFixed(1)}`, cat,
       title: `${label}: ${clip(g.place, 90)}`,
-      desc: `${g.n} ${g.n === 1 ? "suceso" : "sucesos"} codificados por GDELT en la última hora, con ${g.articles} ${g.articles === 1 ? "artículo" : "artículos"} de prensa${outlets.length ? ` (${outlets.slice(0, 4).join(", ")})` : ""}.`,
+      desc: `${g.n} ${g.n === 1 ? "suceso" : "sucesos"} codificados por GDELT en ${window}, con ${g.articles} ${g.articles === 1 ? "artículo" : "artículos"} de prensa${outlets.length ? ` (${outlets.slice(0, 4).join(", ")})` : ""}.`,
       lat: g.lat, lon: g.lon, time: g.time || new Date().toISOString(),
       sev: g.articles >= 40 ? 4 : g.articles >= 15 ? 3 : g.articles >= 5 ? 2 : 1,
       articles: g.articles, outlets: outlets.slice(0, 6), url: g.url, src: "GDELT (prensa)",
       verified: outlets.length >= 2, vlabel: outlets.length >= 2 ? `${outlets.length} medios` : "1 medio",
     };
   });
+}
+
+// GDELT answers 404 to Vercel's servers but not to GitHub's, so on Vercel the news layers come
+// from the copy the "gdelt" workflow publishes every 15 minutes on the repo's live branch.
+const MIRROR = "https://raw.githubusercontent.com/CarlosPV-77/world-alert-data/live/";
+
+async function news(src, cat, keep) {
+  if (!process.env.VERCEL) return gdeltNews(cat, keep);
+  const d = await get(`${MIRROR}${src}.json`);
+  const st = d.status?.[src];
+  if (st && !st.ok && !d.events?.length) throw new Error(`copia de GitHub: ${st.error}`);
+  return d.events || [];
 }
 
 function quakeSev(m) { return m >= 7 ? 4 : m >= 6 ? 3 : m >= 4.5 ? 2 : 1; }
@@ -207,8 +221,8 @@ const SOURCES = {
     }).filter(Boolean);
   },
 
-  async conflictos() { return gdeltNews("conflicto", isConflicto); },
-  async atentados() { return gdeltNews("atentado", isAtentado); },
+  async conflictos() { return news("conflictos", "conflicto", isConflicto); },
+  async atentados() { return news("atentados", "atentado", isAtentado); },
 };
 
 export async function collect(q = {}) {
