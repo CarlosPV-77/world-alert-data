@@ -2,6 +2,7 @@
 import { XMLParser } from "fast-xml-parser";
 import { inflateRawSync, gunzipSync } from "node:zlib";
 import { social } from "./_social.js";
+import { accidents } from "./_accidents.js";
 
 const UA = "WorldAlert/1.0 (personal hazard map)";
 const xml = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "@", removeNSPrefix: false });
@@ -299,6 +300,9 @@ const SOURCES = {
   async mastodon(q) { return social("mastodon", q); },
   async bluesky(q) { return social("bluesky", q); },
   async telegram(q) { return social("telegram", q); },
+
+  async aereos() { return accidents("aereo"); },
+  async maritimos() { return accidents("naval"); },
 };
 
 export async function collect(q = {}) {

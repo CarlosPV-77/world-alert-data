@@ -67,7 +67,7 @@ function placeOf(text, lang) {
     s += Math.min(0.4, (c[4] || 0) / 5e7);
     if (s > bestScore) { bestScore = s; best = c; bestKey = key; }
   }
-  const name = best[3] === 1 ? best[2] : bestKey.replace(/(^|\s)\p{L}/gu, (m) => m.toUpperCase());
+  const name = best[3] === 1 ? best[2] : bestKey.replace(/(^|\s)\p{L}/gu, (m) => m.toUpperCase()).replace(/ (Of|De|Del|La|Las|Los|El|The)\b/g, (m) => m.toLowerCase());
   return { lat: best[0], lon: best[1], country: best[2], name };
 }
 
