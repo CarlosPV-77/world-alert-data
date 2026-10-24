@@ -2,6 +2,7 @@
 // web preview of public Telegram channels. Posts rarely carry coordinates, so the place is read from
 // the text with a small gazetteer (Natural Earth cities, regions and countries). Everything is unverified.
 import { readFileSync } from "node:fs";
+import { notAlert } from "./_notalert.js";
 
 const UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36";
 const DAY = 24 * 3600e3;
@@ -133,7 +134,7 @@ function toEvents(posts, net) {
     const t = Date.parse(p.time);
     if (!p.text || !Number.isFinite(t) || now - t > DAY) continue;
     const topic = topicOf(p.text);
-    if (!topic || ((topic[0] === "sismo" || topic[0] === "tsunami") && isQuakeBot(p.text))) continue;
+    if (!topic || ((topic[0] === "sismo" || topic[0] === "tsunami") && isQuakeBot(p.text)) || notAlert(p.text)) continue;
     const place = placeOf(p.text, p.lang);
     if (!place) continue;
     const key = `${topic[0]}|${place.lat.toFixed(1)}|${place.lon.toFixed(1)}`;

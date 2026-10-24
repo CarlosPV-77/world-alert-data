@@ -197,6 +197,17 @@ main { display: grid; grid-template-columns: 1fr minmax(320px, 380px); min-heigh
 .aacts .btn.primary { color: var(--accent-ink); }
 .aacts svg, .detail .btn svg { width: 15px; height: 15px; }
 .btn.saved { border-color: var(--accent); color: var(--accent); }
+.falsebox { flex: 1 0 100%; display: grid; gap: 8px; padding: 10px; background: var(--room); border: 1px dashed var(--line-2); }
+.falsebox .fq { font-family: var(--font-sign); font-weight: 600; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; }
+.falsebox .fwhy { display: flex; flex-wrap: wrap; gap: 6px; }
+.falsebox .fmute { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; color: var(--muted); }
+.falsebox .fmute span { flex: 1 0 100%; }
+.falsebox label { display: inline-flex; align-items: center; gap: 6px; color: var(--fg); }
+.falsebox .linkbtn { justify-self: start; }
+.falselist { display: grid; font-size: 13px; }
+.falselist .frow2 { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
+.falselist .sub { grid-column: 1; font-size: 12px; color: var(--muted); }
+.falselist .btn { grid-row: 1 / span 2; grid-column: 2; }
 .btn.saved svg path { fill: currentColor; }
 .aacts .pager { margin-left: auto; display: flex; gap: 6px; align-items: center; font-family: var(--font-data); font-size: 12px; color: var(--muted); }
 .aacts .pager .btn { padding: 4px 9px; }
@@ -484,6 +495,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
       <input type="text" id="tgChans" spellcheck="false" autocomplete="off" aria-describedby="tgHint">
       <span class="sub" id="tgHint">Nombres de canales públicos separados por comas, tal como aparecen en t.me/nombre. Máximo 20.</span>
     </div>
+    <div id="falseZone"></div>
     <div class="frow" style="align-items:center">
       <label for="retention" class="label" style="flex:0 0 auto">Conservar el histórico</label>
       <select id="retention">
@@ -989,6 +1001,7 @@ function markerSize(e) {
 }
 function passes(e, anyCat) {
   if (!anyCat && !state.cats[e.cat]) return false;
+  if (isFalse(e)) return false;
   if ((e.sev || 1) < state.minSev) return false;
   const from = state.period ? Date.now() - state.period * HOUR : 0;
   const t = Math.max(Date.parse(e.time) || 0, Date.parse(e.updated) || 0);
@@ -1173,7 +1186,7 @@ function counts() {
 }
 const sw = '<span class="tg" aria-hidden="true"></span>';
 // Redraws replace the buttons; keep keyboard focus on the same control afterwards.
-const FOCUS_KEYS = ["data-pane", "data-cat", "data-group", "data-open", "data-ov", "data-id", "data-save", "data-act", "data-del", "id"];
+const FOCUS_KEYS = ["data-pane", "data-cat", "data-group", "data-open", "data-ov", "data-id", "data-save", "data-act", "data-del", "data-false", "data-falsewhy", "data-unfalse", "data-unmute", "id"];
 function keepFocus(box, redraw) {
   const f = document.activeElement;
   const key = f && box.contains(f) ? FOCUS_KEYS.map((a) => f.getAttribute(a) && `[${a}="${CSS.escape(f.getAttribute(a))}"]`).find(Boolean) : null;
@@ -1305,6 +1318,7 @@ const VICO = {
   yes: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.8l2.6 1.9 3.2-.1 1 3 2.6 1.9-1 3.1 1 3.1-2.6 1.9-1 3-3.2-.1L12 22.2l-2.6-1.9-3.2.1-1-3-2.6-1.9 1-3.1-1-3.1 2.6-1.9 1-3 3.2.1z" fill="var(--ok)"/><path d="M7.6 12.2l3 3 5.8-6" fill="none" stroke="#05080c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
   no: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="var(--s3)" stroke-width="2" stroke-dasharray="3.2 2.4"/><text x="12" y="16.4" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--s3)" font-family="IBM Plex Sans, sans-serif">?</text></svg>`,
 };
+const ICO_FALSE = `<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M3.6 12.4l8.8-8.8" stroke="currentColor" stroke-width="1.5"/></svg>`;
 const ICO_SAVE = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 1.5h9v13L8 11.2 3.5 14.5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>`;
 const ICO_NEWS = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9 2.5h4.5V7M13.5 2.5L7.5 8.5M11.5 9.5v4h-9v-9h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const isNews = (e) => e.verified === false || !!e.vlabel;
@@ -1330,6 +1344,60 @@ function saveBtn(id) {
 state.saved = new Map((store.get("saved") || []).map((e) => [e.id, e]));
 state.showSaved = false;
 const eventOf = (id) => state.events.get(id) || state.saved.get(id);
+// ---------- false alerts ----------
+// Alerts marked as false (an article or study about a hazard, clickbait, a hoax) and outlets silenced by the
+// viewer. Both live in this browser and hide matching alerts everywhere: map, queue, incoming tab and counts.
+// Press and social alerts keep one id per place, so a mark only hides that place for a day; a new report there
+// after that shows again.
+const FALSE_WHY = { articulo: "Artículo o estudio, no un suceso", bulo: "Clickbait o bulo", otro: "No es una alerta real" };
+const FALSE_HOLD = 24 * HOUR;
+state.falsed = new Map((store.get("false") || []).map((x) => [x.id, x]));
+state.muted = new Set(store.get("muted") || []);
+state.falseAsk = null;
+function isFalse(e) {
+  const f = state.falsed.get(e.id);
+  if (f && (Date.parse(e.time) || 0) < Date.parse(f.at) + FALSE_HOLD) return true;
+  const o = e.outlets || [];
+  return o.length > 0 && o.every((x) => state.muted.has(x));
+}
+function falseUi(e) {
+  if (state.falseAsk !== e.id) return `<button type="button" class="btn" data-false="${esc(e.id)}">${ICO_FALSE}Marcar como falsa</button>`;
+  const outs = (e.outlets || []).slice(0, 4);
+  return `<div class="falsebox" role="group" aria-label="Por qué es falsa">
+    <span class="fq">¿Por qué no es una alerta de verdad?</span>
+    <div class="fwhy">${Object.entries(FALSE_WHY).map(([k, t]) => `<button type="button" class="btn" data-falsewhy="${k}">${t}</button>`).join("")}</div>
+    ${outs.length ? `<div class="fmute"><span>Ocultar también todo lo que publique:</span>${outs.map((o) => `<label><input type="checkbox" value="${esc(o)}">${esc(o)}</label>`).join("")}</div>` : ""}
+    <button type="button" class="linkbtn" data-falsecancel="1">Cancelar</button></div>`;
+}
+function falseClick(b) {
+  if (b.dataset.false) { state.falseAsk = b.dataset.false; return true; }
+  if (b.dataset.falsecancel) { state.falseAsk = null; return true; }
+  if (!b.dataset.falsewhy) return false;
+  const id = state.falseAsk, e = eventOf(id);
+  state.falseAsk = null;
+  if (!e) return true;
+  const mute = [...b.closest(".falsebox").querySelectorAll("input:checked")].map((x) => x.value);
+  state.falsed.set(id, { id, title: e.title, cat: e.cat, why: b.dataset.falsewhy, at: new Date().toISOString() });
+  mute.forEach((o) => state.muted.add(o));
+  storeFalse();
+  if (state.selected === id) state.selected = null;
+  if (card?.id === id) closeCard();
+  const i = shown.findIndex((x) => x.id === id); if (i >= 0) shown.splice(i, 1);
+  render(); renderAlerts();
+  announce("Alerta marcada como falsa");
+  banner(`Marcada como falsa: ${esc(e.title)}${mute.length ? ` · ${mute.length === 1 ? "medio silenciado" : `${mute.length} medios silenciados`}` : ""}. Puedes restaurarla en Ajustes.`, "", { label: "Deshacer", onClick: () => {
+    state.falsed.delete(id); mute.forEach((o) => state.muted.delete(o)); storeFalse(); banner(null); render();
+  } });
+  clearTimeout(falseTimer); falseTimer = setTimeout(() => banner(null), 10000);
+  return true;
+}
+let falseTimer = null;
+function storeFalse() {
+  // Marks older than 30 days are forgotten; by then the alert has left the feeds.
+  const old = Date.now() - 30 * 24 * HOUR;
+  for (const [k, f] of state.falsed) if (Date.parse(f.at) < old) state.falsed.delete(k);
+  store.set("false", [...state.falsed.values()]); store.set("muted", [...state.muted]);
+}
 function toggleSave(id) {
   const e = eventOf(id); if (!e) return;
   if (state.saved.has(id)) state.saved.delete(id); else state.saved.set(id, { ...compact(e), savedAt: new Date().toISOString() });
@@ -1391,6 +1459,7 @@ function renderAlerts() {
       <button type="button" class="btn primary" data-act="see">Ver en el mapa</button>
       ${newsBtn(e)}${saveBtn(e.id)}
       <button type="button" class="btn" data-act="dismiss">Descartar</button>
+      ${falseUi(e)}
       ${list.length > 1 ? `<span class="pager"><button type="button" class="btn" data-act="prev" aria-label="Incidencia anterior"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M7.5 2.5 4 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></button>${aIdx + 1} / ${list.length}<button type="button" class="btn" data-act="next" aria-label="Incidencia siguiente"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M4.5 2.5 8 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></button></span>` : ""}
     </div>`);
 }
@@ -1405,6 +1474,8 @@ document.getElementById("atab").addEventListener("click", () => {
   renderAlerts();
 });
 document.getElementById("abody").addEventListener("click", (ev) => {
+  const fb = ev.target.closest("[data-false],[data-falsewhy],[data-falsecancel]");
+  if (fb && falseClick(fb)) { renderAlerts(); return; }
   const b = ev.target.closest("[data-act],[data-save]"); if (!b) return;
   const list = shown.filter((x) => state.events.has(x.id)), cur = list[aIdx];
   if (b.dataset.save) return toggleSave(b.dataset.save);
@@ -1521,7 +1592,7 @@ function detailHtml(e) {
     <dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
     ${postList(e)}
     ${vmark(e)}
-    <div class="aacts">${newsBtn(e)}${saveBtn(e.id)}</div>`;
+    <div class="aacts">${newsBtn(e)}${saveBtn(e.id)}${falseUi(e)}</div>`;
 }
 function renderDetail() {
   const el = document.getElementById("detail");
@@ -1545,9 +1616,16 @@ function mountCard(m, lngLat, html, info, offset = 18) {
   card = { ...info, popup };
 }
 function openCard(m, e) { mountCard(m, [+e.lon, +e.lat], detailHtml(e), { id: e.id }); }
+function refreshCard() {
+  if (!card || card.ship) return;
+  const e = eventOf(card.id), box = card.popup.getElement()?.querySelector(".detail");
+  if (e && box) keepFocus(box, () => (box.innerHTML = detailHtml(e)));
+}
 function closeCard() { if (card) { const c = card; card = null; c.popup.remove(); } }
 for (const id of ["detail"]) document.getElementById(id).addEventListener("click", detailClick);
 function detailClick(ev) {
+  const fb = ev.target.closest("[data-false],[data-falsewhy],[data-falsecancel]");
+  if (fb && falseClick(fb)) { renderDetail(); refreshCard(); return; }
   const b = ev.target.closest("[data-close],[data-save]"); if (!b) return;
   if (card?.ship && b.closest(".mcard")) return closeCard();
   if (b.dataset.save) return toggleSave(b.dataset.save);
@@ -1891,10 +1969,25 @@ function openSettings() {
   }).join("");
   document.getElementById("retention").value = String(state.settings.retention);
   document.getElementById("tgChans").value = state.settings.tg;
+  renderFalseZone();
   document.getElementById("clearZone").innerHTML = `<button class="btn" type="button" id="clearBtn">Borrar histórico</button>`;
   document.getElementById("clearBtn").onclick = askClear;
   if (sheet.hidden) { settingsReturn = document.activeElement; sheet.hidden = false; document.getElementById("setTitle").focus(); }
 }
+// Marked-false alerts and silenced outlets, each with a way back. Changes apply at once.
+function renderFalseZone() {
+  const box = document.getElementById("falseZone");
+  const list = [...state.falsed.values()].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  keepFocus(box, () => box.innerHTML = `<div class="label">Marcadas como falsas</div>
+    <p class="hint" style="margin:4px 0 0">Se ocultan del mapa, la lista y los avisos. Si llega una noticia nueva del mismo sitio pasadas 24 horas, vuelve a mostrarse.</p>
+    <div class="falselist">${list.length ? list.map((f) => `<div class="frow2"><span>${esc(f.title)}</span><span class="sub">${esc(FALSE_WHY[f.why] || "")} · ${esc(rel(f.at))}</span><button type="button" class="btn" data-unfalse="${esc(f.id)}">Restaurar</button></div>`).join("") : `<div class="frow2"><span class="sub">Ninguna todavía. Usa «Marcar como falsa» en la ficha de una alerta.</span></div>`}</div>
+    ${state.muted.size ? `<div class="label" style="margin-top:10px">Medios silenciados</div><div class="sel">${[...state.muted].sort().map((o) => `<span class="cchip">${esc(o)}<button type="button" data-unmute="${esc(o)}" aria-label="Dejar de silenciar ${esc(o)}"><svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.6"/></svg></button></span>`).join("")}</div>` : ""}`);
+}
+document.getElementById("falseZone").addEventListener("click", (ev) => {
+  const b = ev.target.closest("[data-unfalse],[data-unmute]"); if (!b) return;
+  if (b.dataset.unfalse) state.falsed.delete(b.dataset.unfalse); else state.muted.delete(b.dataset.unmute);
+  storeFalse(); renderFalseZone(); render();
+});
 let settingsReturn = null;
 function closeSettings() {
   if (sheet.hidden) return;

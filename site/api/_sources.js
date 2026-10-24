@@ -3,6 +3,7 @@ import { XMLParser } from "fast-xml-parser";
 import { inflateRawSync, gunzipSync } from "node:zlib";
 import { social } from "./_social.js";
 import { accidents } from "./_accidents.js";
+import { notAlert, slugText } from "./_notalert.js";
 
 const UA = "WorldAlert/1.0 (personal hazard map)";
 const xml = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "@", removeNSPrefix: false });
@@ -102,7 +103,8 @@ async function gdeltNews(cat, keep, files = 4) {
   if (!loaded) throw new Error(errs.join(" / "));
   const window = loaded * 15 >= 60 ? "la última hora" : `los últimos ${loaded * 15} min`;
   const groups = new Map();
-  for (const e of rows.filter(keep)) {
+  // Article links whose slug reads like a study, an explainer or clickbait are not incidents.
+  for (const e of rows.filter((r) => keep(r) && !notAlert(slugText(r.url)))) {
     const key = `${e.place}|${e.lat.toFixed(1)}|${e.lon.toFixed(1)}`;
     const g = groups.get(key) || { approx: e.geoType === "1" || e.geoType === "2" || e.geoType === "5", place: e.place, cc: e.cc, lat: e.lat, lon: e.lon, n: 0, articles: 0, time: null, domains: new Set(), url: null, codes: new Map() };
     g.n++; g.articles += e.articles;

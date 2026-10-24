@@ -3,6 +3,7 @@
 // the social layer. A story counts as confirmed when two or more outlets report it.
 import { XMLParser } from "fast-xml-parser";
 import { placeOf } from "./_social.js";
+import { notAlert } from "./_notalert.js";
 
 const UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36";
 const xml = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "@" });
@@ -55,7 +56,7 @@ export async function accidents(kind) {
   const now = Date.now(), groups = new Map();
   for (const it of items) {
     if (!Number.isFinite(it.time) || now - it.time > HOURS * 3600e3) continue;
-    if (!k.craft.test(it.title) || !k.event.test(it.title) || NOT_NEWS.test(it.title)) continue;
+    if (!k.craft.test(it.title) || !k.event.test(it.title) || NOT_NEWS.test(it.title) || notAlert(it.title)) continue;
     const place = placeOf(it.title, it.lang);
     if (!place) continue;
     const key = `${place.lat.toFixed(0)}|${place.lon.toFixed(0)}`;
