@@ -25,7 +25,6 @@ body { margin: 0; }
   --fg: #e3ebf2;
   --muted: #8d9eb0;
   --rail: #0a2a52;
-  --rail-2: #0e3466;
   --rail-line: #1d4d8a;
   --rail-fg: #f2f6fb;
   --rail-muted: #a9bfdb;
@@ -78,7 +77,12 @@ header.top { display: flex; align-items: center; gap: 10px 22px; flex-wrap: wrap
   .brand { letter-spacing: .08em; }
   .clock { min-width: 0; }
   .status { font-size: 11px; }
-  .legend { bottom: calc(48px + env(safe-area-inset-bottom, 0px)); }
+}
+/* Tablet: the source status gets its own line under the clocks. */
+@media (min-width: 761px) and (max-width: 1100px) {
+  header.top { flex-wrap: wrap; row-gap: 6px; }
+  .actions { margin-left: auto; }
+  .status { order: 9; flex: 1 0 100%; -webkit-line-clamp: 1; }
 }
 .actions { display: flex; gap: 6px; }
 .btn { background: var(--panel-2); border: 1px solid var(--line-2); border-radius: var(--r); padding: 6px 12px; font-family: var(--font-sign); font-weight: 600; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; line-height: 1.2; }
@@ -103,7 +107,7 @@ main { display: grid; grid-template-columns: 1fr minmax(320px, 380px); min-heigh
 .zoom button { width: 36px; height: 36px; display: grid; place-items: center; background: var(--panel); border: 1px solid var(--line-2); border-radius: var(--r); color: var(--fg); }
 .zoom button:hover { border-color: var(--accent); }
 .zoom svg { width: 16px; height: 16px; }
-.legend { z-index: 2; position: absolute; left: 12px; bottom: calc(34px + env(safe-area-inset-bottom, 0px)); background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--line-2); border-radius: var(--r); padding: 8px 10px; font-size: 12px; display: grid; gap: 6px; max-width: calc(100% - 80px); }
+.legend { z-index: 2; position: absolute; left: 12px; bottom: calc(var(--attrib-h, 24px) + 10px + env(safe-area-inset-bottom, 0px)); background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--line-2); border-radius: var(--r); padding: 8px 10px; font-size: 12px; display: grid; gap: 6px; max-width: calc(100% - 80px); }
 .legend .row { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
 .legend .sw { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); }
 .legend .sev { font-style: normal; padding: 0 4px; height: 16px; display: inline-grid; place-items: center; font-family: var(--font-sign); font-size: 11px; font-weight: 700; color: var(--ink); }
@@ -291,7 +295,9 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
   .status { grid-column: 1 / -1; grid-row: 3; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; font-size: 11px; }
   .actions .btn { padding-inline: 10px; }
   .actions .lbl-long { display: none; }
-  .asheet .body { max-height: 46vh; }
+  .asheet .body { max-height: 30vh; }
+  .asheet .aacts { position: sticky; bottom: -14px; background: var(--panel); padding-bottom: 6px; z-index: 1; }
+  .mapwrap.dock-open .legend { display: none; }
   .app { height: auto; min-height: 100%; }
   main { grid-template-columns: 1fr; }
   .mapwrap { height: 58vh; }
@@ -336,7 +342,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
           <span class="sw"><i class="sev" style="background:var(--s2)">P3</i>Media</span>
           <span class="sw"><i class="sev" style="background:var(--s1)">P4</i>Baja</span>
           <span class="sw"><i class="hatch"></i>Territorio disputado</span>
-          <span class="sw" id="legendNight"><i class="sev" style="background:var(--night);opacity:.75;border:1px solid var(--border)"></i>Noche y crepúsculos</span>
+          <span class="sw" id="legendNight"><i class="sev" style="background:var(--night);opacity:.75;border:1px solid var(--line-2)"></i>Noche y crepúsculos</span>
         </div>
       </div>
       <div class="zoom"><button type="button" id="zin" aria-label="Acercar"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square"/></svg></button><button type="button" id="zout" aria-label="Alejar"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square"/></svg></button><button type="button" id="zreset" aria-label="Ver el mundo entero"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></button></div>
@@ -672,6 +678,13 @@ function applyBase() {
   map.setLayoutProperty("land", "visibility", state.base === "dark" ? "visible" : "none");
 }
 function layout() { map.resize(); }
+// The legend sits just above the map attribution, whose height changes with the width and when it folds.
+const attribBox = document.querySelector("#map .maplibregl-ctrl-bottom-right");
+if (attribBox && window.ResizeObserver) new ResizeObserver(() => {
+  document.getElementById("mapwrap").style.setProperty("--attrib-h", `${attribBox.offsetHeight}px`);
+}).observe(attribBox);
+// On phones the attribution starts folded behind its (i) button so it does not cover the map.
+if (matchMedia("(max-width: 760px)").matches) map.once("idle", () => { const a = document.querySelector("#map .maplibregl-ctrl-attrib"); a?.classList.remove("maplibregl-compact-show"); a?.removeAttribute("open"); });
 
 // ---------- day / night (NOAA solar position formulas) ----------
 const RAD = Math.PI / 180;
@@ -979,7 +992,7 @@ function renderAlerts() {
   const dock = document.getElementById("dock"), tab = document.getElementById("atab");
   const list = shown.filter((x) => state.events.has(x.id));
   document.getElementById("mapwrap").classList.toggle("has-dock", list.length > 0);
-  if (!list.length) { shown.length = 0; dock.hidden = true; aOpen = false; return; }
+  if (!list.length) { shown.length = 0; dock.hidden = true; aOpen = false; document.getElementById("mapwrap").classList.remove("dock-open"); return; }
   dock.hidden = false;
   aIdx = Math.min(aIdx, list.length - 1);
   // Folded, the tab shows the most serious pending alert.
@@ -987,6 +1000,7 @@ function renderAlerts() {
   const cur = list[aIdx], e = aOpen ? state.events.get(cur.id) : top;
   dock.style.setProperty("--sev", sevColor(e.sev));
   dock.classList.toggle("open", aOpen);
+  document.getElementById("mapwrap").classList.toggle("dock-open", aOpen);
   tab.setAttribute("aria-expanded", String(aOpen));
   const where = (x) => [...countriesOf(x)].map((c) => BY_ISO.get(c)?.name).filter(Boolean).join(", ");
   tab.innerHTML = `${sevIcon(top.sev, top.sev >= 4 && !aOpen ? "pulse" : "")}

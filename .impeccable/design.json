@@ -1,0 +1,635 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-24T13:38:38+00:00",
+  "title": "Design System: World Alert",
+  "extensions": {
+    "colorMeta": {
+      "room": {
+        "role": "neutral",
+        "displayName": "Room",
+        "canonical": "#05080c",
+        "cssVar": "--room",
+        "tonalRamp": [
+          "#080c10",
+          "#21262a",
+          "#3e4348",
+          "#5d6268",
+          "#7d8389",
+          "#a0a6ac",
+          "#c4cad0",
+          "#e9eff6"
+        ]
+      },
+      "wall": {
+        "role": "neutral",
+        "displayName": "Wall",
+        "canonical": "#070c12",
+        "cssVar": "--wall",
+        "tonalRamp": [
+          "#070c12",
+          "#20262d",
+          "#3c434a",
+          "#5b626a",
+          "#7c838c",
+          "#9ea6af",
+          "#c2cad3",
+          "#e7eff9"
+        ]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "Panel",
+        "canonical": "#0b121a",
+        "cssVar": "--panel",
+        "tonalRamp": [
+          "#060c13",
+          "#1e262f",
+          "#3b434c",
+          "#59626c",
+          "#7a838e",
+          "#9ca6b1",
+          "#c0cad6",
+          "#e5f0fc"
+        ]
+      },
+      "panel-2": {
+        "role": "neutral",
+        "displayName": "Panel 2",
+        "canonical": "#101a25",
+        "cssVar": "--panel-2",
+        "tonalRamp": [
+          "#040c16",
+          "#1c2632",
+          "#384350",
+          "#576370",
+          "#778492",
+          "#99a7b5",
+          "#bdcbda",
+          "#e2f0ff"
+        ]
+      },
+      "panel-3": {
+        "role": "neutral",
+        "displayName": "Panel 3",
+        "canonical": "#16222f",
+        "cssVar": "--panel-3",
+        "tonalRamp": [
+          "#030c17",
+          "#1a2633",
+          "#364352",
+          "#556372",
+          "#758494",
+          "#98a7b8",
+          "#bbcbdd",
+          "#e0f0ff"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "canonical": "#1c2938",
+        "cssVar": "--line",
+        "tonalRamp": [
+          "#030c19",
+          "#192635",
+          "#354353",
+          "#546374",
+          "#748496",
+          "#97a7ba",
+          "#bacbdf",
+          "#dff0ff"
+        ]
+      },
+      "line-2": {
+        "role": "neutral",
+        "displayName": "Rule Strong",
+        "canonical": "#2b3b4e",
+        "cssVar": "--line-2",
+        "tonalRamp": [
+          "#010b1b",
+          "#172638",
+          "#334357",
+          "#526378",
+          "#72849a",
+          "#94a7be",
+          "#b8cbe3",
+          "#ddf1ff"
+        ]
+      },
+      "fg": {
+        "role": "neutral",
+        "displayName": "Console White",
+        "canonical": "#e3ebf2",
+        "cssVar": "--fg",
+        "tonalRamp": [
+          "#070c10",
+          "#20262b",
+          "#3c4348",
+          "#5b6268",
+          "#7c838a",
+          "#9fa6ad",
+          "#c2cad1",
+          "#e8f0f7"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Steel Muted",
+        "canonical": "#8d9eb0",
+        "cssVar": "--muted",
+        "tonalRamp": [
+          "#020c18",
+          "#182634",
+          "#354453",
+          "#536374",
+          "#748496",
+          "#96a7b9",
+          "#bacbde",
+          "#def1ff"
+        ]
+      },
+      "rail": {
+        "role": "primary",
+        "displayName": "Dispatch Rail Blue",
+        "canonical": "#0a2a52",
+        "cssVar": "--rail",
+        "tonalRamp": [
+          "#00072c",
+          "#04244c",
+          "#23426d",
+          "#41638f",
+          "#6284b3",
+          "#83a7d8",
+          "#a7ccfe",
+          "#cbf2ff"
+        ]
+      },
+      "rail-line": {
+        "role": "primary",
+        "displayName": "Rail Line Blue",
+        "canonical": "#1d4d8a",
+        "cssVar": "--rail-line",
+        "tonalRamp": [
+          "#000039",
+          "#00215a",
+          "#0f417d",
+          "#3262a0",
+          "#5384c5",
+          "#75a7eb",
+          "#98ccff",
+          "#bcf2ff"
+        ]
+      },
+      "rail-fg": {
+        "role": "primary",
+        "displayName": "Rail White",
+        "canonical": "#f2f6fb",
+        "cssVar": "--rail-fg",
+        "tonalRamp": [
+          "#090b0e",
+          "#222529",
+          "#3f4246",
+          "#5e6266",
+          "#7f8387",
+          "#a2a5aa",
+          "#c6c9ce",
+          "#ebeff4"
+        ]
+      },
+      "rail-muted": {
+        "role": "primary",
+        "displayName": "Rail Haze",
+        "canonical": "#a9bfdb",
+        "cssVar": "--rail-muted",
+        "tonalRamp": [
+          "#000b1e",
+          "#15263b",
+          "#31435b",
+          "#4f637c",
+          "#70849e",
+          "#92a7c2",
+          "#b5cbe8",
+          "#daf1ff"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Console Signal Blue",
+        "canonical": "#49b3ff",
+        "cssVar": "--accent",
+        "tonalRamp": [
+          "#000043",
+          "#002265",
+          "#004488",
+          "#0066ad",
+          "#0989d2",
+          "#43adf9",
+          "#6bd3ff",
+          "#92f9ff"
+        ]
+      },
+      "accent-ink": {
+        "role": "primary",
+        "displayName": "Signal Ink",
+        "canonical": "#03111f",
+        "cssVar": "--accent-ink",
+        "tonalRamp": [
+          "#010c1a",
+          "#162736",
+          "#324455",
+          "#516375",
+          "#718598",
+          "#93a8bb",
+          "#b7cce0",
+          "#dcf1ff"
+        ]
+      },
+      "p4-baja": {
+        "role": "secondary",
+        "displayName": "P4 Baja Blue",
+        "canonical": "#4aa3e0",
+        "cssVar": "--s1",
+        "tonalRamp": [
+          "#000439",
+          "#00265a",
+          "#00467d",
+          "#0067a0",
+          "#2d8ac5",
+          "#55aeeb",
+          "#7bd3ff",
+          "#a0f9ff"
+        ]
+      },
+      "p3-media": {
+        "role": "secondary",
+        "displayName": "P3 Media Amber",
+        "canonical": "#f0c419",
+        "cssVar": "--s2",
+        "tonalRamp": [
+          "#220000",
+          "#411800",
+          "#623800",
+          "#835a00",
+          "#a67c00",
+          "#cb9f00",
+          "#f0c41a",
+          "#ffea55"
+        ]
+      },
+      "p2-alta": {
+        "role": "secondary",
+        "displayName": "P2 Alta Orange",
+        "canonical": "#ff7b1c",
+        "cssVar": "--s3",
+        "tonalRamp": [
+          "#380000",
+          "#5f0000",
+          "#850000",
+          "#ac3100",
+          "#d35700",
+          "#fb7c24",
+          "#ffa152",
+          "#ffc779"
+        ]
+      },
+      "p1-critica": {
+        "role": "secondary",
+        "displayName": "P1 Crítica Red",
+        "canonical": "#ff4040",
+        "cssVar": "--s4",
+        "tonalRamp": [
+          "#3b0000",
+          "#620000",
+          "#890000",
+          "#b12023",
+          "#d94a45",
+          "#ff7067",
+          "#ff958a",
+          "#ffbbae"
+        ]
+      },
+      "ok": {
+        "role": "tertiary",
+        "displayName": "Official Green",
+        "canonical": "#36d27f",
+        "cssVar": "--ok",
+        "tonalRamp": [
+          "#001900",
+          "#003800",
+          "#005908",
+          "#007b2e",
+          "#009f50",
+          "#1bc472",
+          "#55e995",
+          "#80ffb9"
+        ]
+      },
+      "disputed": {
+        "role": "tertiary",
+        "displayName": "Disputed Ochre",
+        "canonical": "#d6a24a",
+        "cssVar": "--disputed",
+        "tonalRamp": [
+          "#230000",
+          "#431600",
+          "#643600",
+          "#865600",
+          "#aa7813",
+          "#ce9b42",
+          "#f4bf68",
+          "#ffe58e"
+        ]
+      },
+      "night": {
+        "role": "tertiary",
+        "displayName": "Night",
+        "canonical": "#01060b",
+        "cssVar": "--night",
+        "tonalRamp": [
+          "#040c12",
+          "#1c272d",
+          "#38444b",
+          "#57636b",
+          "#78848d",
+          "#9aa7b0",
+          "#becbd4",
+          "#e3f1fa"
+        ]
+      },
+      "sun": {
+        "role": "tertiary",
+        "displayName": "Sun",
+        "canonical": "#f3c94b",
+        "cssVar": "--sun",
+        "tonalRamp": [
+          "#210000",
+          "#401a00",
+          "#603900",
+          "#815a00",
+          "#a47c00",
+          "#c9a001",
+          "#eec445",
+          "#ffea6f"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#05080c",
+        "cssVar": "--ink",
+        "tonalRamp": [
+          "#080c10",
+          "#21262a",
+          "#3e4348",
+          "#5d6268",
+          "#7d8389",
+          "#a0a6ac",
+          "#c4cad0",
+          "#e9eff6"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Signage Display",
+        "purpose": "Brand on the header rail only; uppercase."
+      },
+      "headline": {
+        "displayName": "Incident Headline",
+        "purpose": "Incident titles in the detail block and incoming sheet."
+      },
+      "title": {
+        "displayName": "Console Key",
+        "purpose": "Buttons, layer group names, chips, row category; uppercase."
+      },
+      "label": {
+        "displayName": "Section Signage",
+        "purpose": "Section labels followed by a 1px rule; clock captions."
+      },
+      "priority": {
+        "displayName": "Priority Code",
+        "purpose": "P1 to P4 inside priority blocks, tally and legend."
+      },
+      "body": {
+        "displayName": "Reading",
+        "purpose": "Queue titles (500) and general UI text."
+      },
+      "body-reading": {
+        "displayName": "Reading Long",
+        "purpose": "Incident descriptions and settings hints, muted."
+      },
+      "data-clock": {
+        "displayName": "Wall Clock",
+        "purpose": "Madrid and UTC clocks with seconds."
+      },
+      "data": {
+        "displayName": "Data",
+        "purpose": "Elapsed timers, counts, detail values, source status."
+      }
+    },
+    "shadows": [
+      {
+        "name": "float",
+        "value": "0 6px 18px rgba(0,0,0,.5)",
+        "purpose": "Map tooltip."
+      },
+      {
+        "name": "dropdown",
+        "value": "0 8px 24px rgba(0,0,0,.5)",
+        "purpose": "Country search options."
+      },
+      {
+        "name": "tab",
+        "value": "0 10px 26px rgba(0,0,0,.55)",
+        "purpose": "Folded incoming-incident tab."
+      },
+      {
+        "name": "sheet",
+        "value": "0 16px 40px rgba(0,0,0,.6)",
+        "purpose": "Unfolded incoming-incident sheet."
+      },
+      {
+        "name": "selected-row",
+        "value": "inset 0 0 0 1px var(--accent)",
+        "purpose": "Selected queue row outline; not a lift."
+      }
+    ],
+    "motion": [
+      {
+        "name": "tab-drop",
+        "value": "0.45s cubic-bezier(.2,.9,.3,1.2)",
+        "purpose": "New incoming tab drops from the top edge."
+      },
+      {
+        "name": "sheet-unfold",
+        "value": "grid-template-rows 0.3s ease",
+        "purpose": "Incoming sheet unfolds below the tab."
+      },
+      {
+        "name": "switch",
+        "value": "transform 0.15s",
+        "purpose": "Switch knob and group chevron."
+      },
+      {
+        "name": "live-blink",
+        "value": "2s steps(1) infinite",
+        "purpose": "Live dot in the brand."
+      },
+      {
+        "name": "critical-pulse",
+        "value": "1.2s ease-in-out infinite",
+        "purpose": "Critical severity icon in the incoming sheet."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: reduce",
+        "purpose": "All of the above become instant or static."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact-rail",
+        "value": "1100px"
+      },
+      {
+        "name": "stacked",
+        "value": "760px"
+      },
+      {
+        "name": "touch",
+        "value": "pointer: coarse"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Console Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Default flat square key for side-column and sheet actions.",
+      "html": "<button class=\"ds-btn\" type=\"button\">Actualizar</button>",
+      "css": ".ds-btn{background:var(--panel-2);color:var(--fg);border:1px solid var(--line-2);border-radius:var(--r);padding:6px 12px;font-family:var(--font-sign);font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase;line-height:1.2;cursor:pointer}.ds-btn:hover{border-color:var(--accent);background:var(--panel-3)}.ds-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.ds-btn:disabled{opacity:.45;cursor:default}"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one confirming action in a sheet, e.g. Guardar.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Guardar</button>",
+      "css": ".ds-btn-primary{background:var(--accent);color:var(--accent-ink);border:1px solid var(--accent);border-radius:var(--r);padding:6px 12px;font-family:var(--font-sign);font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase;line-height:1.2;cursor:pointer}.ds-btn-primary:hover{background:color-mix(in srgb,var(--accent) 85%,#fff)}.ds-btn-primary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}"
+    },
+    {
+      "name": "Header Rail with Wall Clocks",
+      "kind": "nav",
+      "refersTo": "header-rail",
+      "description": "Dispatch-blue rail: brand with live dot, Madrid and UTC clocks, source status, actions.",
+      "html": "<header class=\"ds-rail\"><h1 class=\"ds-brand\"><span class=\"ds-dot\"></span>World Alert</h1><div class=\"ds-clocks\"><div class=\"ds-clock\"><span>Madrid</span><time>14:32:07</time></div><div class=\"ds-clock\"><span>UTC</span><time>12:32:07</time></div></div><div class=\"ds-status\">USGS 12 · GDACS 4 · AEMET 9 · hace 1 min</div><button class=\"ds-rbtn\" type=\"button\">Ajustes</button></header>",
+      "css": ".ds-rail{display:flex;align-items:center;gap:10px 22px;background:var(--rail);color:var(--rail-fg);border-bottom:1px solid var(--rail-line);padding:8px 16px}.ds-brand{margin:0;font-family:var(--font-sign);font-weight:700;font-size:21px;letter-spacing:.14em;text-transform:uppercase;display:flex;align-items:center;gap:10px;line-height:1;white-space:nowrap}.ds-dot{width:10px;height:10px;background:var(--ok)}.ds-clocks{display:flex;gap:2px}.ds-clock{display:grid;gap:1px;padding:3px 10px;background:color-mix(in srgb,var(--ink) 55%,var(--rail));border:1px solid var(--rail-line);min-width:92px}.ds-clock span{font-family:var(--font-sign);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--rail-muted)}.ds-clock time{font-family:var(--font-data);font-size:16px;letter-spacing:.04em;font-variant-numeric:tabular-nums;color:var(--rail-fg)}.ds-status{flex:1;color:var(--rail-muted);font-family:var(--font-data);font-size:12px}.ds-rbtn{background:color-mix(in srgb,var(--ink) 40%,var(--rail));border:1px solid var(--rail-line);color:var(--rail-fg);border-radius:var(--r);padding:6px 12px;font-family:var(--font-sign);font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}.ds-rbtn:hover{border-color:var(--rail-fg)}.ds-rbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}"
+    },
+    {
+      "name": "Dispatch Queue Row",
+      "kind": "custom",
+      "refersTo": "queue-row",
+      "description": "Signature row: priority block, category and source, title, elapsed T+ timer.",
+      "html": "<div class=\"ds-queue\"><button class=\"ds-ev\" type=\"button\" style=\"--sev:var(--s4)\"><span class=\"ds-prio\">P1</span><span><span class=\"ds-meta\"><span class=\"ds-cat\">Terremotos</span><span>USGS</span></span><span class=\"ds-title\">M6,8 · 42 km al SO de Hualien, Taiwán</span></span><time class=\"ds-elapsed\">T+00:14</time></button><button class=\"ds-ev\" type=\"button\" style=\"--sev:var(--s3)\"><span class=\"ds-prio ds-unv\">P2</span><span><span class=\"ds-meta\"><span class=\"ds-cat\">Atentados</span><span>GDELT</span><span class=\"ds-badge\">Sin verificar</span></span><span class=\"ds-title\">Explosión en un mercado</span></span><time class=\"ds-elapsed\">T+02:41</time></button><button class=\"ds-ev\" type=\"button\" style=\"--sev:var(--s2)\"><span class=\"ds-prio\">P3</span><span><span class=\"ds-meta\"><span class=\"ds-cat\">Avisos de AEMET</span><span>AEMET</span></span><span class=\"ds-title\">Aviso amarillo por lluvias · Litoral de Valencia</span></span><time class=\"ds-elapsed ds-future\">Inicio 18:00</time></button></div>",
+      "css": ".ds-queue{background:var(--panel);width:360px}.ds-ev{display:grid;grid-template-columns:38px 1fr auto;gap:0 12px;align-items:start;padding:9px 14px 9px 12px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);color:var(--fg);font-family:var(--font-body);font-size:14px;cursor:pointer}.ds-ev:hover{background:var(--panel-2)}.ds-ev:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;background:var(--panel-3)}.ds-prio{display:grid;place-items:center;height:26px;font-family:var(--font-sign);font-weight:700;font-size:14px;letter-spacing:.04em;color:var(--ink);background:var(--sev);border:1px solid var(--sev)}.ds-prio.ds-unv{background:transparent;color:var(--sev);border-style:dashed}.ds-meta{display:flex;gap:6px 8px;align-items:center;font-size:11px;color:var(--muted);flex-wrap:wrap}.ds-cat{font-family:var(--font-sign);font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--fg)}.ds-title{display:block;font-weight:500;margin-top:3px;line-height:1.35}.ds-elapsed{font-family:var(--font-data);font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;padding-top:4px}.ds-elapsed.ds-future{color:var(--muted);font-size:11px}.ds-badge{font-family:var(--font-sign);font-size:10px;padding:0 5px;border-radius:var(--r);text-transform:uppercase;letter-spacing:.1em;font-weight:700;line-height:14px;background:color-mix(in srgb,var(--s3) 14%,transparent);color:var(--s3);border:1px dashed var(--s3)}"
+    },
+    {
+      "name": "Incoming-Incident Tab",
+      "kind": "custom",
+      "refersTo": "incoming-tab",
+      "description": "Tab hanging from the top of the map wall announcing new incidents; unfolds into a sheet.",
+      "html": "<div class=\"ds-wall\"><button class=\"ds-atab\" type=\"button\" style=\"--sev:var(--s3)\"><span class=\"ds-txt\"><span class=\"ds-kind\">Incidencia entrante · P2 · Ciclones · Filipinas</span><span class=\"ds-ttl\">Tifón categoría 3 se aproxima a Luzón</span></span><span class=\"ds-count\">3</span><span class=\"ds-chev\">&#9662;</span></button></div>",
+      "css": ".ds-wall{background:var(--wall);display:grid;justify-items:center;padding-bottom:40px;width:560px}.ds-atab{display:flex;align-items:center;gap:10px;max-width:100%;background:var(--panel);color:var(--fg);border:1px solid var(--line-2);border-top:0;border-bottom:3px solid var(--sev);border-radius:0 0 var(--r) var(--r);padding:7px 14px 8px;box-shadow:0 10px 26px rgba(0,0,0,.55);text-align:left;font-family:var(--font-body);cursor:pointer}.ds-atab:hover{background:var(--panel-2)}.ds-atab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.ds-txt{display:grid;min-width:0}.ds-kind{font-family:var(--font-sign);font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--sev);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ds-ttl{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ds-count{font-family:var(--font-data);font-size:11px;background:var(--panel-3);border:1px solid var(--line-2);padding:1px 7px}.ds-chev{color:var(--muted)}"
+    },
+    {
+      "name": "Priority Tally",
+      "kind": "custom",
+      "refersTo": "priority-tally",
+      "description": "Four-cell count of visible incidents by priority, P1 to P4.",
+      "html": "<div class=\"ds-tally\"><div><span class=\"ds-pc\" style=\"color:var(--s4)\">P1</span><b>2</b><span>Crítica</span></div><div><span class=\"ds-pc\" style=\"color:var(--s3)\">P2</span><b>7</b><span>Alta</span></div><div><span class=\"ds-pc\" style=\"color:var(--s2)\">P3</span><b>18</b><span>Media</span></div><div><span class=\"ds-pc\" style=\"color:var(--s1)\">P4</span><b>41</b><span>Baja</span></div></div>",
+      "css": ".ds-tally{display:grid;grid-template-columns:repeat(4,1fr);background:var(--room);border-bottom:1px solid var(--line);color:var(--fg);width:360px}.ds-tally div{display:grid;gap:1px;padding:8px 4px 7px;text-align:center;border-right:1px solid var(--line)}.ds-tally div:last-child{border-right:0}.ds-pc{font-family:var(--font-sign);font-weight:700;font-size:11px;letter-spacing:.14em}.ds-tally b{font-family:var(--font-data);font-size:20px;font-weight:400;font-variant-numeric:tabular-nums;line-height:1.1}.ds-tally span:last-child{font-family:var(--font-body);font-size:11px;color:var(--muted)}"
+    },
+    {
+      "name": "Country Search and Chip",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Room-well search field and a chosen-country chip.",
+      "html": "<div class=\"ds-cpick\"><input class=\"ds-input\" type=\"search\" placeholder=\"Buscar país y pulsar para añadirlo…\"><span class=\"ds-chip\">España<button type=\"button\" aria-label=\"Quitar\">×</button></span></div>",
+      "css": ".ds-cpick{display:grid;gap:6px;width:340px;justify-items:start}.ds-input{width:100%;background:var(--room);color:var(--fg);border:1px solid var(--line-2);border-radius:var(--r);padding:7px 9px;font-family:var(--font-body);font-size:14px;caret-color:var(--accent)}.ds-input::placeholder{color:var(--muted)}.ds-input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.ds-chip{display:inline-flex;align-items:center;gap:4px;padding:2px 3px 2px 8px;border-radius:var(--r);background:color-mix(in srgb,var(--accent) 16%,var(--panel-2));border:1px solid color-mix(in srgb,var(--accent) 45%,var(--line));color:var(--fg);font-family:var(--font-sign);font-weight:600;letter-spacing:.04em;font-size:12px;text-transform:uppercase}.ds-chip button{background:none;border:0;color:var(--muted);padding:2px 5px;cursor:pointer}.ds-chip button:hover{color:var(--fg)}"
+    },
+    {
+      "name": "Layer Switch Row",
+      "kind": "chip",
+      "refersTo": "layer-switch",
+      "description": "Square switch with category symbol, name and count; the primary action.",
+      "html": "<div class=\"ds-lg\"><button class=\"ds-litem\" role=\"switch\" aria-checked=\"true\" type=\"button\"><span class=\"ds-tg\"></span><span class=\"ds-nm\">Terremotos</span><span class=\"ds-n\">12</span></button><button class=\"ds-litem\" role=\"switch\" aria-checked=\"false\" type=\"button\"><span class=\"ds-tg\"></span><span class=\"ds-nm\">Volcanes</span><span class=\"ds-n\">0</span></button></div>",
+      "css": ".ds-lg{width:340px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel-2);padding:0 10px}.ds-litem{display:flex;align-items:center;gap:9px;padding:6px 2px;width:100%;background:none;border:0;border-top:1px solid var(--line);color:var(--fg);font-family:var(--font-body);font-size:13px;text-align:left;cursor:pointer}.ds-litem:first-child{border-top:0}.ds-litem[aria-checked=\"false\"] .ds-nm{color:var(--muted)}.ds-litem:hover .ds-nm{color:var(--fg)}.ds-litem:focus-visible{outline:2px solid var(--accent);outline-offset:2px}.ds-tg{width:30px;height:16px;background:var(--room);border:1px solid var(--line-2);position:relative;flex:0 0 auto}.ds-tg::after{content:\"\";position:absolute;top:2px;left:2px;width:10px;height:10px;background:var(--muted);transition:transform .15s}[aria-checked=\"true\"]>.ds-tg{background:color-mix(in srgb,var(--accent) 30%,var(--room));border-color:var(--accent)}[aria-checked=\"true\"]>.ds-tg::after{transform:translateX(14px);background:var(--accent)}.ds-n{margin-left:auto;font-family:var(--font-data);color:var(--muted);font-size:12px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Operations Room",
+    "overview": "World Alert is drawn as the emergency operations room of a Spanish 091/110 sala. The map is the video wall, the dark room around it holds everything else, a committed dispatch-blue rail runs across the top carrying the brand, two wall clocks and the source status, and the right column is the dispatch queue where every row carries its priority. The room is quiet and dark so that colour means something: severity colour belongs to incidents, and almost nothing else is allowed to be loud.\n\nDensity is high and deliberate. Rows are tight, separated by 1px rules rather than gaps or cards; corners are square; signage is condensed uppercase; anything that counts, ticks or locates is set in a monospaced data face with tabular figures. The system rejects the generic dark dashboard of rounded cards with one neon accent, and it carries no real police insignia, names or logos; the reference is the room, not the institution.",
+    "keyCharacteristics": [
+      "Room-dark blue-black ground with stepped steel-blue panels; depth by tone, not by cards.",
+      "A solid dispatch-blue header rail is the one large area of colour outside the map.",
+      "Severity is expressed as priority codes P1 to P4, each with its own colour and always with its code in text.",
+      "Three type voices with fixed jobs: Saira Semi Condensed for signage, Public Sans for reading, Azeret Mono for data.",
+      "Square 2px corners, 1px rules, dense rows, 44px touch targets on coarse pointers."
+    ],
+    "rules": [
+      {
+        "name": "The Priority Owns The Heat Rule",
+        "body": "Red, orange and amber are priority colours. They appear only where an incident's severity is being stated (or, for P2 orange, where something is unverified or failing). No decorative use.",
+        "section": "colors"
+      },
+      {
+        "name": "The Green Means Trusted Rule",
+        "body": "Official Green marks verified, official or live. Never use it for success toasts, active states or decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The Code Beside The Colour Rule",
+        "body": "Every severity colour is accompanied by its code (P1 to P4) or its Spanish word (Crítica, Alta, Media, Baja). Colour alone never carries severity.",
+        "section": "colors"
+      },
+      {
+        "name": "The Three Voices Rule",
+        "body": "Signage is Saira uppercase, reading is Public Sans in sentence case, anything that counts, ticks or locates is Azeret Mono with tabular figures. Do not swap jobs between faces.",
+        "section": "typography"
+      },
+      {
+        "name": "The Steady Clock Rule",
+        "body": "Every number that updates in place (clocks, T+ timers, counts) uses `font-variant-numeric: tabular-nums` so nothing jitters as it ticks.",
+        "section": "typography"
+      },
+      {
+        "name": "The Rule Not Gap Rule",
+        "body": "Sections and rows are separated by 1px rules (line), not by whitespace or by cards. Dense lists stay dense.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat Console Rule",
+        "body": "Panels in the side column never cast shadows. Only floating overlays on the wall do.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do state severity as a priority code P1 (Crítica) to P4 (Baja) next to its colour, everywhere it appears.",
+      "Do set the row, tab or marker's `--sev` from the priority scale and let the component colour itself from it.",
+      "Do keep corners square (2px, or 0 for full-width sheets and blocks) and separate rows with 1px rules.",
+      "Do set clocks, timers, counts and coordinates in Azeret Mono with tabular figures.",
+      "Do mark unverified items with dashed outlines as well as P2 orange, so trust reads without colour.",
+      "Do keep every control at 44px or more on coarse pointers, and text fields at 16px.",
+      "Do honour reduced motion: no blink, pulse, drop or unfold animation."
+    ],
+    "donts": [
+      "Don't build the generic dark dashboard: rounded cards with one neon accent.",
+      "Don't use real police insignia, names or logos; the reference is the room, not the institution.",
+      "Don't use green for anything except verified, official or live.",
+      "Don't use priority red, orange or amber for decoration or emphasis.",
+      "Don't put shadows on side-column panels; only overlays floating on the map wall cast them.",
+      "Don't let severity rely on colour alone."
+    ]
+  }
+}
