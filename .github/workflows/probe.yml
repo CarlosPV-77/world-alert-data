@@ -15,5 +15,5 @@ jobs:
           for u in $URLS; do
             echo "== $u"
             curl -sS -m 30 -L -o body -w "HTTP %{http_code} %{size_download}B %{time_total}s\n" "$u" || true
-            head -c 600 body; echo
+            head -c 600 body; echo; sleep 6
           done
