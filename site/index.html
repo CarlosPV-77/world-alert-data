@@ -39,6 +39,13 @@ body { margin: 0; }
   --night: #01060b;
   --sun: #f3c94b;
   --ink: #05080c;
+  /* Ships: hues kept clear of the priority scale (red, orange, amber, blue) and of verified green. */
+  --ship-cargo: #a9b8c6;
+  --ship-tanker: #b48cff;
+  --ship-people: #ff8ad8;
+  --ship-fishing: #7fd6cf;
+  --ship-service: #f2f6fb;
+  --ship-other: #6f7d8a;
   --r: 2px;
   --font-sign: "Saira Semi Condensed", "Arial Narrow", sans-serif;
   --font-body: "Public Sans", system-ui, sans-serif;
@@ -76,7 +83,7 @@ header.top { display: flex; align-items: center; gap: 10px 22px; flex-wrap: wrap
   .actions .lbl-long { display: none; }
   .brand { letter-spacing: .08em; }
   .clock { min-width: 0; }
-  .status { font-size: 11px; }
+  .status { font-size: 12px; }
 }
 /* Tablet: the source status gets its own line under the clocks. */
 @media (min-width: 761px) and (max-width: 1100px) {
@@ -96,6 +103,10 @@ header.top .btn:hover { border-color: var(--rail-fg); }
 
 main { display: grid; grid-template-columns: 1fr minmax(320px, 380px); min-height: 0; }
 
+.skip { position: absolute; left: 8px; top: -60px; z-index: 30; background: var(--accent); color: var(--accent-ink); padding: 10px 14px; font-family: var(--font-sign); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; text-decoration: none; }
+.skip:focus { top: 8px; }
+#side:focus { outline: none; }
+
 /* ---- videowall ---- */
 .mapwrap { position: relative; min-width: 0; min-height: 0; background: var(--wall); }
 #map { position: absolute; inset: 0; }
@@ -114,7 +125,7 @@ main { display: grid; grid-template-columns: 1fr minmax(320px, 380px); min-heigh
 .plabel select { font: inherit; letter-spacing: inherit; text-transform: inherit; background: transparent; border: 0; padding: 0 2px; max-width: 100%; }
 .plabel .n { font-family: var(--font-data); font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--muted); font-size: 12px; white-space: nowrap; }
 /* Date of the satellite picture under the centre of each map. */
-.imgdate { position: absolute; z-index: 3; right: 10px; top: 10px; background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--line-2); border-radius: var(--r); padding: 4px 8px; font-family: var(--font-data); font-size: 11px; color: var(--fg); max-width: calc(100% - 20px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+.imgdate { position: absolute; z-index: 3; right: 10px; top: 10px; background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--line-2); border-radius: var(--r); padding: 4px 8px; font-family: var(--font-data); font-size: 12px; color: var(--fg); max-width: calc(100% - 20px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
 .imgdate b { font-family: var(--font-sign); font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-right: 6px; }
 /* The wall's edges are shared out: the incoming tab hangs from the top centre, the view switch and the imagery date
    stack at the top left, the legend sits bottom left and the zoom keys bottom right. When the wall is too narrow for
@@ -133,6 +144,8 @@ main { display: grid; grid-template-columns: 1fr minmax(320px, 380px); min-heigh
 .maplibregl-ctrl-attrib { background: color-mix(in srgb, var(--panel) 88%, transparent) !important; color: var(--muted); font-size: 10px; }
 .maplibregl-ctrl-attrib a { color: var(--accent); }
 .maplibregl-ctrl-bottom-right { bottom: 0; right: 56px; }
+/* Country maps keep their credits folded behind the (i) button; hovering or focusing it shows them. */
+.pane .maplibregl-ctrl-attrib:not(:hover):not(:focus-within) .maplibregl-ctrl-attrib-inner { display: none; }
 
 .zoom { z-index: 2; position: absolute; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 2px; }
 .zoom button { width: 36px; height: 36px; display: grid; place-items: center; background: var(--panel); border: 1px solid var(--line-2); border-radius: var(--r); color: var(--fg); }
@@ -161,7 +174,7 @@ main { display: grid; grid-template-columns: 1fr minmax(320px, 380px); min-heigh
 .atab .txt { min-width: 0; display: grid; }
 .atab .kind { font-family: var(--font-sign); font-size: 11px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--sev); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .atab .ttl { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.atab .count { font-family: var(--font-data); font-size: 11px; background: var(--panel-3); border: 1px solid var(--line-2); padding: 1px 7px; flex: 0 0 auto; }
+.atab .count { font-family: var(--font-data); font-size: 12px; background: var(--panel-3); border: 1px solid var(--line-2); padding: 1px 7px; flex: 0 0 auto; }
 .atab .chev { color: var(--muted); transition: transform .2s; flex: 0 0 auto; }
 .dock.open .atab .chev { transform: rotate(180deg); }
 .dock.open .atab { border-radius: 0; border-bottom-color: transparent; box-shadow: none; }
@@ -187,7 +200,7 @@ main { display: grid; grid-template-columns: 1fr minmax(320px, 380px); min-heigh
 .btn.saved svg path { fill: currentColor; }
 .aacts .pager { margin-left: auto; display: flex; gap: 6px; align-items: center; font-family: var(--font-data); font-size: 12px; color: var(--muted); }
 .aacts .pager .btn { padding: 4px 9px; }
-.vmark { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; letter-spacing: .04em; margin-top: 4px; }
+.vmark { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; letter-spacing: .04em; margin-top: 4px; }
 .vmark svg { width: 18px; height: 18px; }
 .vmark.yes { color: var(--ok); }
 .vmark.no { color: var(--s3); }
@@ -229,7 +242,10 @@ aside.side { background: var(--panel); border-left: 1px solid var(--line-2); dis
 .litem:hover .nm { color: var(--fg); }
 .litem svg { width: 13px; height: 13px; flex: 0 0 auto; }
 .litem[aria-checked="false"] .nm { color: var(--muted); }
-.litem .hint { display: block; font-size: 11px; color: var(--muted); }
+.litem .hint { display: block; font-size: 12px; color: var(--muted); }
+.shipkey { display: flex; flex-wrap: wrap; gap: 2px 10px; margin-top: 4px; font-size: 12px; color: var(--muted); }
+.shipkey span { display: inline-flex; align-items: center; gap: 5px; }
+.shipkey i { width: 8px; height: 8px; display: inline-block; }
 .lrow { display: flex; gap: 6px; padding: 6px 0 2px; border-top: 1px solid var(--line); flex-wrap: wrap; }
 .lrow .btn { flex: 0 0 auto; }
 #globeBtn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
@@ -245,7 +261,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 .summary div:last-child { border-right: 0; }
 .summary .pc { font-family: var(--font-sign); font-weight: 700; font-size: 11px; letter-spacing: .14em; }
 .summary b { font-family: var(--font-data); font-size: 20px; font-weight: 400; font-variant-numeric: tabular-nums; line-height: 1.1; }
-.summary span { font-size: 11px; color: var(--muted); }
+.summary span { font-size: 12px; color: var(--muted); }
 .savedbar { display: flex; align-items: center; gap: 8px; padding: 6px 16px; border-bottom: 1px solid var(--line); font-size: 12px; }
 .savedbar .btn { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; font-size: 12px; }
 .savedbar svg { width: 13px; height: 13px; }
@@ -257,7 +273,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 .ev.sel { background: var(--panel-3); box-shadow: inset 0 0 0 1px var(--accent); }
 .prio { display: grid; place-items: center; height: 26px; font-family: var(--font-sign); font-weight: 700; font-size: 14px; letter-spacing: .04em; color: var(--ink); background: var(--sev); border: 1px solid var(--sev); }
 .prio.unv { background: transparent; color: var(--sev); border-style: dashed; }
-.ev .meta { display: flex; gap: 6px 8px; align-items: center; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
+.ev .meta { display: flex; gap: 6px 8px; align-items: center; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
 .ev .cat { font-family: var(--font-sign); font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--fg); display: inline-flex; align-items: center; gap: 5px; }
 .ev .cat .pic { width: 14px; height: 14px; color: var(--sev); flex: 0 0 auto; }
 .ebadge { width: 32px; height: 32px; flex: 0 0 auto; display: grid; place-items: center; background: var(--sev); color: var(--ink); border: 1px solid rgba(5,8,12,.85); border-radius: 3px; }
@@ -269,7 +285,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 .ev .title { display: block; font-weight: 500; margin: 3px 0 0; line-height: 1.35; overflow-wrap: anywhere; }
 .ev .sv { color: var(--accent); }
 .ev .elapsed { font-family: var(--font-data); font-size: 12px; color: var(--fg); font-variant-numeric: tabular-nums; white-space: nowrap; padding-top: 4px; }
-.ev .elapsed.future { color: var(--muted); font-size: 11px; }
+.ev .elapsed.future { color: var(--muted); font-size: 12px; }
 .ev.old .elapsed, .ev.old .title { color: var(--muted); }
 .badge { font-family: var(--font-sign); font-size: 10px; padding: 0 5px; border-radius: var(--r); text-transform: uppercase; letter-spacing: .1em; font-weight: 700; line-height: 16px; }
 .badge.ok { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
@@ -278,7 +294,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 .empty { padding: 24px 16px; color: var(--muted); line-height: 1.5; }
 
 .detail { padding: 14px 16px; border-bottom: 1px solid var(--line); background: var(--panel-2); display: grid; gap: 8px; }
-.detail h2 { font-family: var(--font-sign); font-weight: 600; font-size: 21px; margin: 0; line-height: 1.15; text-wrap: balance; }
+.detail h2 { font-family: var(--font-sign); font-weight: 600; font-size: 21px; margin: 0; line-height: 1.15; text-wrap: balance; overflow-wrap: anywhere; }
 .detail p { margin: 0; color: var(--muted); line-height: 1.5; font-size: 13px; max-height: 9em; overflow-y: auto; overflow-wrap: anywhere; }
 .detail a { color: var(--accent); }
 .ebadge.sm { width: 26px; height: 26px; }
@@ -298,14 +314,14 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 .sheet p.hint { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .srcrow { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .srcrow .nm { font-weight: 500; }
-.srcrow .sub { grid-column: 2 / 4; font-size: 11px; color: var(--muted); font-family: var(--font-data); }
+.srcrow .sub { grid-column: 2 / 4; font-size: 12px; color: var(--muted); font-family: var(--font-data); }
 .srcrow .sub.err { color: var(--s3); }
 .tgrow { display: grid; gap: 6px; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .tgrow label { font-weight: 500; }
-.tgrow .sub { font-size: 11px; color: var(--muted); }
+.tgrow .sub { font-size: 12px; color: var(--muted); }
 .posts { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
 .posts li { border-left: 2px dashed var(--s3); padding: 2px 0 2px 10px; }
-.posts .pmeta { font-family: var(--font-data); font-size: 11px; color: var(--muted); }
+.posts .pmeta { font-family: var(--font-data); font-size: 12px; color: var(--muted); }
 .posts p { margin: 3px 0; font-size: 13px; overflow-wrap: anywhere; }
 .posts a { font-size: 12px; color: var(--accent); }
 .sheet .foot { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
@@ -361,19 +377,20 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
   .clocks { grid-column: 1 / -1; grid-row: 2; }
   .clock { min-width: 0; flex: 1; grid-template-columns: auto 1fr; align-items: baseline; gap: 6px; padding: 4px 8px; }
   .clock time { font-size: 14px; }
-  .status { grid-column: 1 / -1; grid-row: 3; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; font-size: 11px; }
+  .status { grid-column: 1 / -1; grid-row: 3; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; font-size: 12px; }
   .actions .btn { padding-inline: 10px; }
   .actions .lbl-long { display: none; }
   .asheet .body { max-height: 30vh; }
   .asheet .aacts { position: sticky; bottom: -14px; background: var(--panel); padding-bottom: 6px; z-index: 1; }
   .mapwrap.dock-open .legend { display: none; }
-  .legend { font-size: 11px; padding: 8px 10px; }
+  .legend { font-size: 12px; padding: 8px 10px; }
   .legend .row.cats { display: none; }
 }
 </style>
 
 </head>
 <body>
+<a class="skip" href="#side">Saltar al panel de incidencias</a>
 <div class="app">
   <header class="top">
     <h1 class="brand"><span class="dot" id="liveDot" aria-hidden="true"></span>World Alert</h1>
@@ -420,7 +437,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
       </div>
       <div class="zoom"><button type="button" id="zin" aria-label="Acercar"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square"/></svg></button><button type="button" id="zout" aria-label="Alejar"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square"/></svg></button><button type="button" id="zreset" aria-label="Ver el mundo entero"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></button></div>
     </div>
-    <aside class="side">
+    <aside class="side" id="side" tabindex="-1">
       <section class="filters">
         <div class="label">Países</div>
         <div class="cpick" id="cpick">
@@ -700,6 +717,8 @@ const SPAIN = await fetch("spain.json").then((r) => (r.ok ? r.json() : null)).ca
 const NAME = ["coalesce", ["get", "name:es"], ["get", "name:latin"], ["get", "name"]];
 const inSpain = (f) => (SPAIN ? ["all", f, ["within", SPAIN]] : null);
 const LABEL_LAYERS = [], LIMIT_LAYERS = [];
+const ROOT_STYLE = getComputedStyle(document.documentElement);
+const tok = (name) => ROOT_STYLE.getPropertyValue(name).trim();
 const HALO = { "text-color": "#eef4f8", "text-halo-color": "rgba(5,12,20,.88)", "text-halo-width": 1.4, "text-halo-blur": 0.3 };
 function addPlaceLayers() {
   map.addSource("omt", { type: "vector", url: "https://tiles.openfreemap.org/planet",
@@ -787,28 +806,28 @@ map.on("load", () => {
   map.addLayer({ id: "land", type: "fill", source: "countries", layout: { visibility: "none" }, paint: { "fill-color": "#2f4559" } });
   map.addLayer({ id: "country-hit", type: "fill", source: "countries", paint: { "fill-color": "#000", "fill-opacity": 0 } });
   map.addSource("country-sel", { type: "geojson", data: empty });
-  map.addLayer({ id: "country-sel-fill", type: "fill", source: "country-sel", paint: { "fill-color": "#49b3ff", "fill-opacity": 0.08 } });
-  map.addLayer({ id: "country-sel-line", type: "line", source: "country-sel", layout: { "line-join": "round" }, paint: { "line-color": "#49b3ff", "line-width": ["interpolate", ["linear"], ["zoom"], 2, 1.4, 8, 2.6] } });
+  map.addLayer({ id: "country-sel-fill", type: "fill", source: "country-sel", paint: { "fill-color": tok("--accent"), "fill-opacity": 0.08 } });
+  map.addLayer({ id: "country-sel-line", type: "line", source: "country-sel", layout: { "line-join": "round" }, paint: { "line-color": tok("--accent"), "line-width": ["interpolate", ["linear"], ["zoom"], 2, 1.4, 8, 2.6] } });
   map.addLayer({ id: "borders", type: "line", source: "countries", paint: { "line-color": "rgba(235,242,248,.6)", "line-width": ["interpolate", ["linear"], ["zoom"], 1, 0.5, 6, 1.4], "line-opacity": ["interpolate", ["linear"], ["zoom"], 4, 1, 5.5, 0] } });
-  map.addLayer({ id: "disputed-fill", type: "fill", source: "disputed", paint: { "fill-color": "#d6a24a", "fill-opacity": 0.28 } });
+  map.addLayer({ id: "disputed-fill", type: "fill", source: "disputed", paint: { "fill-color": tok("--disputed"), "fill-opacity": 0.28 } });
   map.addLayer({ id: "disputed-line", type: "line", source: "disputed", paint: { "line-color": "#f0bd5c", "line-width": 1.4, "line-dasharray": [2, 1.5] } });
   addPlaceLayers();
   map.addSource("zones", { type: "geojson", data: empty });
-  const zoneColor = ["match", ["get", "sev"], 4, "#ff4040", 3, "#ff7b1c", "#f0c419"];
+  const zoneColor = ["match", ["get", "sev"], 4, tok("--s4"), 3, tok("--s3"), tok("--s2")];
   map.addLayer({ id: "zones-fill", type: "fill", source: "zones", paint: { "fill-color": zoneColor, "fill-opacity": 0.3 } });
   map.addLayer({ id: "zones-line", type: "line", source: "zones", paint: { "line-color": zoneColor, "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.8, 9, 2] } });
   map.addSource("night", { type: "geojson", data: empty });
-  map.addLayer({ id: "night", type: "fill", source: "night", paint: { "fill-color": "#01060b", "fill-opacity": 0.2, "fill-antialias": false } });
+  map.addLayer({ id: "night", type: "fill", source: "night", paint: { "fill-color": tok("--night"), "fill-opacity": 0.2, "fill-antialias": false } });
   map.addSource("sun", { type: "geojson", data: empty });
-  map.addLayer({ id: "sun", type: "circle", source: "sun", paint: { "circle-radius": 7, "circle-color": "#f3c94b", "circle-stroke-color": "rgba(243,201,75,.35)", "circle-stroke-width": 6 } });
+  map.addLayer({ id: "sun", type: "circle", source: "sun", paint: { "circle-radius": 7, "circle-color": tok("--sun"), "circle-stroke-color": "rgba(243,201,75,.35)", "circle-stroke-width": 6 } });
   addShipLayers(map);
   addIcons();
   map.addSource("events", { type: "geojson", data: empty });
-  map.addLayer({ id: "crit", type: "circle", source: "events", filter: ["==", ["get", "pulse"], 1], paint: { "circle-radius": 15, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#ff4040", "circle-stroke-width": 2, "circle-stroke-opacity": 0.8 } });
+  map.addLayer({ id: "crit", type: "circle", source: "events", filter: ["==", ["get", "pulse"], 1], paint: { "circle-radius": 15, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": tok("--s4"), "circle-stroke-width": 2, "circle-stroke-opacity": 0.8 } });
   map.addLayer({ id: "events", type: "symbol", source: "events", layout: {
     "icon-image": ["get", "icon"], "icon-size": ["get", "scale"], "icon-allow-overlap": true, "icon-ignore-placement": true, "symbol-sort-key": ["get", "sev"],
   }, paint: { "icon-opacity": ["get", "op"] } });
-  map.addLayer({ id: "sel", type: "circle", source: "events", filter: ["==", ["get", "id"], ""], paint: { "circle-radius": 13, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#ffffff", "circle-stroke-width": 2.5 } });
+  map.addLayer({ id: "sel", type: "circle", source: "events", filter: ["==", ["get", "id"], ""], paint: { "circle-radius": 13, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": tok("--rail-fg"), "circle-stroke-width": 2.5 } });
   // Place names sit above the night shading and alert zones, below the alert markers.
   for (const id of LABEL_LAYERS) if (map.getLayer(id)) map.moveLayer(id, "crit");
   applyBase(); applyOverlays(); applyCountries(false); renderNight(); renderMarkers();
@@ -914,9 +933,8 @@ function renderNight() {
   const sun = solarPosition(Date.now());
   document.getElementById("legendNight").hidden = !state.ov.solar;
   if (!map.getSource("night")) return;
-  map.getSource("night").setData(state.ov.solar ? { type: "FeatureCollection", features: [0, -6, -12, -18].map((a) => belowAltitude(sun, a)) } : empty);
-  map.getSource("sun").setData(state.ov.solar ? { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [((sun[0] + 540) % 360) - 180, sun[1]] } } : empty);
-  syncPanesSoon();
+  feed("night", state.ov.solar ? { type: "FeatureCollection", features: [0, -6, -12, -18].map((a) => belowAltitude(sun, a)) } : empty);
+  feed("sun", state.ov.solar ? { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [((sun[0] + 540) % 360) - 180, sun[1]] } } : empty);
 }
 setInterval(renderNight, 60000);
 
@@ -935,7 +953,10 @@ function hideTip() { tip.hidden = true; }
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 function bindMapUi(map) {
-map.on("mousemove", (ev) => {
+// Hover is resolved once per animation frame, not on every mouse event.
+let moveEv = null, moveFrame = 0;
+map.on("mousemove", (ev) => { moveEv = ev; if (!moveFrame) moveFrame = requestAnimationFrame(() => { moveFrame = 0; hover(moveEv); }); });
+function hover(ev) {
   if (!map.getLayer("events")) return;
   const layers = ["events", "ships", "zones-fill", "disputed-fill", "country-hit"].filter((l) => map.getLayer(l));
   const hit = map.queryRenderedFeatures(ev.point, { layers });
@@ -947,8 +968,8 @@ map.on("mousemove", (ev) => {
   if (dsp) return showTip(ev.originalEvent, `<b>${esc(dsp.properties.n)} · territorio disputado</b><span>${esc(dsp.properties.note || "Soberanía en disputa")}</span>`);
   if (c) return showTip(ev.originalEvent, `<b>${esc(c.properties.n)}</b>`);
   hideTip();
-});
-map.on("mouseout", hideTip);
+}
+map.on("mouseout", () => { cancelAnimationFrame(moveFrame); moveFrame = 0; hideTip(); });
 map.on("click", (ev) => {
   const e = map.getLayer("events") && (map.queryRenderedFeatures(ev.point, { layers: ["events"] })[0] || map.queryRenderedFeatures(ev.point, { layers: ["zones-fill"] })[0]);
   if (e) { hideTip(); select(e.properties.id, false); const d = eventOf(e.properties.id); if (d) openCard(map, d); return; }
@@ -992,8 +1013,8 @@ function renderMarkers(v = visible()) {
       id: e.id, sev, icon: `${picOf(e)}-${sev}${e.verified === false ? "-u" : ""}`, scale: Math.min(1.5, Math.max(0.8, Math.sqrt(markerSize(e) / 150) * 1.05)), op: live ? 0.95 : 0.5,
       pulse: sev >= 4 && live && Date.now() - Date.parse(e.time) < 24 * HOUR ? 1 : 0 } };
   });
-  src.setData({ type: "FeatureCollection", features });
-  map.getSource("zones")?.setData({ type: "FeatureCollection", features: v.filter((e) => e.poly).reverse()
+  feed("events", { type: "FeatureCollection", features });
+  feed("zones", { type: "FeatureCollection", features: v.filter((e) => e.poly).reverse()
     .map((e) => ({ type: "Feature", geometry: e.poly, properties: { id: e.id, sev: Math.min(4, Math.max(1, e.sev || 1)) } })) });
   map.setFilter("sel", ["==", ["get", "id"], state.selected || ""]);
   syncPanesSoon();
@@ -1006,13 +1027,33 @@ const announce = (msg) => { document.getElementById("announcer").textContent = m
 // night) and stay in step with it; only the camera is their own. They are always flat (Mercator).
 const PANES = ["paneA", "paneB"].map((id) => ({ el: document.getElementById(id), map: null, iso: null, loaded: false }));
 let navMain = null, shownView = "world";
+// A country map starts from a copy of the main style; after that it only receives what changes: the live
+// GeoJSON sources (through feed), layer visibility and the selection ring. Copying the whole style on every
+// redraw serialised the borders and every ship each time.
 function paneStyle() { const st = map.getStyle(); st.projection = { type: "mercator" }; return st; }
+const LIVE = {};
+function feed(id, data) {
+  const src = map.getSource(id);
+  if (!src) return;
+  src.setData(data); LIVE[id] = data; syncPanesSoon();
+}
 let syncTimer = null;
 function syncPanesSoon() { if (state.view === "world" || !PANES.some((p) => p.loaded)) return; clearTimeout(syncTimer); syncTimer = setTimeout(syncPanes, 120); }
 function syncPanes() {
   if (!map.getLayer("events")) return;
-  const st = paneStyle();
-  for (const p of PANES) if (p.loaded) { try { p.map.setStyle(st, { diff: true }); } catch (err) { console.warn(err); } }
+  const layers = map.getLayersOrder();
+  for (const p of PANES) if (p.loaded) {
+    const m = p.map, sent = p.sent || (p.sent = {});
+    try {
+      for (const [id, data] of Object.entries(LIVE)) if (sent[id] !== data && m.getSource(id)) { m.getSource(id).setData(data); sent[id] = data; }
+      for (const id of layers) {
+        if (!m.getLayer(id)) continue;
+        const v = map.getLayoutProperty(id, "visibility") || "visible";
+        if ((m.getLayoutProperty(id, "visibility") || "visible") !== v) m.setLayoutProperty(id, "visibility", v);
+      }
+      m.setFilter("sel", map.getFilter("sel"));
+    } catch (err) { console.warn(err); }
+  }
 }
 // Frame the country's main landmass, so France is not zoomed out to show French Guiana too.
 function mainland(f) {
@@ -1218,7 +1259,7 @@ async function drawOutlines() {
   const want = [...state.countries];
   await Promise.all(want.filter((c) => !outlines.has(c)).map((c) =>
     fetch(`countries/${c}.json`).then((r) => (r.ok ? r.json() : BY_ISO.get(c)?.f)).catch(() => BY_ISO.get(c)?.f).then((f) => f && outlines.set(c, f))));
-  map.getSource("country-sel")?.setData({ type: "FeatureCollection", features: [...state.countries].map((c) => outlines.get(c)).filter(Boolean) });
+  feed("country-sel", { type: "FeatureCollection", features: [...state.countries].map((c) => outlines.get(c)).filter(Boolean) });
   syncPanesSoon();
 }
 function applyCountries(fly) {
@@ -1355,7 +1396,8 @@ function renderAlerts() {
 }
 document.getElementById("atab").addEventListener("click", () => {
   aOpen = !aOpen;
-  if (aOpen) {   // open on the most serious one
+  if (aOpen) {   // open on the most serious one, and fold any map card so the two never overlap
+    closeCard();
     const list = shown.filter((x) => state.events.has(x.id));
     let best = 0; list.forEach((x, i) => { if ((state.events.get(x.id).sev || 1) > (state.events.get(list[best].id).sev || 1)) best = i; });
     aIdx = best;
@@ -1492,14 +1534,17 @@ function renderDetail() {
 }
 // The same card opens on the map, next to the alert that was pressed there.
 let card = null;
-function openCard(m, e) {
+// One card builder for alerts and ships. Only one floating sheet at a time: the card folds the incoming sheet.
+function mountCard(m, lngLat, html, info, offset = 18) {
   closeCard();
+  if (aOpen) { aOpen = false; renderAlerts(); }
   const box = document.createElement("div");
-  box.className = "detail mcard-body"; box.innerHTML = detailHtml(e);
-  const popup = new maplibregl.Popup({ className: "mcard", closeButton: false, closeOnClick: false, maxWidth: "340px", offset: 18, focusAfterOpen: false })
-    .setLngLat([+e.lon, +e.lat]).setDOMContent(box).addTo(m);
-  card = { id: e.id, popup };
+  box.className = "detail mcard-body"; box.innerHTML = html;
+  const popup = new maplibregl.Popup({ className: "mcard", closeButton: false, closeOnClick: false, maxWidth: "340px", offset, focusAfterOpen: false })
+    .setLngLat(lngLat).setDOMContent(box).addTo(m);
+  card = { ...info, popup };
 }
+function openCard(m, e) { mountCard(m, [+e.lon, +e.lat], detailHtml(e), { id: e.id }); }
 function closeCard() { if (card) { const c = card; card = null; c.popup.remove(); } }
 for (const id of ["detail"]) document.getElementById(id).addEventListener("click", detailClick);
 function detailClick(ev) {
@@ -1516,10 +1561,12 @@ document.getElementById("mapwrap").addEventListener("click", (ev) => { if (ev.ta
 // Ships are not alerts: they never enter the list, the history or the new-alert tab.
 const SHIPS = new Map(), SHIP_TTL = 30 * 60000;
 const shipSt = { busy: false, again: false, at: 0, error: null };
+// Each AIS kind folds into one of six colour groups (tokens --ship-*), listed under the layer switch.
+const SHIP_GROUP = { cargo: "Carga", tanker: "Petrolero", people: "Pasaje y recreo", fishing: "Pesca", service: "Servicio", other: "Otros" };
 const SHIP_KIND = {
-  carga: ["Carga", "#6fcf97"], petrolero: ["Petrolero o cisterna", "#c58cff"], pasaje: ["Pasaje", "#5ec8ff"],
-  pesca: ["Pesca", "#3fd0c0"], recreo: ["Recreo", "#ff9ad5"], remolcador: ["Remolcador o práctico", "#d8c27a"],
-  militar: ["Militar", "#e8eef3"], rescate: ["Rescate o autoridad", "#e8eef3"], otro: ["Otro", "#9aa7b2"],
+  carga: ["Carga", "cargo"], petrolero: ["Petrolero o cisterna", "tanker"], pasaje: ["Pasaje", "people"],
+  recreo: ["Recreo", "people"], pesca: ["Pesca", "fishing"], remolcador: ["Remolcador o práctico", "service"],
+  militar: ["Militar", "service"], rescate: ["Rescate o autoridad", "service"], otro: ["Otro", "other"],
 };
 const NAV = { 0: "Navegando a motor", 1: "Fondeado", 2: "Sin gobierno", 3: "Maniobra restringida", 4: "Limitado por su calado", 5: "Amarrado",
   6: "Varado", 7: "Pescando", 8: "Navegando a vela", 14: "Señal de emergencia (AIS-SART)" };
@@ -1535,12 +1582,12 @@ function addShipLayers(m) {
   for (const id of Object.keys(SHIP_ICONS)) if (!m.hasImage(id)) m.addImage(id, shipIcon(id), { pixelRatio: 2, sdf: true });
   m.addSource("ships", { type: "geojson", data: empty });
   m.addLayer({ id: "ships-alert", type: "circle", source: "ships", filter: ["==", ["get", "alert"], 1], layout: { visibility: "none" },
-    paint: { "circle-radius": 11, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#ff4040", "circle-stroke-width": 2 } });
+    paint: { "circle-radius": 11, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": tok("--s4"), "circle-stroke-width": 2 } });
   m.addLayer({ id: "ships", type: "symbol", source: "ships", layout: { visibility: "none",
     "icon-image": ["case", ["==", ["get", "moving"], 1], "ship-arrow", "ship-dot"], "icon-rotate": ["get", "rot"], "icon-rotation-alignment": "map",
     "icon-allow-overlap": true, "icon-ignore-placement": true, "symbol-sort-key": ["get", "alert"],
     "icon-size": ["interpolate", ["linear"], ["zoom"], 1, 0.55, 5, 0.8, 9, 1.1] },
-    paint: { "icon-color": ["match", ["get", "kind"], ...Object.entries(SHIP_KIND).flatMap(([k, v]) => [k, v[1]]), "#9aa7b2"],
+    paint: { "icon-color": ["match", ["get", "kind"], ...Object.entries(SHIP_KIND).flatMap(([k, v]) => [k, tok(`--ship-${v[1]}`)]), tok("--ship-other")],
       "icon-halo-color": "rgba(5,8,12,.85)", "icon-halo-width": 1, "icon-opacity": ["get", "op"] } });
 }
 function shipLine(x) {
@@ -1549,7 +1596,7 @@ function shipLine(x) {
 }
 function renderShips() {
   const now = Date.now();
-  map.getSource("ships")?.setData({ type: "FeatureCollection", features: state.ov.ships ? [...SHIPS.values()].map((x) => ({ type: "Feature",
+  feed("ships", { type: "FeatureCollection", features: state.ov.ships ? [...SHIPS.values()].map((x) => ({ type: "Feature",
     geometry: { type: "Point", coordinates: [x.lon, x.lat] },
     properties: { mmsi: x.mmsi, kind: x.kind || "otro", moving: x.sog > 0.5 && (x.hdg ?? x.cog) != null ? 1 : 0, rot: x.hdg ?? x.cog ?? 0,
       alert: shipAlert(x) ? 1 : 0, op: now - x.t > 15 * 60000 ? 0.45 : 0.95 } })) : [] });
@@ -1599,10 +1646,11 @@ function shipRow() {
     : shipSt.at ? `Actualizado ${hm(shipSt.at)} · se completa al seguir mirando` : "";
   return `<button type="button" class="litem" role="switch" data-ov="ships" aria-checked="${!!state.ov.ships}">${sw}`
     + `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${SHIP_ICONS["ship-arrow"]}" fill="currentColor"/></svg>`
-    + `<span class="nm">Barcos en tiempo real (AIS)<span class="hint">${hint}</span></span><span class="n">${state.ov.ships ? SHIPS.size : 0}</span></button>`;
+    + `<span class="nm">Barcos en tiempo real (AIS)<span class="hint">${hint}</span>`
+    + (state.ov.ships ? `<span class="shipkey">${Object.entries(SHIP_GROUP).map(([k, n]) => `<span><i style="background:var(--ship-${k})"></i>${n}</span>`).join("")}</span>` : "")
+    + `</span><span class="n">${state.ov.ships ? SHIPS.size : 0}</span></button>`;
 }
 function openShipCard(m, x) {
-  closeCard();
   const kind = SHIP_KIND[x.kind];
   const rows = [
     ["Tipo", kind?.[0] || "Sin datos (llegan cada pocos minutos)"],
@@ -1616,17 +1664,12 @@ function openShipCard(m, x) {
     ["Posición", `${x.lat.toFixed(3)}°, ${x.lon.toFixed(3)}°`],
     ["Fuente", "AISStream (receptores AIS terrestres)"],
   ].filter(Boolean);
-  const box = document.createElement("div");
-  box.className = "detail mcard-body";
-  box.innerHTML = `<div style="display:flex;gap:8px;align-items:center">
+  mountCard(m, [x.lon, x.lat], `<div style="display:flex;gap:8px;align-items:center">
       <span class="dcat">Barco · AIS</span>${shipAlert(x) ? `<span class="sevpill" style="background:var(--s4)">Posible emergencia</span>` : ""}
       <button type="button" class="x" data-close="1" aria-label="Cerrar ficha"><svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.6"/></svg></button></div>
     <h2>${esc(x.name || `MMSI ${x.mmsi}`)}</h2>
     <dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
-    <div class="aacts"><a class="btn" href="https://www.marinetraffic.com/es/ais/details/ships/mmsi:${x.mmsi}" target="_blank" rel="noopener">Ver en MarineTraffic</a></div>`;
-  const popup = new maplibregl.Popup({ className: "mcard", closeButton: false, closeOnClick: false, maxWidth: "340px", offset: 12, focusAfterOpen: false })
-    .setLngLat([x.lon, x.lat]).setDOMContent(box).addTo(m);
-  card = { id: `ship:${x.mmsi}`, ship: true, popup };
+    <div class="aacts"><a class="btn" href="https://www.marinetraffic.com/es/ais/details/ships/mmsi:${x.mmsi}" target="_blank" rel="noopener">Ver en MarineTraffic</a></div>`, { id: `ship:${x.mmsi}`, ship: true }, 12);
 }
 
 function render() { const v = visible(); renderLayers(); renderMarkers(v); renderList(v); renderDetail(); renderStatus(); renderPanes(v); }
@@ -1878,7 +1921,12 @@ function askClear() {
 document.getElementById("settingsBtn").onclick = openSettings;
 document.getElementById("setCancel").onclick = closeSettings;
 sheet.addEventListener("click", (e) => { if (e.target === sheet) closeSettings(); });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSettings(); });
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (!document.getElementById("settings").hidden) return closeSettings();
+  if (card) { const inCard = card.popup.getElement()?.contains(document.activeElement); closeCard(); if (inCard) map.getCanvas().focus(); return; }
+  if (aOpen) { aOpen = false; renderAlerts(); document.getElementById("atab").focus(); }
+});
 document.getElementById("setSave").onclick = async () => {
   for (const k of Object.keys(SOURCES)) {
     state.settings.enabled[k] = document.getElementById("en_" + k).checked;

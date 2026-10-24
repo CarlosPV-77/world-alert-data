@@ -26,6 +26,12 @@ colors:
   night: "#01060b"
   sun: "#f3c94b"
   ink: "#05080c"
+  ship-cargo: "#a9b8c6"
+  ship-tanker: "#b48cff"
+  ship-people: "#ff8ad8"
+  ship-fishing: "#7fd6cf"
+  ship-service: "#f2f6fb"
+  ship-other: "#6f7d8a"
 typography:
   display:
     fontFamily: "Saira Semi Condensed, Arial Narrow, sans-serif"
@@ -249,7 +255,7 @@ Depth is tonal. The room, wall and three panel steps make the structure; 1px rul
 
 ## Shapes
 
-Corners are square: 2px (`--r`) on buttons, inputs, selects, chips, layer groups, legend, tooltip and zoom buttons; 0 on full-width sheets (settings, unfolded incoming sheet) and on priority blocks, tally cells, clocks and switches. Severity is drawn as heavy edge bars: a 3px bottom border in priority colour on the incoming tab, a 3px top border on the unfolded sheet, a 3px accent top border on the settings sheet. Switches are square tracks with a square knob. Unverified items use dashed borders (priority block, badge, map marker outline) so trust reads by shape as well as colour. Events are drawn as pictograms of what happened (seismic trace, volcano, wave, cyclone, flood, flame, cracked ground, storm, rain, wind, snow, heat, cold, fog, coastal waves, tornado, ship, crossed swords for clashes, burst for attacks), stroked on a 24px grid. Weather warnings pick their pictogram from the warning text. On the map each pictogram sits in a 28px square badge filled with priority colour; unverified events get a dark badge with a dashed priority-colour edge. The same pictograms appear in the legend, layer list, queue rows, detail header and incoming tab.
+Corners are square: 2px (`--r`) on buttons, inputs, selects, chips, layer groups, legend, tooltip and zoom buttons; 0 on full-width sheets (settings, unfolded incoming sheet) and on priority blocks, tally cells, clocks and switches. Severity is drawn as heavy edge bars: a 3px bottom border in priority colour on the incoming tab, a 3px top border on the unfolded sheet, a 3px accent top border on the settings sheet. Switches are square tracks with a square knob. Unverified items use dashed borders (priority block, badge, map marker outline) so trust reads by shape as well as colour. Events are drawn as pictograms of what happened (seismic trace, volcano, wave, cyclone, flood, flame, cracked ground, storm, rain, wind, snow, heat, cold, fog, coastal waves, tornado, ship, crossed swords for clashes, burst for attacks), stroked on a 24px grid. Weather warnings pick their pictogram from the warning text. On the map each pictogram sits in a 28px square badge filled with priority colour; unverified events get a dark badge with a dashed priority-colour edge. The same pictograms appear in the legend, layer list, queue rows, detail header and incoming tab. Live AIS ships are not alerts and use their own language: a small arrow pointing along the heading (a dot when stopped), coloured by six ship groups (cargo steel, tanker violet, passenger and leisure pink, fishing sea glass, service white, other dim grey) whose hues stay clear of the priority scale and of verified green; the key sits under the layer switch. A ship that is not under command, aground or sending a distress beacon gets a P1 red ring. Map paint colours are read from these tokens at load, never retyped in JavaScript.
 
 ## Components
 
