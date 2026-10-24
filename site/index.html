@@ -238,7 +238,7 @@ aside.side { background: var(--panel); border-left: 1px solid var(--line); displ
 <div class="overlay" id="settings" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="setTitle">
     <h2 id="setTitle">Ajustes</h2>
-    <p class="hint">Los datos solo se actualizan mientras tienes el mapa abierto y visible. Elige cada cuánto consulta cada fuente.</p>
+    <p class="hint">Cada fuente solo se consulta mientras tienes el mapa abierto y alguna de sus capas activada. Al abrir la página todas las capas empiezan apagadas. Elige cada cuánto consulta cada fuente.</p>
     <div id="srcRows"></div>
     <div class="frow" style="align-items:center">
       <label for="retention" class="label" style="flex:0 0 auto">Guardar histórico</label>
@@ -312,6 +312,13 @@ const SOURCES = {
   conflictos: { name: "GDELT · noticias de conflictos armados", def: 15, opts: [15, 30, 60] },
   atentados:  { name: "GDELT · noticias de atentados", def: 15, opts: [15, 30, 60] },
 };
+// Layers each source feeds. A source is only queried while at least one of its layers is on.
+const SOURCE_CATS = {
+  usgs: ["sismo"], gdacs: ["sismo", "volcan", "tsunami", "ciclon", "inundacion", "incendio", "sequia"], tsunami: ["tsunami"],
+  nhc: ["ciclon"], navarea: ["maritimo"], volcanes: ["volcan"], nws: ["meteo"], aemet: ["aviso_es"],
+  conflictos: ["conflicto"], atentados: ["atentado"],
+};
+const wanted = (k) => state.settings.enabled[k] && SOURCE_CATS[k].some((c) => state.cats[c]);
 const SEV = ["", "Baja", "Media", "Alta", "Crítica"];
 const sevColor = (s) => `var(--s${Math.min(4, Math.max(1, s || 1))})`;
 
@@ -320,10 +327,11 @@ const state = {
   events: new Map(),          // id -> event
   live: {},                   // source -> Set(ids) seen in last fetch
   srcStatus: {},              // source -> {ok, at, n, error}
-  cats: Object.fromEntries(Object.keys(CATS).map((c) => [c, true])),
+  // Every layer starts off on each visit; the viewer turns on what they want to see.
+  cats: Object.fromEntries(Object.keys(CATS).map((c) => [c, false])),
   period: 24, minSev: 1, selected: null, base: "s2", globe: false,
-  ov: Object.fromEntries(Object.keys(OVERLAYS).map((k) => [k, true])),
-  open: { naturales: true, meteo: true, mar: false, seguridad: true, mapa: false },
+  ov: Object.fromEntries(Object.keys(OVERLAYS).map((k) => [k, false])),
+  open: { naturales: true, meteo: true, mar: false, seguridad: true, mapa: true },
   settings: { intervals: Object.fromEntries(Object.entries(SOURCES).map(([k, v]) => [k, v.def])), enabled: Object.fromEntries(Object.keys(SOURCES).map((k) => [k, !SOURCES[k].off])), retention: 90 },
   lastUpdate: null,
 };
@@ -333,8 +341,7 @@ const store = {
 };
 const savedUi = store.get("ui");
 if (savedUi) {
-  Object.assign(state.cats, savedUi.cats || {}); Object.assign(state.ov, savedUi.ov || {}); Object.assign(state.open, savedUi.open || {});
-  if (savedUi.solar != null && !savedUi.ov) state.ov.solar = savedUi.solar;
+  Object.assign(state.open, savedUi.open || {});
   state.period = savedUi.period ?? 24; state.minSev = savedUi.minSev ?? 1; state.base = savedUi.base || "s2"; state.globe = !!savedUi.globe;
 }
 const localSettings = store.get("settings");
@@ -622,9 +629,9 @@ document.getElementById("layers").addEventListener("click", (ev) => {
   if (t.dataset.group) {
     const cats = Object.keys(CATS).filter((c) => CATS[c].group === t.dataset.group);
     const all = cats.every((c) => state.cats[c]);
-    cats.forEach((c) => (state.cats[c] = !all)); saveUi(); render(); return;
+    cats.forEach((c) => (state.cats[c] = !all)); saveUi(); render(); tick(); return;
   }
-  if (t.dataset.cat) { state.cats[t.dataset.cat] = !state.cats[t.dataset.cat]; saveUi(); render(); return; }
+  if (t.dataset.cat) { state.cats[t.dataset.cat] = !state.cats[t.dataset.cat]; saveUi(); render(); tick(); return; }
   if (t.dataset.ov) { state.ov[t.dataset.ov] = !state.ov[t.dataset.ov]; saveUi(); if (map.getLayer("land")) applyOverlays(); renderLayers(); return; }
   if (t.id === "globeBtn") { state.globe = !state.globe; t.setAttribute("aria-pressed", String(state.globe)); saveUi(); map.setProjection({ type: state.globe ? "globe" : "mercator" }); }
 });
@@ -635,7 +642,7 @@ document.getElementById("fPeriod").value = String(state.period);
 document.getElementById("fSev").value = String(state.minSev);
 document.getElementById("fPeriod").onchange = (e) => { state.period = +e.target.value; saveUi(); render(); };
 document.getElementById("fSev").onchange = (e) => { state.minSev = +e.target.value; saveUi(); render(); };
-function saveUi() { store.set("ui", { cats: state.cats, ov: state.ov, open: state.open, period: state.period, minSev: state.minSev, base: state.base, globe: state.globe }); }
+function saveUi() { store.set("ui", { open: state.open, period: state.period, minSev: state.minSev, base: state.base, globe: state.globe }); }
 
 function rel(t) {
   const ms = Date.now() - Date.parse(t);
@@ -657,7 +664,8 @@ function renderList() {
     `<div><b style="color:${sevColor(n)}">${s[n - 1]}</b><span>${SEV[n]}</span></div>`).join("");
   const list = document.getElementById("list");
   if (!v.length) {
-    list.innerHTML = `<div class="empty">${state.events.size ? "No hay alertas con estos filtros. Prueba a ampliar el periodo o a bajar la gravedad mínima." : "Aún no hay alertas cargadas. Cuando el mapa conecte con las fuentes aparecerán aquí, ordenadas de la más reciente a la más antigua."}</div>`;
+    const anyOn = Object.values(state.cats).some(Boolean);
+    list.innerHTML = `<div class="empty">${!anyOn ? "Todas las capas están apagadas. Activa en el panel de arriba las que quieras ver." : state.events.size ? "No hay alertas con estos filtros. Prueba a ampliar el periodo o a bajar la gravedad mínima." : "Aún no hay alertas cargadas. Cuando el mapa conecte con las fuentes aparecerán aquí, ordenadas de la más reciente a la más antigua."}</div>`;
     return;
   }
   list.innerHTML = v.slice(0, 400).map((e) => `
@@ -721,12 +729,13 @@ function renderDetail() {
 function render() { renderLayers(); renderMarkers(); renderList(); renderDetail(); renderStatus(); }
 
 function renderStatus() {
-  const ok = Object.values(state.srcStatus).filter((s) => s.ok).length;
-  const total = Object.keys(SOURCES).filter((k) => state.settings.enabled[k]).length;
+  const ok = Object.entries(state.srcStatus).filter(([k, s]) => s.ok && wanted(k)).length;
+  const total = Object.keys(SOURCES).filter(wanted).length;
   const live = ok > 0;
   document.getElementById("liveDot").classList.toggle("live", live);
   document.getElementById("status").textContent = state.lastUpdate
     ? `${live ? "En directo" : "Sin conexión"} · ${ok}/${total} fuentes · actualizado ${rel(state.lastUpdate)} · ${state.events.size} alertas guardadas`
+    : !Object.keys(SOURCES).some(wanted) ? "Sin capas activas: no se consulta ninguna fuente"
     : state.mcpState || "Conectando con las fuentes…";
 }
 setInterval(renderStatus, 30000);
@@ -844,10 +853,12 @@ function watchAll() {
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") tick(); });
 function dueSources(force) {
   const now = Date.now();
-  return Object.keys(SOURCES).filter((k) => state.settings.enabled[k] && (force || !lastRun[k] || now - lastRun[k] >= state.settings.intervals[k] * 60000 - 5000));
+  return Object.keys(SOURCES).filter((k) => wanted(k) && (force || !lastRun[k] || now - lastRun[k] >= state.settings.intervals[k] * 60000 - 5000));
 }
+let again = false;
 async function tick(force = false) {
-  if (running || document.visibilityState !== "visible") return;
+  if (running) { again = true; return; }  // a layer switched on mid-fetch is picked up right after
+  if (document.visibilityState !== "visible") return;
   const due = dueSources(force);
   if (!due.length) return;
   running = true; setRefreshing(true);
@@ -863,7 +874,7 @@ async function tick(force = false) {
     }
   } catch (err) {
     banner(`No se pudieron traer las alertas: ${esc(err.message || err)}`, "warn", { label: "Reintentar", onClick: () => tick(true) });
-  } finally { running = false; setRefreshing(false); renderStatus(); }
+  } finally { running = false; setRefreshing(false); renderStatus(); if (again) { again = false; tick(); } }
 }
 function sourceOf(e) { if (String(e.id).startsWith("gdelt:")) return e.cat === "atentado" ? "atentados" : "conflictos"; return { usgs: "usgs", gdacs: "gdacs", tsunami: "tsunami", nhc: "nhc", nga: "navarea", gvp: "volcanes", nws: "nws", aemet: "aemet" }[String(e.id).split(":")[0]]; }
 function setRefreshing(on) {
