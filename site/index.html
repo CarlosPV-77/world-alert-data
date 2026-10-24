@@ -605,7 +605,7 @@ const state = {
   // Every layer starts off on each visit; the viewer turns on what they want to see.
   cats: Object.fromEntries(Object.keys(CATS).map((c) => [c, false])),
   period: 24, minSev: 1, selected: null, base: "s2", globe: false, view: "world",
-  ov: Object.fromEntries(Object.keys(OVERLAYS).map((k) => [k, false])),
+  ov: { ...Object.fromEntries(Object.keys(OVERLAYS).map((k) => [k, false])), ships: false },
   countries: new Set(),        // ISO3 codes the viewer is following; empty = whole world
   open: { naturales: true, meteo: true, mar: false, seguridad: true, mapa: true },
   settings: { intervals: Object.fromEntries(Object.entries(SOURCES).map(([k, v]) => [k, v.def])), enabled: Object.fromEntries(Object.keys(SOURCES).map((k) => [k, !SOURCES[k].off])), retention: 90, tg: TG_DEFAULT },
@@ -757,6 +757,7 @@ function addIcons(m = map) {
 // Maps that copy the main style draw each marker image the first time it is needed.
 function iconsOnDemand(m) {
   m.on("styleimagemissing", ({ id }) => {
+    if (SHIP_ICONS[id] && !m.hasImage(id)) return m.addImage(id, shipIcon(id), { pixelRatio: 2, sdf: true });
     const [, key, sev, u] = String(id).match(/^(\w+)-([1-4])(-u)?$/) || [];
     if (PICS[key] && !m.hasImage(id)) m.addImage(id, iconImage(key, +sev, !!u), { pixelRatio: 2 });
   });
@@ -785,6 +786,7 @@ map.on("load", () => {
   map.addLayer({ id: "night", type: "fill", source: "night", paint: { "fill-color": "#01060b", "fill-opacity": 0.2, "fill-antialias": false } });
   map.addSource("sun", { type: "geojson", data: empty });
   map.addLayer({ id: "sun", type: "circle", source: "sun", paint: { "circle-radius": 7, "circle-color": "#f3c94b", "circle-stroke-color": "rgba(243,201,75,.35)", "circle-stroke-width": 6 } });
+  addShipLayers(map);
   addIcons();
   map.addSource("events", { type: "geojson", data: empty });
   map.addLayer({ id: "crit", type: "circle", source: "events", filter: ["==", ["get", "pulse"], 1], paint: { "circle-radius": 15, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#ff4040", "circle-stroke-width": 2, "circle-stroke-opacity": 0.8 } });
@@ -803,6 +805,8 @@ function applyOverlays() {
   for (const id of LIMIT_LAYERS) map.setLayoutProperty(id, "visibility", vis(state.ov.limits));
   for (const id of ["disputed-fill", "disputed-line"]) map.setLayoutProperty(id, "visibility", vis(state.ov.disputed));
   for (const id of ["zones-fill", "zones-line"]) map.setLayoutProperty(id, "visibility", vis(state.ov.zones));
+  for (const id of ["ships", "ships-alert"]) map.setLayoutProperty(id, "visibility", vis(state.ov.ships));
+  shipsWatch();
   renderNight(); syncPanesSoon();
 }
 function applyBase() {
@@ -918,10 +922,12 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 function bindMapUi(map) {
 map.on("mousemove", (ev) => {
   if (!map.getLayer("events")) return;
-  const layers = ["events", "zones-fill", "disputed-fill", "country-hit"].filter((l) => map.getLayer(l));
+  const layers = ["events", "ships", "zones-fill", "disputed-fill", "country-hit"].filter((l) => map.getLayer(l));
   const hit = map.queryRenderedFeatures(ev.point, { layers });
   const e = hit.find((f) => f.layer.id === "events") || hit.find((f) => f.layer.id === "zones-fill"), dsp = hit.find((f) => f.layer.id === "disputed-fill"), c = hit.find((f) => f.layer.id === "country-hit");
-  map.getCanvas().style.cursor = e ? "pointer" : "";
+  const sh = !hit.find((f) => f.layer.id === "events") && hit.find((f) => f.layer.id === "ships");
+  map.getCanvas().style.cursor = e || sh ? "pointer" : "";
+  if (sh) { const x = SHIPS.get(sh.properties.mmsi); if (x) return showTip(ev.originalEvent, `<b>${esc(x.name || `MMSI ${x.mmsi}`)}</b><span>${esc(shipLine(x))}</span>`); }
   if (e) { const d = state.events.get(e.properties.id); if (d) return showTip(ev.originalEvent, `<b>${esc(d.title)}</b><span>${esc(CATS[d.cat]?.name || d.cat)} · ${rel(d.time)} · ${esc(d.src)}</span>`); }
   if (dsp) return showTip(ev.originalEvent, `<b>${esc(dsp.properties.n)} · territorio disputado</b><span>${esc(dsp.properties.note || "Soberanía en disputa")}</span>`);
   if (c) return showTip(ev.originalEvent, `<b>${esc(c.properties.n)}</b>`);
@@ -931,6 +937,9 @@ map.on("mouseout", hideTip);
 map.on("click", (ev) => {
   const e = map.getLayer("events") && (map.queryRenderedFeatures(ev.point, { layers: ["events"] })[0] || map.queryRenderedFeatures(ev.point, { layers: ["zones-fill"] })[0]);
   if (e) { hideTip(); select(e.properties.id, false); const d = eventOf(e.properties.id); if (d) openCard(map, d); return; }
+  const sh = map.getLayer("ships") && map.queryRenderedFeatures(ev.point, { layers: ["ships"] })[0];
+  if (sh) { hideTip(); const x = SHIPS.get(sh.properties.mmsi); if (x) openShipCard(map, x); return; }
+  if (card?.ship) closeCard();
   if (state.selected) { state.selected = null; render(); }
 });
 }
@@ -1104,6 +1113,7 @@ function renderLayers() {
       const total = cats.reduce((a, c) => a + (n[c] || 0), 0);
       head = `<button type="button" class="gtoggle" role="switch" data-group="${g}" aria-checked="${on === cats.length ? "true" : on ? "mixed" : "false"}" aria-label="Mostrar u ocultar ${gname}">${sw}</button>`;
       items = cats.map((c) => `<button type="button" class="litem" role="switch" data-cat="${c}" aria-checked="${!!state.cats[c]}">${sw}${legendShape(c)}<span class="nm">${CATS[c].name}</span><span class="n">${n[c] || 0}</span></button>`).join("");
+      if (g === "mar") items += shipRow();
       gname += `<span class="n">${total}</span>`;
     }
     return `<div class="lgroup">
@@ -1429,11 +1439,11 @@ function detailHtml(e) {
 function renderDetail() {
   const el = document.getElementById("detail");
   const e = state.selected && eventOf(state.selected);
-  if (!e) { el.hidden = true; closeCard(); return; }
+  if (!e) { el.hidden = true; if (!card?.ship) closeCard(); return; }
   el.hidden = false;
   keepFocus(el, () => el.innerHTML = detailHtml(e));
   if (card && card.id === e.id) { const box = card.popup.getElement()?.querySelector(".detail"); if (box) keepFocus(box, () => (box.innerHTML = detailHtml(e))); }
-  else closeCard();
+  else if (!card?.ship) closeCard();
 }
 // The same card opens on the map, next to the alert that was pressed there.
 let card = null;
@@ -1449,10 +1459,130 @@ function closeCard() { if (card) { const c = card; card = null; c.popup.remove()
 for (const id of ["detail"]) document.getElementById(id).addEventListener("click", detailClick);
 function detailClick(ev) {
   const b = ev.target.closest("[data-close],[data-save]"); if (!b) return;
+  if (card?.ship && b.closest(".mcard")) return closeCard();
   if (b.dataset.save) return toggleSave(b.dataset.save);
   state.selected = null; render();
 }
 document.getElementById("mapwrap").addEventListener("click", (ev) => { if (ev.target.closest(".mcard")) detailClick(ev); });
+
+// ---------- ships (AIS) ----------
+// Live positions from AISStream, read through /api/ships for the area in view. Each call listens a few
+// seconds, so the picture fills in over successive calls; a ship not heard for 30 minutes is dropped.
+// Ships are not alerts: they never enter the list, the history or the new-alert tab.
+const SHIPS = new Map(), SHIP_TTL = 30 * 60000;
+const shipSt = { busy: false, again: false, at: 0, error: null };
+const SHIP_KIND = {
+  carga: ["Carga", "#6fcf97"], petrolero: ["Petrolero o cisterna", "#c58cff"], pasaje: ["Pasaje", "#5ec8ff"],
+  pesca: ["Pesca", "#3fd0c0"], recreo: ["Recreo", "#ff9ad5"], remolcador: ["Remolcador o práctico", "#d8c27a"],
+  militar: ["Militar", "#e8eef3"], rescate: ["Rescate o autoridad", "#e8eef3"], otro: ["Otro", "#9aa7b2"],
+};
+const NAV = { 0: "Navegando a motor", 1: "Fondeado", 2: "Sin gobierno", 3: "Maniobra restringida", 4: "Limitado por su calado", 5: "Amarrado",
+  6: "Varado", 7: "Pescando", 8: "Navegando a vela", 14: "Señal de emergencia (AIS-SART)" };
+// Not under command, aground, or a distress beacon (AIS-SART, man overboard, EPIRB use MMSI 970–974).
+const shipAlert = (x) => [2, 6, 14].includes(x.st) || /^97[024]/.test(String(x.mmsi));
+const SHIP_ICONS = { "ship-arrow": "M12 2.5 18.5 21 12 17 5.5 21z", "ship-dot": "M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10z" };
+function shipIcon(id) {
+  const cv = document.createElement("canvas"); cv.width = cv.height = 48;
+  const ctx = cv.getContext("2d"); ctx.scale(2, 2); ctx.fillStyle = "#fff"; ctx.fill(new Path2D(SHIP_ICONS[id]));
+  return ctx.getImageData(0, 0, 48, 48);
+}
+function addShipLayers(m) {
+  for (const id of Object.keys(SHIP_ICONS)) if (!m.hasImage(id)) m.addImage(id, shipIcon(id), { pixelRatio: 2, sdf: true });
+  m.addSource("ships", { type: "geojson", data: empty });
+  m.addLayer({ id: "ships-alert", type: "circle", source: "ships", filter: ["==", ["get", "alert"], 1], layout: { visibility: "none" },
+    paint: { "circle-radius": 11, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#ff4040", "circle-stroke-width": 2 } });
+  m.addLayer({ id: "ships", type: "symbol", source: "ships", layout: { visibility: "none",
+    "icon-image": ["case", ["==", ["get", "moving"], 1], "ship-arrow", "ship-dot"], "icon-rotate": ["get", "rot"], "icon-rotation-alignment": "map",
+    "icon-allow-overlap": true, "icon-ignore-placement": true, "symbol-sort-key": ["get", "alert"],
+    "icon-size": ["interpolate", ["linear"], ["zoom"], 1, 0.55, 5, 0.8, 9, 1.1] },
+    paint: { "icon-color": ["match", ["get", "kind"], ...Object.entries(SHIP_KIND).flatMap(([k, v]) => [k, v[1]]), "#9aa7b2"],
+      "icon-halo-color": "rgba(5,8,12,.85)", "icon-halo-width": 1, "icon-opacity": ["get", "op"] } });
+}
+function shipLine(x) {
+  const bits = [SHIP_KIND[x.kind]?.[0] || "Tipo desconocido", NAV[x.st], x.sog != null ? `${String(x.sog).replace(".", ",")} nudos` : null, rel(new Date(x.t).toISOString())];
+  return (shipAlert(x) ? "Posible emergencia · " : "") + bits.filter(Boolean).join(" · ");
+}
+function renderShips() {
+  const now = Date.now();
+  map.getSource("ships")?.setData({ type: "FeatureCollection", features: state.ov.ships ? [...SHIPS.values()].map((x) => ({ type: "Feature",
+    geometry: { type: "Point", coordinates: [x.lon, x.lat] },
+    properties: { mmsi: x.mmsi, kind: x.kind || "otro", moving: x.sog > 0.5 && (x.hdg ?? x.cog) != null ? 1 : 0, rot: x.hdg ?? x.cog ?? 0,
+      alert: shipAlert(x) ? 1 : 0, op: now - x.t > 15 * 60000 ? 0.45 : 0.95 } })) : [] });
+  syncPanesSoon();
+}
+function shipsBox() {
+  const b = map.getBounds(), w = b.getWest(), e = b.getEast();
+  if (state.globe || map.getZoom() < 2.2 || e - w >= 360) return "-180,-90,180,90";
+  return [w, b.getSouth(), e, b.getNorth()].map((v) => v.toFixed(1)).join(",");
+}
+async function loadShips() {
+  if (!state.ov.ships || document.visibilityState !== "visible") return;
+  if (shipSt.busy) { shipSt.again = true; return; }
+  shipSt.busy = true; renderLayers();
+  try {
+    const r = await fetch(`/api/ships?bbox=${shipsBox()}`, { signal: AbortSignal.timeout(25000) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `el servidor respondió con un error (${r.status})`);
+    for (const x of d.ships || []) {
+      const old = SHIPS.get(x.mmsi);
+      SHIPS.set(x.mmsi, old ? { ...old, ...x, kind: x.kind || old.kind, type: x.type ?? old.type } : x);
+    }
+    const now = Date.now();
+    for (const [k, x] of SHIPS) if (now - x.t > SHIP_TTL) SHIPS.delete(k);
+    shipSt.error = null; shipSt.at = now;
+  } catch (err) {
+    shipSt.error = err?.name === "TimeoutError" ? "AISStream tardó demasiado en responder" : err instanceof TypeError ? "no se pudo contactar con el servidor" : err.message;
+  } finally {
+    shipSt.busy = false; renderShips(); renderLayers();
+    if (shipSt.again) { shipSt.again = false; loadShips(); }
+  }
+}
+let shipTimer = null, shipMove = null;
+function shipsWatch() {
+  clearInterval(shipTimer); shipTimer = null;
+  if (state.ov.ships) { shipTimer = setInterval(loadShips, 30000); if (!shipSt.at || Date.now() - shipSt.at > 25000) loadShips(); }
+  else { SHIPS.clear(); shipSt.at = 0; shipSt.error = null; if (card?.ship) closeCard(); }
+  renderShips();
+}
+map.on("moveend", () => { if (!state.ov.ships) return; clearTimeout(shipMove); shipMove = setTimeout(loadShips, 1500); });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && state.ov.ships && Date.now() - shipSt.at > 25000) loadShips(); });
+function shipRow() {
+  const hm = (t) => new Date(t).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+  const hint = !state.ov.ships ? "Posiciones AIS de la zona que ves (AISStream)"
+    : shipSt.busy ? "Escuchando la señal AIS…"
+    : shipSt.error ? `Sin datos: ${esc(shipSt.error)}`
+    : shipSt.at ? `Actualizado ${hm(shipSt.at)} · se completa al seguir mirando` : "";
+  return `<button type="button" class="litem" role="switch" data-ov="ships" aria-checked="${!!state.ov.ships}">${sw}`
+    + `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${SHIP_ICONS["ship-arrow"]}" fill="currentColor"/></svg>`
+    + `<span class="nm">Barcos en tiempo real (AIS)<span class="hint">${hint}</span></span><span class="n">${state.ov.ships ? SHIPS.size : 0}</span></button>`;
+}
+function openShipCard(m, x) {
+  closeCard();
+  const kind = SHIP_KIND[x.kind];
+  const rows = [
+    ["Tipo", kind?.[0] || "Sin datos (llegan cada pocos minutos)"],
+    NAV[x.st] ? ["Estado", NAV[x.st]] : null,
+    x.sog != null ? ["Velocidad", `${String(x.sog).replace(".", ",")} nudos`] : null,
+    (x.hdg ?? x.cog) != null ? ["Rumbo", `${Math.round(x.hdg ?? x.cog)}°`] : null,
+    x.dest ? ["Destino", x.dest] : null,
+    x.len ? ["Eslora", `${x.len} m`] : null,
+    ["MMSI", String(x.mmsi)], x.imo ? ["IMO", String(x.imo)] : null, x.call ? ["Indicativo", x.call] : null,
+    ["Última señal", fmt(new Date(x.t).toISOString())],
+    ["Posición", `${x.lat.toFixed(3)}°, ${x.lon.toFixed(3)}°`],
+    ["Fuente", "AISStream (receptores AIS terrestres)"],
+  ].filter(Boolean);
+  const box = document.createElement("div");
+  box.className = "detail mcard-body";
+  box.innerHTML = `<div style="display:flex;gap:8px;align-items:center">
+      <span class="dcat">Barco · AIS</span>${shipAlert(x) ? `<span class="sevpill" style="background:var(--s4)">Posible emergencia</span>` : ""}
+      <button type="button" class="x" data-close="1" aria-label="Cerrar ficha"><svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.6"/></svg></button></div>
+    <h2>${esc(x.name || `MMSI ${x.mmsi}`)}</h2>
+    <dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
+    <div class="aacts"><a class="btn" href="https://www.marinetraffic.com/es/ais/details/ships/mmsi:${x.mmsi}" target="_blank" rel="noopener">Ver en MarineTraffic</a></div>`;
+  const popup = new maplibregl.Popup({ className: "mcard", closeButton: false, closeOnClick: false, maxWidth: "340px", offset: 12, focusAfterOpen: false })
+    .setLngLat([x.lon, x.lat]).setDOMContent(box).addTo(m);
+  card = { id: `ship:${x.mmsi}`, ship: true, popup };
+}
 
 function render() { const v = visible(); renderLayers(); renderMarkers(v); renderList(v); renderDetail(); renderStatus(); renderPanes(v); }
 // Several sources can answer in one go; draw once after all of them are in.

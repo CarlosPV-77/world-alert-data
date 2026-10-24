@@ -33,7 +33,7 @@ export default async function handler(req, res) {
   else { w = ((w + 540) % 360) - 180; e = ((e + 540) % 360) - 180; }
   // A view across the antimeridian becomes two boxes. AISStream wants [lat, lon] corners.
   const boxes = w <= e ? [[[s, w], [n, e]]] : [[[s, w], [n, 180]], [[s, -180], [n, e]]];
-  const secs = Math.max(2, Math.min(12, +req.query.secs || 7));
+  const secs = Math.max(2, Math.min(12, +req.query.secs || 10));
 
   const ships = new Map();
   let error = null, msgs = 0;
