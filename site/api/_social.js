@@ -37,6 +37,9 @@ const isQuakeBot = (t) => /(\b(m[blsw]?v?|mww?)\s?\d([.,]\d+)?\b|magnitu[dr]e?\W
 // Region names that are also everyday words ("Coast", "Islands", "Southern"…) say nothing about the place on their own.
 const GENERIC = new Set("islands island coast coastal southern northern eastern western central capital national north south east west north east lakes river valley mountain mountains highlands lowlands border upper lower greater interior littoral centre center metropolitan federal special region frontier sur norte este oeste centro costa islas frontera sierra valle rio capital oriental occidental".split(" "));
 const PREP = new Set("in off near at outside en frente cerca junto costa costas de del a".split(" "));
+// "Malaga Street", "calle Málaga", "Rue de Paris": a street or district named after a place is not that place.
+const STREET_AFTER = new Set("street st avenue ave road rd drive dr boulevard blvd lane ln court ct terrace parkway pkwy highway hwy square circle crescent alley county township".split(" "));
+const STREET_BEFORE = new Set("calle c avenida avda av paseo plaza ronda carrera travesia rua rue via viale strasse".split(" "));
 const SPANISH = /(^|\s)(que|los|las|del|el|en|por|una|para|con|está|según|hoy|y)(\s|$)/i;
 
 // Reads place names from the text: hashtags or capitalised words, longest phrase first.
@@ -54,6 +57,8 @@ function placeOf(text, lang) {
       if (n === 1 && GENERIC.has(key)) continue;
       // A place right after "in", "off", "near", "en", "frente a"… is where it happened, not who is talked about.
       const prev = norm(words[i - 1]?.w || "");
+      const before = /^(de|del|di|da|do|du|des|of)$/.test(prev) ? norm(words[i - 2]?.w || "") : prev;
+      if (STREET_AFTER.has(norm(words[i + n]?.w || "")) || STREET_BEFORE.has(before)) continue;
       if (g[key]) { hits.push({ key, cands: g[key], at: PREP.has(prev) }); found = n; }
     }
     i += found || 1;
