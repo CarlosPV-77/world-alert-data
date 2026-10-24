@@ -30,7 +30,7 @@ export default async function handler(req, res) {
   if (![w, s, e, n].every(Number.isFinite)) return res.status(400).json({ error: "bbox no válido" });
   s = Math.max(-90, Math.min(90, s)); n = Math.max(-90, Math.min(90, n));
   if (e - w >= 360) { w = -180; e = 180; }
-  w = ((w + 540) % 360) - 180; e = ((e + 540) % 360) - 180;
+  else { w = ((w + 540) % 360) - 180; e = ((e + 540) % 360) - 180; }
   // A view across the antimeridian becomes two boxes. AISStream wants [lat, lon] corners.
   const boxes = w <= e ? [[[s, w], [n, e]]] : [[[s, w], [n, 180]], [[s, -180], [n, e]]];
   const secs = Math.max(2, Math.min(12, +req.query.secs || 7));
