@@ -740,8 +740,8 @@ function markerSize(e) {
   if (e.cat === "aviso_es") return 30 + (e.sev || 1) * 14;
   return 40 + (e.sev || 1) * 22;
 }
-function passes(e) {
-  if (!state.cats[e.cat]) return false;
+function passes(e, anyCat) {
+  if (!anyCat && !state.cats[e.cat]) return false;
   if ((e.sev || 1) < state.minSev) return false;
   const from = state.period ? Date.now() - state.period * HOUR : 0;
   const t = Math.max(Date.parse(e.time) || 0, Date.parse(e.updated) || 0);
@@ -749,21 +749,23 @@ function passes(e) {
   return inCountries(e);
 }
 function visible() {
-  return [...state.events.values()].filter(passes).sort((a, b) => (Date.parse(b.time) || 0) - (Date.parse(a.time) || 0));
+  // Parse each time once, not on every comparison.
+  return [...state.events.values()].filter((e) => passes(e)).map((e) => [Date.parse(e.time) || 0, e])
+    .sort((a, b) => b[0] - a[0]).map((x) => x[1]);
 }
 const isLive = (e) => Object.values(state.live).some((s) => s.has(e.id));
 
-function renderMarkers() {
+function renderMarkers(v = visible()) {
   const src = map.getSource("events");
   if (!src) return;
-  const features = visible().map((e) => {
+  const features = v.map((e) => {
     const sev = Math.min(4, Math.max(1, e.sev || 1)), live = isLive(e);
     return { type: "Feature", geometry: { type: "Point", coordinates: [+e.lon, +e.lat] }, properties: {
       id: e.id, sev, icon: `${CATS[e.cat] ? e.cat : "sismo"}-${sev}${e.verified === false ? "-u" : ""}`, scale: Math.sqrt(markerSize(e) / 150) * 1.15, op: live ? 0.95 : 0.5,
       pulse: sev >= 4 && live && Date.now() - Date.parse(e.time) < 24 * HOUR ? 1 : 0 } };
   });
   src.setData({ type: "FeatureCollection", features });
-  map.getSource("zones")?.setData({ type: "FeatureCollection", features: visible().filter((e) => e.poly).reverse()
+  map.getSource("zones")?.setData({ type: "FeatureCollection", features: v.filter((e) => e.poly).reverse()
     .map((e) => ({ type: "Feature", geometry: e.poly, properties: { id: e.id, sev: Math.min(4, Math.max(1, e.sev || 1)) } })) });
   map.setFilter("sel", ["==", ["get", "id"], state.selected || ""]);
 }
@@ -774,10 +776,10 @@ function legendShape(cat, color = "currentColor") {
   const p = d3.symbol(CATS[cat].sym, 60)();
   return `<svg viewBox="-7 -7 14 14" aria-hidden="true"><path d="${p}" fill="${color}"></path></svg>`;
 }
+// Per-layer counts with the other filters applied, whether or not the layer is on.
 function counts() {
-  const all = state.cats; state.cats = Object.fromEntries(Object.keys(CATS).map((c) => [c, true]));
-  const v = visible(); state.cats = all;
-  const n = {}; v.forEach((e) => (n[e.cat] = (n[e.cat] || 0) + 1));
+  const n = {};
+  for (const e of state.events.values()) if (passes(e, true)) n[e.cat] = (n[e.cat] || 0) + 1;
   return n;
 }
 const sw = '<span class="tg" aria-hidden="true"></span>';
@@ -1057,7 +1059,7 @@ function evRow(e, savedView) {
     <time class="elapsed${fut ? " future" : ""}" data-t="${esc(e.time || "")}" datetime="${esc(e.time || "")}" title="${esc(fmt(e.time))}">${savedView ? esc(fmt(e.time).split(",")[0]) : elapsed(e.time)}</time>
   </button>`;
 }
-function renderList() {
+function renderList(vis) {
   renderSavedBar();
   if (state.showSaved) {
     const v = [...state.saved.values()].sort((a, b) => (b.savedAt || "").localeCompare(a.savedAt || ""));
@@ -1065,7 +1067,7 @@ function renderList() {
     keepFocus(box, () => box.innerHTML = v.length ? v.map((e) => evRow(e, true)).join("") : `<div class="empty">No tienes alertas guardadas. Pulsa «Guardar alerta» en una incidencia o en su ficha.</div>`);
     return;
   }
-  const v = visible();
+  const v = vis || visible();
   const s = [1, 2, 3, 4].map((n) => v.filter((e) => (e.sev || 1) === n).length);
   document.getElementById("summary").innerHTML = [4, 3, 2, 1].map((n) =>
     `<div><span class="pc" style="color:${sevColor(n)}">${prioOf(n)}</span><b>${s[n - 1]}</b><span>${SEV[n]}</span></div>`).join("");
@@ -1128,7 +1130,10 @@ function renderDetail() {
   el.querySelector("[data-save]").onclick = (ev) => toggleSave(ev.currentTarget.dataset.save);
 }
 
-function render() { renderLayers(); renderMarkers(); renderList(); renderDetail(); renderStatus(); }
+function render() { const v = visible(); renderLayers(); renderMarkers(v); renderList(v); renderDetail(); renderStatus(); }
+// Several sources can answer in one go; draw once after all of them are in.
+let renderQueued = false;
+function renderSoon() { if (renderQueued) return; renderQueued = true; queueMicrotask(() => { renderQueued = false; render(); }); }
 
 function renderStatus() {
   const ok = Object.entries(state.srcStatus).filter(([k, s]) => s.ok && wanted(k)).length;
@@ -1198,7 +1203,7 @@ function ingest(src, feed, at) {
   const st = feed.status?.[src];
   state.srcStatus[src] = st?.ok === false ? { ok: false, at, error: st.error } : { ok: true, at, n: ids.size };
   state.lastUpdate = new Date(at).toISOString();
-  render();
+  renderSoon();
   scheduleFlush();
 }
 
