@@ -1,4 +1,4 @@
 {
-  "functions": { "api/feed.js": { "maxDuration": 20 } },
+  "functions": { "api/feed.js": { "maxDuration": 20 }, "api/ships.js": { "maxDuration": 20 } },
   "headers": [{ "source": "/api/(.*)", "headers": [{ "key": "Access-Control-Allow-Origin", "value": "*" }] }]
 }
