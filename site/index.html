@@ -71,7 +71,8 @@ header.top { display: flex; align-items: center; gap: 10px 22px; flex-wrap: wrap
 .clock { display: grid; gap: 1px; padding: 3px 10px; background: color-mix(in srgb, var(--ink) 55%, var(--rail)); border: 1px solid var(--rail-line); min-width: 92px; }
 .clock span { font-family: var(--font-sign); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--rail-muted); }
 .clock time { font-family: var(--font-data); font-size: 16px; letter-spacing: .04em; font-variant-numeric: tabular-nums; color: var(--rail-fg); }
-.status { color: var(--rail-muted); font-family: var(--font-data); font-size: 12px; flex: 1; min-width: 180px; }
+.status { color: var(--rail-muted); font-family: var(--font-data); font-size: 12px; flex: 1 1 160px; min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+@media (min-width: 761px) { header.top { flex-wrap: nowrap; } }
 .actions { display: flex; gap: 6px; }
 .btn { background: var(--panel-2); border: 1px solid var(--line-2); border-radius: var(--r); padding: 6px 12px; font-family: var(--font-sign); font-weight: 600; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; line-height: 1.2; }
 .btn:hover { border-color: var(--accent); background: var(--panel-3); }
@@ -95,7 +96,7 @@ main { display: grid; grid-template-columns: 1fr minmax(320px, 380px); min-heigh
 .zoom button { width: 36px; height: 36px; display: grid; place-items: center; background: var(--panel); border: 1px solid var(--line-2); border-radius: var(--r); color: var(--fg); }
 .zoom button:hover { border-color: var(--accent); }
 .zoom svg { width: 16px; height: 16px; }
-.legend { z-index: 2; position: absolute; left: 12px; bottom: calc(26px + env(safe-area-inset-bottom, 0px)); background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--line-2); border-radius: var(--r); padding: 8px 10px; font-size: 12px; display: grid; gap: 6px; max-width: calc(100% - 80px); }
+.legend { z-index: 2; position: absolute; left: 12px; bottom: calc(34px + env(safe-area-inset-bottom, 0px)); background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--line-2); border-radius: var(--r); padding: 8px 10px; font-size: 12px; display: grid; gap: 6px; max-width: calc(100% - 80px); }
 .legend .row { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
 .legend .sw { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); }
 .legend .sev { font-style: normal; width: 18px; height: 12px; display: inline-grid; place-items: center; font-family: var(--font-data); font-size: 8px; font-weight: 700; color: var(--ink); }
@@ -254,8 +255,34 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
   .asheet, .atab .chev, .gname .chev, .tg::after { transition: none; }
 }
 
+/* Touch screens: every control at least 44 px, text fields at 16 px so iOS does not zoom. */
+@media (pointer: coarse) {
+  .btn, select, .cpick input { min-height: 44px; }
+  select, .cpick input { font-size: 16px; }
+  .litem, .lghead { min-height: 44px; }
+  .gname, .gtoggle { min-height: 40px; }
+  .zoom button { width: 44px; height: 44px; }
+  .cchip { min-height: 36px; }
+  .cchip button { min-width: 36px; min-height: 36px; font-size: 18px; }
+  .linkbtn { min-height: 44px; padding: 0 6px; }
+  .cpick .opts button { min-height: 44px; }
+  .aacts .pager .btn { min-width: 44px; }
+  .detail .x { min-width: 44px; min-height: 44px; }
+  .atab { min-height: 52px; }
+  .ev { min-height: 56px; }
+}
+
 @media (max-width: 760px) {
   body { overflow: auto; }
+  header.top { display: grid; grid-template-columns: 1fr auto; gap: 8px 10px; padding-block: 8px; }
+  .brand { font-size: 18px; }
+  .actions { grid-column: 2; grid-row: 1; }
+  .clocks { grid-column: 1 / -1; grid-row: 2; }
+  .clock { min-width: 0; flex: 1; grid-template-columns: auto 1fr; align-items: baseline; gap: 6px; padding: 4px 8px; }
+  .clock time { font-size: 14px; }
+  .status { grid-column: 1 / -1; grid-row: 3; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; font-size: 11px; }
+  .actions .btn { padding-inline: 10px; }
+  .actions .lbl-long { display: none; }
   .app { height: auto; min-height: 100%; }
   main { grid-template-columns: 1fr; }
   .mapwrap { height: 58vh; }
@@ -278,7 +305,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
     </div>
     <div class="status" id="status">Cargando mapa…</div>
     <div class="actions">
-      <button class="btn" id="refreshBtn" type="button">Actualizar ahora</button>
+      <button class="btn" id="refreshBtn" type="button">Actualizar<span class="lbl-long"> ahora</span></button>
       <button class="btn" id="settingsBtn" type="button">Ajustes</button>
     </div>
   </header>
@@ -560,6 +587,9 @@ const map = new maplibregl.Map({
   container: "map",
   style: { version: 8, glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf", projection: { type: state.globe ? "globe" : "mercator" }, sources: {}, layers: [{ id: "bg", type: "background", paint: { "background-color": "#070c12" } }] },
   center: HOME.center, zoom: HOME.zoom, minZoom: 0.6, maxZoom: 17, attributionControl: { compact: true }, dragRotate: false,
+  // On a phone the page scrolls past the map; one finger scrolls the page, two move the map.
+  cooperativeGestures: matchMedia("(max-width: 760px) and (pointer: coarse)").matches,
+  locale: { "CooperativeGesturesHandler.MobileHelpText": "Usa dos dedos para mover el mapa", "CooperativeGesturesHandler.WindowsHelpText": "Usa Ctrl + rueda para hacer zoom en el mapa", "CooperativeGesturesHandler.MacHelpText": "Usa ⌘ + rueda para hacer zoom en el mapa" },
 });
 map.touchZoomRotate.disableRotation();
 const mapReady = new Promise((r) => map.on("load", r));
@@ -1270,7 +1300,7 @@ async function tick(force = false) {
 function sourceOf(e) { if (String(e.id).startsWith("gdelt:")) return e.cat === "atentado" ? "atentados" : "conflictos"; return { usgs: "usgs", gdacs: "gdacs", tsunami: "tsunami", nhc: "nhc", nga: "navarea", gvp: "volcanes", nws: "nws", aemet: "aemet" }[String(e.id).split(":")[0]]; }
 function setRefreshing(on) {
   const b = document.getElementById("refreshBtn");
-  b.disabled = on; b.textContent = on ? "Actualizando…" : "Actualizar ahora";
+  b.disabled = on; b.innerHTML = on ? "Actualizando…" : 'Actualizar<span class="lbl-long"> ahora</span>';
 }
 document.getElementById("refreshBtn").onclick = () => tick(true);
 window.addEventListener("offline", () => banner("Sin conexión a internet. Las alertas se actualizarán solas cuando vuelva.", "warn"));
