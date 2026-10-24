@@ -66,7 +66,7 @@ async function loadGdelt(stamp) {
     .split("\n").filter(Boolean).map((l) => l.split("\t"))
     .map((f) => ({
       root: f[28], code: f[26], articles: num(f[33]) || 1, tone: num(f[34]),
-      place: f[f.length - 9], cc: f[f.length - 8], lat: num(f[f.length - 5]), lon: num(f[f.length - 4]),
+      geoType: f[f.length - 10], place: f[f.length - 9], cc: f[f.length - 8], lat: num(f[f.length - 5]), lon: num(f[f.length - 4]),
       added: f[f.length - 2], url: f[f.length - 1]?.trim(),
     }))
     .filter((e) => Number.isFinite(e.lat) && Number.isFinite(e.lon) && e.place);
@@ -102,7 +102,7 @@ async function gdeltNews(cat, keep, files = 4) {
   const groups = new Map();
   for (const e of rows.filter(keep)) {
     const key = `${e.place}|${e.lat.toFixed(1)}|${e.lon.toFixed(1)}`;
-    const g = groups.get(key) || { place: e.place, cc: e.cc, lat: e.lat, lon: e.lon, n: 0, articles: 0, time: null, domains: new Set(), url: null, codes: new Map() };
+    const g = groups.get(key) || { approx: e.geoType === "1" || e.geoType === "2" || e.geoType === "5", place: e.place, cc: e.cc, lat: e.lat, lon: e.lon, n: 0, articles: 0, time: null, domains: new Set(), url: null, codes: new Map() };
     g.n++; g.articles += e.articles;
     g.codes.set(e.code, (g.codes.get(e.code) || 0) + e.articles);
     const t = gdeltTime(e.added);
@@ -119,7 +119,7 @@ async function gdeltNews(cat, keep, files = 4) {
       id: `gdelt:${cat}:${g.place}:${g.lat.toFixed(1)},${g.lon.toFixed(1)}`, cat,
       title: `${label}: ${clip(g.place, 90)}`,
       desc: `${g.n} ${g.n === 1 ? "suceso" : "sucesos"} codificados por GDELT en ${window}, con ${g.articles} ${g.articles === 1 ? "artículo" : "artículos"} de prensa${outlets.length ? ` (${outlets.slice(0, 4).join(", ")})` : ""}.`,
-      lat: g.lat, lon: g.lon, time: g.time || new Date().toISOString(),
+      lat: g.lat, lon: g.lon, approx: g.approx || undefined, time: g.time || new Date().toISOString(),
       sev: g.articles >= 40 ? 4 : g.articles >= 15 ? 3 : g.articles >= 5 ? 2 : 1,
       articles: g.articles, outlets: outlets.slice(0, 6), url: g.url, src: "GDELT (prensa)",
       verified: outlets.length >= 2, vlabel: outlets.length >= 2 ? `${outlets.length} medios` : "1 medio",
