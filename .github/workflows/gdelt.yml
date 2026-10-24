@@ -37,6 +37,8 @@ jobs:
             curl -fsSL --retry 3 -o /tmp/m.zip "https://argos-net.com/v1/translate-$m.argosmodel"
             mkdir -p "$MODELS/${m%-*}" && unzip -q /tmp/m.zip -d "$MODELS/${m%-*}"
           done
+      - name: Keep the last good news if GDELT failed
+        run: node scripts/keep-last-good.mjs conflictos atentados
       # A failed translation never holds back the news: the headlines then go out in their original language.
       - name: Translate headlines
         continue-on-error: true
