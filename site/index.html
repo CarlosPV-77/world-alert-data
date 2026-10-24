@@ -1,0 +1,750 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>World Alert</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+/* Layout: sala de situación a pantalla completa; mapa protagonista, panel lateral de eventos (abajo en móvil). Tema oscuro deliberado. */
+:root {
+  color-scheme: dark;
+  --ocean: #0a1520;
+  --ocean-2: #0e1c2a;
+  --land: #2f4559;
+  --land-hover: #3b566e;
+  --border: #5b7d9c;
+  --disputed: #d6a24a;
+  --panel: #101e2c;
+  --panel-2: #152637;
+  --line: #22374b;
+  --fg: #dce7ef;
+  --muted: #8299ab;
+  --accent: #8cc4e8;
+  --s1: #5fa3c9;
+  --s2: #e2c050;
+  --s3: #ec8636;
+  --s4: #ea4a4f;
+  --ok: #5cbf8a;
+  --night: #01060b;
+  --sun: #f3c94b;
+  --font-display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, monospace;
+}
+html, body { height: 100%; }
+body { background: var(--ocean); color: var(--fg); font-family: var(--font-body); font-size: 14px; overflow: hidden; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--panel); }
+button, select, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.app { height: 100%; display: grid; grid-template-rows: auto 1fr; }
+header.top { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; background: var(--panel); border-bottom: 1px solid var(--line); padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.brand { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: .08em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
+.brand .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
+.brand .dot.live { background: var(--ok); box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 60%, transparent); animation: pulse 2s infinite; }
+.status { color: var(--muted); font-family: var(--font-data); font-size: 12px; flex: 1; min-width: 180px; }
+.actions { display: flex; gap: 8px; }
+.btn { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; font-size: 13px; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--ocean); border-color: var(--accent); font-weight: 600; }
+
+main { display: grid; grid-template-columns: 1fr 360px; min-height: 0; }
+.mapwrap { position: relative; min-width: 0; min-height: 0; background: radial-gradient(ellipse at 50% 40%, var(--ocean-2), var(--ocean) 70%); }
+#map { width: 100%; height: 100%; display: block; touch-action: none; }
+.country { fill: var(--land); stroke: var(--border); stroke-width: .6px; vector-effect: non-scaling-stroke; }
+.country:hover { fill: var(--land-hover); }
+.disputed { fill: url(#hatch); stroke: var(--disputed); stroke-width: 1px; stroke-dasharray: 3 2; vector-effect: non-scaling-stroke; }
+.graticule { fill: none; stroke: var(--line); stroke-width: .4px; vector-effect: non-scaling-stroke; opacity: .6; }
+.night { fill: var(--night); fill-opacity: .14; stroke: none; pointer-events: none; }
+.sun { fill: var(--sun); stroke: var(--ocean); stroke-width: 1px; vector-effect: non-scaling-stroke; pointer-events: none; }
+.chip.solar svg circle { fill: var(--sun); }
+.sphere { fill: none; stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.marker { cursor: pointer; stroke: var(--ocean); stroke-width: 1px; }
+.marker.sel { stroke: var(--fg); stroke-width: 2px; }
+.ring { fill: none; stroke-width: 1.5px; pointer-events: none; animation: ring 2.2s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes ring { from { transform: scale(1); opacity: .9; } to { transform: scale(3.2); opacity: 0; } }
+@keyframes pulse { 70% { box-shadow: 0 0 0 8px transparent; } }
+@media (prefers-reduced-motion: reduce) { .ring, .brand .dot.live { animation: none; } }
+
+.zoom { position: absolute; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 4px; }
+.zoom button { width: 34px; height: 34px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; font-size: 18px; line-height: 1; }
+.legend { position: absolute; left: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 12px; display: grid; gap: 6px; max-width: calc(100% - 80px); }
+.legend .row { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+.legend .sw { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); }
+.legend .sev { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.legend .hatch { width: 14px; height: 10px; border: 1px dashed var(--disputed); background: repeating-linear-gradient(45deg, transparent 0 2px, color-mix(in srgb, var(--disputed) 45%, transparent) 2px 3px); }
+.tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; font-size: 12px; max-width: 280px; z-index: 5; box-shadow: 0 6px 20px rgba(0,0,0,.4); }
+.tip b { display: block; font-weight: 600; }
+.tip span { color: var(--muted); }
+
+.banner { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: var(--panel); border: 1px solid var(--accent); border-radius: 8px; padding: 10px 14px; display: flex; gap: 12px; align-items: center; max-width: min(560px, calc(100% - 24px)); z-index: 6; font-size: 13px; }
+.banner.warn { border-color: var(--s3); }
+
+aside.side { background: var(--panel); border-left: 1px solid var(--line); display: grid; grid-template-rows: auto auto 1fr; min-height: 0; min-width: 0; }
+.filters { padding: 12px 16px; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
+.label { font-family: var(--font-display); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); font-size: 12px; }
+.chip[aria-pressed="false"] { opacity: .45; }
+.chip svg { width: 12px; height: 12px; }
+.chip .n { font-family: var(--font-data); color: var(--muted); }
+.frow { display: flex; gap: 8px; flex-wrap: wrap; }
+.frow select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; flex: 1; min-width: 120px; }
+.summary { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--line); }
+.summary div { padding: 8px 4px; text-align: center; border-right: 1px solid var(--line); }
+.summary div:last-child { border-right: 0; }
+.summary b { display: block; font-family: var(--font-data); font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.summary span { font-size: 11px; color: var(--muted); }
+.list { overflow-y: auto; min-height: 0; }
+.ev { display: grid; grid-template-columns: 4px 1fr; gap: 0 12px; padding: 10px 16px 10px 0; border-bottom: 1px solid var(--line); cursor: pointer; width: 100%; text-align: left; background: none; border-left: 0; border-right: 0; border-top: 0; }
+.ev:hover, .ev.sel { background: var(--panel-2); }
+.ev .bar { border-radius: 0 2px 2px 0; }
+.ev .meta { display: flex; gap: 8px; align-items: center; font-size: 11px; color: var(--muted); font-family: var(--font-data); flex-wrap: wrap; }
+.ev .title { font-weight: 500; margin: 3px 0; line-height: 1.35; overflow-wrap: anywhere; }
+.badge { font-family: var(--font-body); font-size: 10px; padding: 1px 6px; border-radius: 4px; text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.badge.ok { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+.badge.unv { background: color-mix(in srgb, var(--s3) 18%, transparent); color: var(--s3); border: 1px dashed var(--s3); }
+.badge.old { background: var(--panel-2); color: var(--muted); }
+.empty { padding: 24px 16px; color: var(--muted); line-height: 1.5; }
+
+.detail { padding: 14px 16px; border-bottom: 1px solid var(--line); background: var(--panel-2); display: grid; gap: 8px; }
+.detail h2 { font-family: var(--font-display); font-weight: 600; font-size: 20px; margin: 0; line-height: 1.15; text-wrap: balance; }
+.detail p { margin: 0; color: var(--muted); line-height: 1.5; font-size: 13px; max-height: 9em; overflow-y: auto; overflow-wrap: anywhere; }
+.detail dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 12px; margin: 0; font-size: 12px; }
+.detail dt { color: var(--muted); }
+.detail dd { margin: 0; font-family: var(--font-data); }
+.detail a { color: var(--accent); }
+.detail .x { justify-self: end; background: none; border: 0; color: var(--muted); font-size: 18px; margin: -6px -6px 0 0; }
+.sevpill { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; color: var(--ocean); }
+
+.overlay { position: fixed; inset: 0; background: rgba(4, 10, 16, .7); z-index: 20; display: grid; place-items: center; padding: 16px; }
+.sheet { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; width: min(560px, 100%); max-height: calc(100% - 32px); overflow-y: auto; padding: 18px 20px; display: grid; gap: 14px; }
+.sheet h2 { font-family: var(--font-display); font-size: 22px; margin: 0; letter-spacing: .04em; }
+.sheet p.hint { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.srcrow { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.srcrow .nm { font-weight: 500; }
+.srcrow .sub { grid-column: 2 / 4; font-size: 11px; color: var(--muted); font-family: var(--font-data); }
+.srcrow select { background: var(--panel-2); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; }
+.srcrow .sub.err { color: var(--s3); }
+.sheet .foot { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--s3); }
+
+@media (max-width: 760px) {
+  body { overflow: auto; }
+  .app { height: auto; min-height: 100%; }
+  main { grid-template-columns: 1fr; }
+  .mapwrap { height: 58vh; }
+  aside.side { border-left: 0; border-top: 1px solid var(--line); grid-template-rows: auto auto auto; }
+  .list { overflow: visible; }
+  .legend { font-size: 11px; padding: 8px 10px; }
+  .legend .row.cats { display: none; }
+}
+</style>
+
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand"><span class="dot" id="liveDot"></span>World Alert</div>
+    <div class="status" id="status">Cargando mapa…</div>
+    <div class="actions">
+      <button class="btn" id="refreshBtn" type="button">Actualizar ahora</button>
+      <button class="btn" id="settingsBtn" type="button">Ajustes</button>
+    </div>
+  </header>
+  <main>
+    <div class="mapwrap" id="mapwrap">
+      <svg id="map" role="img" aria-label="Mapa del mundo con alertas">
+        <defs>
+          <pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <rect width="5" height="5" style="fill:var(--land)"></rect>
+            <line x1="0" y1="0" x2="0" y2="5" style="stroke:var(--disputed);stroke-width:1.6;stroke-opacity:.55"></line>
+          </pattern>
+        </defs>
+        <g id="zoomLayer"><path class="sphere" id="sphere"></path><path class="graticule" id="grat"></path><g id="countries"></g><g id="disputed"></g><g id="night"></g><path class="sun" id="sun"></path></g>
+        <g id="markers"></g>
+      </svg>
+      <div class="banner" id="banner" hidden></div>
+      <div class="tip" id="tip" hidden></div>
+      <div class="legend" aria-label="Leyenda">
+        <div class="row cats" id="legendCats"></div>
+        <div class="row">
+          <span class="sw"><i class="sev" style="background:var(--s1)"></i>Baja</span>
+          <span class="sw"><i class="sev" style="background:var(--s2)"></i>Media</span>
+          <span class="sw"><i class="sev" style="background:var(--s3)"></i>Alta</span>
+          <span class="sw"><i class="sev" style="background:var(--s4)"></i>Crítica</span>
+          <span class="sw"><i class="hatch"></i>Territorio disputado</span>
+          <span class="sw" id="legendNight"><i class="sev" style="background:var(--night);opacity:.75;border:1px solid var(--border)"></i>Noche y crepúsculos</span>
+        </div>
+      </div>
+      <div class="zoom"><button type="button" id="zin" aria-label="Acercar">+</button><button type="button" id="zout" aria-label="Alejar">−</button><button type="button" id="zreset" aria-label="Ver el mundo entero" style="font-size:13px">⤢</button></div>
+    </div>
+    <aside class="side">
+      <section class="filters">
+        <div class="label">Capas</div>
+        <div class="chips" id="chips"></div>
+        <div class="frow">
+          <select id="fPeriod" aria-label="Periodo">
+            <option value="1">Última hora</option>
+            <option value="6">Últimas 6 h</option>
+            <option value="24" selected>Últimas 24 h</option>
+            <option value="168">Últimos 7 días</option>
+            <option value="720">Últimos 30 días</option>
+            <option value="0">Todo el histórico</option>
+          </select>
+          <select id="fSev" aria-label="Gravedad mínima">
+            <option value="1">Toda gravedad</option>
+            <option value="2">Media o más</option>
+            <option value="3">Alta o más</option>
+            <option value="4">Solo crítica</option>
+          </select>
+        </div>
+      </section>
+      <div>
+        <div class="detail" id="detail" hidden></div>
+        <div class="summary" id="summary"></div>
+      </div>
+      <div class="list" id="list" aria-live="polite"></div>
+    </aside>
+  </main>
+</div>
+
+<div class="overlay" id="settings" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+    <h2 id="setTitle">Ajustes</h2>
+    <p class="hint">Los datos solo se actualizan mientras tienes el mapa abierto y visible. Elige cada cuánto consulta cada fuente.</p>
+    <div id="srcRows"></div>
+    <div class="frow" style="align-items:center">
+      <label for="retention" class="label" style="flex:0 0 auto">Guardar histórico</label>
+      <select id="retention">
+        <option value="30">30 días</option>
+        <option value="90">90 días</option>
+        <option value="365">1 año</option>
+        <option value="0">Sin límite</option>
+      </select>
+    </div>
+    <div id="clearZone"><button class="btn" type="button" id="clearBtn">Borrar histórico</button></div>
+    <div class="foot"><button class="btn" type="button" id="setCancel">Cancelar</button><button class="btn primary" type="button" id="setSave">Guardar</button></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
+
+<script>
+(async () => {
+"use strict";
+const BRIDGE = "/api/feed";
+const HOUR = 3600e3;
+
+const poly = (pts) => ({ draw(ctx, size) { const r = Math.sqrt(size / 2.6); pts.forEach(([a, k], i) => { const x = Math.sin(a) * r * k, y = -Math.cos(a) * r * k; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.closePath(); } });
+const symHex = poly(d3.range(6).map((i) => [i * Math.PI / 3 + Math.PI / 6, 1]));
+const symDown = poly([[Math.PI, 1.25], [Math.PI / 3, 1.25], [-Math.PI / 3, 1.25]]);
+const CATS = {
+  sismo:      { name: "Terremotos",   sym: d3.symbolCircle },
+  volcan:     { name: "Volcanes",     sym: d3.symbolTriangle },
+  tsunami:    { name: "Tsunamis",     sym: d3.symbolDiamond },
+  ciclon:     { name: "Ciclones",     sym: d3.symbolStar },
+  inundacion: { name: "Inundaciones", sym: d3.symbolSquare },
+  meteo:      { name: "Avisos meteo", sym: d3.symbolWye },
+  maritimo:   { name: "Marítimo",     sym: d3.symbolCross },
+  incendio:   { name: "Incendios",    sym: symDown },
+  sequia:     { name: "Sequías",      sym: symHex },
+};
+const SOURCES = {
+  usgs:     { name: "USGS · terremotos M2,5+", def: 2, opts: [1, 2, 5, 10, 15, 30] },
+  gdacs:    { name: "GDACS · desastres globales (ONU/UE)", def: 10, opts: [5, 10, 15, 30, 60] },
+  tsunami:  { name: "NOAA · avisos de tsunami", def: 5, opts: [1, 2, 5, 10, 15] },
+  nhc:      { name: "NOAA NHC · ciclones tropicales", def: 15, opts: [5, 10, 15, 30, 60] },
+  navarea:  { name: "NGA · avisos a navegantes", def: 60, opts: [15, 30, 60, 180] },
+  volcanes: { name: "Smithsonian GVP · volcanes (semanal; ahora bloquea las descargas automáticas, los volcanes llegan por GDACS)", def: 720, opts: [180, 360, 720, 1440], off: true },
+  nws:      { name: "NOAA NWS · avisos graves EE. UU.", def: 10, opts: [5, 10, 15, 30, 60] },
+};
+const SEV = ["", "Baja", "Media", "Alta", "Crítica"];
+const sevColor = (s) => `var(--s${Math.min(4, Math.max(1, s || 1))})`;
+
+// ---------- state ----------
+const state = {
+  events: new Map(),          // id -> event
+  live: {},                   // source -> Set(ids) seen in last fetch
+  srcStatus: {},              // source -> {ok, at, n, error}
+  cats: Object.fromEntries(Object.keys(CATS).map((c) => [c, true])),
+  period: 24, minSev: 1, selected: null, solar: true,
+  settings: { intervals: Object.fromEntries(Object.entries(SOURCES).map(([k, v]) => [k, v.def])), enabled: Object.fromEntries(Object.keys(SOURCES).map((k) => [k, !SOURCES[k].off])), retention: 90 },
+  lastUpdate: null,
+};
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem("wa:" + k)); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem("wa:" + k, JSON.stringify(v)); } catch {} },
+};
+const savedUi = store.get("ui");
+if (savedUi) { Object.assign(state.cats, savedUi.cats || {}); state.period = savedUi.period ?? 24; state.minSev = savedUi.minSev ?? 1; state.solar = savedUi.solar ?? true; }
+const localSettings = store.get("settings");
+if (localSettings) mergeSettings(localSettings);
+function mergeSettings(s) {
+  if (!s) return;
+  Object.assign(state.settings.intervals, s.intervals || {});
+  Object.assign(state.settings.enabled, s.enabled || {});
+  if (s.retention != null) state.settings.retention = s.retention;
+}
+
+// ---------- map ----------
+const WORLD_URL = "https://cdn.jsdelivr.net/gh/CarlosPV-77/world-alert-data@9331bebaef71694f012c0987be391382ade3d67c/web/world.json";
+const world = await fetch(WORLD_URL).then((r) => { if (!r.ok) throw r; return r.json(); })
+  .catch(() => fetch(WORLD_URL.replace("https://cdn.jsdelivr.net/gh/CarlosPV-77/world-alert-data@", "https://raw.githubusercontent.com/CarlosPV-77/world-alert-data/")).then((r) => r.json()));
+const svg = d3.select("#map"), zl = d3.select("#zoomLayer"), mk = d3.select("#markers");
+const projection = d3.geoNaturalEarth1();
+const path = d3.geoPath(projection);
+const countries = topojson.feature(world, world.objects.countries).features;
+const disputed = topojson.feature(world, world.objects.disputed).features;
+const tip = document.getElementById("tip");
+let transform = d3.zoomIdentity, W = 0, H = 0;
+
+function layout() {
+  const box = document.getElementById("mapwrap").getBoundingClientRect();
+  W = box.width; H = box.height;
+  svg.attr("viewBox", `0 0 ${W} ${H}`);
+  projection.fitExtent([[8, 8], [W - 8, H - 8]], { type: "Sphere" });
+  d3.select("#sphere").attr("d", path({ type: "Sphere" }));
+  d3.select("#grat").attr("d", path(d3.geoGraticule10()));
+  zl.select("#countries").selectAll("path").data(countries).join("path").attr("class", "country").attr("d", path)
+    .on("mousemove", (ev, d) => showTip(ev, `<b>${esc(d.properties.n)}</b>`)).on("mouseleave", hideTip);
+  zl.select("#disputed").selectAll("path").data(disputed).join("path").attr("class", "disputed").attr("d", path)
+    .on("mousemove", (ev, d) => showTip(ev, `<b>${esc(d.properties.n)} · territorio disputado</b><span>${esc(d.properties.note || "Soberanía en disputa")}</span>`)).on("mouseleave", hideTip);
+  zoom.extent([[0, 0], [W, H]]).translateExtent([[0, 0], [W, H]]);
+  renderNight();
+  renderMarkers();
+}
+
+// ---------- day / night (NOAA solar position formulas) ----------
+const RAD = Math.PI / 180;
+function solarPosition(t) {
+  const c = (t - Date.UTC(2000, 0, 1, 12)) / 864e5 / 36525;
+  const lon = ((d3.utcDay.floor(t) - t) / 864e5) * 360 - 180;
+  return [lon - equationOfTime(c) / RAD, solarDeclination(c) / RAD];
+}
+function equationOfTime(c) {
+  const e = eccentricity(c), m = meanAnomaly(c), l = meanLongitude(c), y = Math.tan(obliquity(c) / 2) ** 2;
+  return y * Math.sin(2 * l) - 2 * e * Math.sin(m) + 4 * e * y * Math.sin(m) * Math.cos(2 * l) - 0.5 * y * y * Math.sin(4 * l) - 1.25 * e * e * Math.sin(2 * m);
+}
+function solarDeclination(c) { return Math.asin(Math.sin(obliquity(c)) * Math.sin(apparentLongitude(c))); }
+function apparentLongitude(c) { return meanLongitude(c) + equationOfCenter(c) - (0.00569 + 0.00478 * Math.sin((125.04 - 1934.136 * c) * RAD)) * RAD; }
+function meanAnomaly(c) { return (357.52911 + c * (35999.05029 - 0.0001537 * c)) * RAD; }
+function meanLongitude(c) { const l = (280.46646 + c * (36000.76983 + c * 0.0003032)) % 360; return (l < 0 ? l + 360 : l) * RAD; }
+function equationOfCenter(c) { const m = meanAnomaly(c); return (Math.sin(m) * (1.914602 - c * (0.004817 + 0.000014 * c)) + Math.sin(2 * m) * (0.019993 - 0.000101 * c) + Math.sin(3 * m) * 0.000289) * RAD; }
+function obliquity(c) { const m = (23 + (26 + (21.448 - c * (46.815 + c * (0.00059 - c * 0.001813))) / 60) / 60) * RAD; return m + 0.00256 * Math.cos((125.04 - 1934.136 * c) * RAD) * RAD; }
+function eccentricity(c) { return 0.016708634 - c * (0.000042037 + 0.0000001267 * c); }
+// Night = sun below the horizon (90° from the antisolar point); then civil, nautical and astronomical twilight limits.
+function renderNight() {
+  const sun = solarPosition(Date.now()), anti = [sun[0] + 180, -sun[1]];
+  const radii = state.solar ? [90, 84, 78, 72] : [];
+  zl.select("#night").selectAll("path").data(radii).join("path").attr("class", "night").attr("d", (r) => path(d3.geoCircle().center(anti).radius(r)()));
+  d3.select("#sun").attr("d", state.solar ? path(d3.geoCircle().center(sun).radius(1.6)()) : null);
+  document.getElementById("legendNight").hidden = !state.solar;
+}
+setInterval(renderNight, 60000);
+const zoom = d3.zoom().scaleExtent([1, 40]).on("zoom", (ev) => { transform = ev.transform; zl.attr("transform", transform); placeMarkers(); hideTip(); });
+svg.call(zoom).on("dblclick.zoom", null);
+document.getElementById("zin").onclick = () => svg.transition().duration(300).call(zoom.scaleBy, 1.8);
+document.getElementById("zout").onclick = () => svg.transition().duration(300).call(zoom.scaleBy, 1 / 1.8);
+document.getElementById("zreset").onclick = () => svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity);
+
+function showTip(ev, html) {
+  const box = document.getElementById("mapwrap").getBoundingClientRect();
+  tip.innerHTML = html; tip.hidden = false;
+  const x = ev.clientX - box.left + 14, y = ev.clientY - box.top + 14;
+  tip.style.left = Math.min(x, box.width - tip.offsetWidth - 8) + "px";
+  tip.style.top = Math.min(y, box.height - tip.offsetHeight - 8) + "px";
+}
+function hideTip() { tip.hidden = true; }
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function markerSize(e) {
+  if (e.cat === "sismo" && e.mag) return Math.max(18, Math.pow(e.mag, 2.2) * 4);
+  if (e.cat === "maritimo") return 22 + (e.sev || 1) * 6;
+  return 40 + (e.sev || 1) * 22;
+}
+function visible() {
+  const now = Date.now(), from = state.period ? now - state.period * HOUR : 0;
+  return [...state.events.values()].filter((e) => {
+    if (!state.cats[e.cat]) return false;
+    if ((e.sev || 1) < state.minSev) return false;
+    const t = Date.parse(e.time || e.updated || 0) || 0;
+    if (from && t < from && !isLive(e)) return false;
+    return true;
+  }).sort((a, b) => (Date.parse(b.time) || 0) - (Date.parse(a.time) || 0));
+}
+const isLive = (e) => Object.values(state.live).some((s) => s.has(e.id));
+
+function renderMarkers() {
+  const data = visible().slice().sort((a, b) => (a.sev || 1) - (b.sev || 1));
+  const g = mk.selectAll("g.m").data(data, (d) => d.id).join((en) => {
+    const g = en.append("g").attr("class", "m");
+    g.append("path").attr("class", "marker");
+    return g;
+  });
+  g.select("path.marker")
+    .attr("d", (d) => d3.symbol((CATS[d.cat] || CATS.sismo).sym, markerSize(d))())
+    .attr("fill", (d) => sevColor(d.sev)).attr("fill-opacity", (d) => (isLive(d) ? 0.92 : 0.45))
+    .classed("sel", (d) => d.id === state.selected)
+    .on("mousemove", (ev, d) => showTip(ev, `<b>${esc(d.title)}</b><span>${esc(CATS[d.cat]?.name || d.cat)} · ${rel(d.time)} · ${esc(d.src)}</span>`))
+    .on("mouseleave", hideTip)
+    .on("click", (ev, d) => { ev.stopPropagation(); select(d.id, false); });
+  g.selectAll("circle.ring").data((d) => (d.sev >= 4 && isLive(d) && Date.now() - Date.parse(d.time) < 24 * HOUR ? [d] : [])).join("circle").attr("class", "ring").attr("r", 6).attr("stroke", (d) => sevColor(d.sev));
+  placeMarkers();
+}
+function placeMarkers() {
+  mk.selectAll("g.m").attr("transform", (d) => {
+    const p = projection([d.lon, d.lat]);
+    if (!p) return "translate(-99,-99)";
+    const [x, y] = transform.apply(p);
+    return `translate(${x},${y})`;
+  });
+}
+
+// ---------- side panel ----------
+function legendShape(cat, color = "currentColor") {
+  const p = d3.symbol(CATS[cat].sym, 60)();
+  return `<svg viewBox="-7 -7 14 14" aria-hidden="true"><path d="${p}" fill="${color}"></path></svg>`;
+}
+function renderChips() {
+  const counts = {};
+  const base = (() => { const s = state.cats; state.cats = Object.fromEntries(Object.keys(CATS).map((c) => [c, true])); const v = visible(); state.cats = s; return v; })();
+  base.forEach((e) => (counts[e.cat] = (counts[e.cat] || 0) + 1));
+  document.getElementById("chips").innerHTML = Object.entries(CATS).map(([k, c]) =>
+    `<button type="button" class="chip" data-cat="${k}" aria-pressed="${state.cats[k]}">${legendShape(k)}${c.name}<span class="n">${counts[k] || 0}</span></button>`).join("")
+    + `<button type="button" class="chip solar" data-layer="solar" aria-pressed="${state.solar}"><svg viewBox="-7 -7 14 14" aria-hidden="true"><circle r="4.5"></circle></svg>Día y noche</button>`;
+  document.getElementById("legendCats").innerHTML = Object.entries(CATS).map(([k, c]) => `<span class="sw">${legendShape(k, "var(--muted)").replace("<svg", '<svg width="11" height="11"')}${c.name}</span>`).join("");
+}
+document.getElementById("chips").addEventListener("click", (ev) => {
+  const b = ev.target.closest(".chip"); if (!b) return;
+  if (b.dataset.layer === "solar") { state.solar = !state.solar; saveUi(); renderNight(); renderChips(); return; }
+  state.cats[b.dataset.cat] = !state.cats[b.dataset.cat]; saveUi(); render();
+});
+document.getElementById("fPeriod").value = String(state.period);
+document.getElementById("fSev").value = String(state.minSev);
+document.getElementById("fPeriod").onchange = (e) => { state.period = +e.target.value; saveUi(); render(); };
+document.getElementById("fSev").onchange = (e) => { state.minSev = +e.target.value; saveUi(); render(); };
+function saveUi() { store.set("ui", { cats: state.cats, period: state.period, minSev: state.minSev, solar: state.solar }); }
+
+function rel(t) {
+  const ms = Date.now() - Date.parse(t);
+  if (!Number.isFinite(ms)) return "sin fecha";
+  const m = Math.round(ms / 60000);
+  if (m < 1) return "ahora";
+  if (m < 60) return `hace ${m} min`;
+  const h = Math.round(m / 60);
+  if (h < 48) return `hace ${h} h`;
+  return `hace ${Math.round(h / 24)} días`;
+}
+const fmt = (t) => { const d = new Date(t); return isNaN(d) ? "—" : d.toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short" }); };
+
+function renderList() {
+  const v = visible();
+  const s = [1, 2, 3, 4].map((n) => v.filter((e) => (e.sev || 1) === n).length);
+  document.getElementById("summary").innerHTML = [4, 3, 2, 1].map((n) =>
+    `<div><b style="color:${sevColor(n)}">${s[n - 1]}</b><span>${SEV[n]}</span></div>`).join("");
+  const list = document.getElementById("list");
+  if (!v.length) {
+    list.innerHTML = `<div class="empty">${state.events.size ? "No hay alertas con estos filtros. Prueba a ampliar el periodo o a bajar la gravedad mínima." : "Aún no hay alertas cargadas. Cuando el mapa conecte con las fuentes aparecerán aquí, ordenadas de la más reciente a la más antigua."}</div>`;
+    return;
+  }
+  list.innerHTML = v.slice(0, 400).map((e) => `
+    <button type="button" class="ev${e.id === state.selected ? " sel" : ""}" data-id="${esc(e.id)}">
+      <span class="bar" style="background:${sevColor(e.sev)}"></span>
+      <span>
+        <span class="meta"><span>${esc(CATS[e.cat]?.name || e.cat)}</span><span>${rel(e.time)}</span><span>${esc(e.src)}</span>${badge(e)}</span>
+        <span class="title" style="display:block">${esc(e.title)}</span>
+      </span>
+    </button>`).join("") + (v.length > 400 ? `<div class="empty">Se muestran las 400 más recientes de ${v.length}. Usa los filtros para acotar.</div>` : "");
+}
+function badge(e) {
+  const v = e.verified === false ? `<span class="badge unv" title="Sin verificar">Sin verificar</span>` : `<span class="badge ok" title="Fuente oficial">Oficial</span>`;
+  return v + (isLive(e) ? "" : `<span class="badge old">Histórico</span>`);
+}
+document.getElementById("list").addEventListener("click", (ev) => {
+  const b = ev.target.closest(".ev"); if (b) select(b.dataset.id, true);
+});
+svg.on("click", () => { if (state.selected) { state.selected = null; render(); } });
+
+function select(id, fly) {
+  state.selected = id;
+  const e = state.events.get(id);
+  render();
+  if (fly && e) {
+    const p = projection([e.lon, e.lat]);
+    if (p) { const k = Math.max(transform.k, 4); svg.transition().duration(600).call(zoom.transform, d3.zoomIdentity.translate(W / 2 - p[0] * k, H / 2 - p[1] * k).scale(k)); }
+  }
+}
+function renderDetail() {
+  const el = document.getElementById("detail");
+  const e = state.selected && state.events.get(state.selected);
+  if (!e) { el.hidden = true; return; }
+  el.hidden = false;
+  const rows = [
+    ["Fecha", fmt(e.time)],
+    e.updated && e.updated !== e.time ? ["Actualizado", fmt(e.updated)] : null,
+    e.until ? ["Hasta", fmt(e.until)] : null,
+    ["Posición", `${(+e.lat).toFixed(2)}°, ${(+e.lon).toFixed(2)}°${e.approx ? " (aprox.)" : ""}`],
+    e.mag != null ? ["Magnitud", `M${(+e.mag).toFixed(1)}${e.depth != null ? ` · ${Math.round(e.depth)} km de profundidad` : ""}`] : null,
+    e.tsunami ? ["Tsunami", "Posible, revisa los avisos de tsunami"] : null,
+    e.level ? ["Nivel", e.level] : null,
+    e.country ? ["País", e.country] : null,
+    ["Fuente", e.src],
+  ].filter(Boolean);
+  el.innerHTML = `
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span class="sevpill" style="background:${sevColor(e.sev)}">${SEV[e.sev || 1]}</span>
+      <span class="label">${esc(CATS[e.cat]?.name || e.cat)}</span>${badge(e)}
+      <button type="button" class="x" id="closeDetail" aria-label="Cerrar ficha">×</button>
+    </div>
+    <h2>${esc(e.title)}</h2>
+    ${e.desc ? `<p>${esc(e.desc)}</p>` : ""}
+    <dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
+    ${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">Ver en la fuente original ↗</a>` : ""}`;
+  document.getElementById("closeDetail").onclick = () => { state.selected = null; render(); };
+}
+
+function render() { renderChips(); renderMarkers(); renderList(); renderDetail(); renderStatus(); }
+
+function renderStatus() {
+  const ok = Object.values(state.srcStatus).filter((s) => s.ok).length;
+  const total = Object.keys(SOURCES).filter((k) => state.settings.enabled[k]).length;
+  const live = ok > 0;
+  document.getElementById("liveDot").classList.toggle("live", live);
+  document.getElementById("status").textContent = state.lastUpdate
+    ? `${live ? "En directo" : "Sin conexión"} · ${ok}/${total} fuentes · actualizado ${rel(state.lastUpdate)} · ${state.events.size} alertas guardadas`
+    : state.mcpState || "Conectando con las fuentes…";
+}
+setInterval(renderStatus, 30000);
+
+// ---------- banner ----------
+function banner(html, kind = "", btn) {
+  const b = document.getElementById("banner");
+  if (!html) { b.hidden = true; return; }
+  b.className = "banner " + kind; b.innerHTML = `<span>${html}</span>`; b.hidden = false;
+  if (btn) { const x = document.createElement("button"); x.className = "btn primary"; x.type = "button"; x.textContent = btn.label; x.onclick = btn.onClick; b.appendChild(x); }
+}
+
+// ---------- data ingest ----------
+function extractFeed(payload) {
+  const seen = new Set();
+  const walk = (p, depth) => {
+    if (p == null || depth > 5 || seen.has(p)) return null;
+    if (typeof p === "string") {
+      const i = p.indexOf("{");
+      if (i < 0) return null;
+      try { return walk(JSON.parse(p.slice(i, p.lastIndexOf("}") + 1)), depth + 1); } catch { return null; }
+    }
+    if (typeof p !== "object") return null;
+    seen.add(p);
+    if (Array.isArray(p.events) && p.status) return p;
+    for (const k of ["body", "text", "content", "data", "response", "result", "payload"]) { const r = walk(p[k], depth + 1); if (r) return r; }
+    if (Array.isArray(p)) for (const x of p) { const r = walk(x?.text ?? x, depth + 1); if (r) return r; }
+    for (const v of Object.values(p)) { const r = walk(v, depth + 1); if (r) return r; }
+    return null;
+  };
+  return walk(payload, 0);
+}
+function ingest(src, feed, at) {
+  const ids = new Set();
+  for (const e of feed.events || []) {
+    if (!Number.isFinite(+e.lat) || !Number.isFinite(+e.lon)) continue;
+    ids.add(e.id);
+    const old = state.events.get(e.id);
+    state.events.set(e.id, e);
+    if (!old || old.sev !== e.sev || old.updated !== e.updated || old.title !== e.title) markDirty(e);
+  }
+  state.live[src] = ids;
+  const st = feed.status?.[src];
+  state.srcStatus[src] = st?.ok === false ? { ok: false, at, error: st.error } : { ok: true, at, n: ids.size };
+  state.lastUpdate = new Date(at).toISOString();
+  render();
+  scheduleFlush();
+}
+
+// ---------- history (db) ----------
+let db = null;
+const dirtyDays = new Set();
+const dayOf = (e) => (e.time || e.updated || new Date().toISOString()).slice(0, 10);
+const keyOf = (id) => id.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 120);
+function compact(e) {
+  const o = {};
+  for (const k of ["id", "cat", "title", "lat", "lon", "time", "updated", "until", "sev", "mag", "depth", "tsunami", "level", "country", "url", "src", "approx", "verified"]) if (e[k] != null && e[k] !== "") o[k] = e[k];
+  if (e.desc) o.desc = String(e.desc).slice(0, 300);
+  return o;
+}
+function withinRetention(e) {
+  const r = state.settings.retention;
+  if (!r) return true;
+  return (Date.parse(e.time) || Date.now()) >= Date.now() - r * 24 * HOUR;
+}
+function markDirty(e) { if (db && withinRetention(e)) dirtyDays.add(dayOf(e)); }
+let flushTimer = null, flushing = false;
+function scheduleFlush() { if (db && dirtyDays.size && !flushTimer) flushTimer = setTimeout(flush, 4000); }
+async function flush() {
+  flushTimer = null;
+  if (flushing || !db) return;
+  flushing = true;
+  try {
+    for (const day of [...dirtyDays]) {
+      dirtyDays.delete(day);
+      const ev = {};
+      for (const e of state.events.values()) if (dayOf(e) === day && withinRetention(e)) ev[keyOf(e.id)] = compact(e);
+      try { await db.doc("dias/" + day).set({ d: day, n: Object.keys(ev).length, ev }); }
+      catch (err) { console.warn("No se pudo guardar el histórico", day, err); if (err?.code === "invalid_argument") { db = null; break; } }
+    }
+  } finally { flushing = false; if (dirtyDays.size) scheduleFlush(); }
+}
+async function loadHistory() {
+  if (!db) return;
+  try {
+    const r = state.settings.retention;
+    let q = db.collection("dias");
+    if (r) q = q.where("d", ">=", new Date(Date.now() - r * 24 * HOUR).toISOString().slice(0, 10));
+    const snap = await q.get();
+    snap.docs.forEach((d) => { const ev = d.data()?.ev || {}; for (const e of Object.values(ev)) if (!state.events.has(e.id)) state.events.set(e.id, e); });
+    render();
+  } catch (err) { console.warn("No se pudo leer el histórico", err); }
+}
+async function pruneHistory() {
+  const r = state.settings.retention;
+  if (!db || !r) return;
+  try {
+    const cutoff = new Date(Date.now() - r * 24 * HOUR).toISOString().slice(0, 10);
+    const snap = await db.collection("dias").where("d", "<", cutoff).get();
+    for (const d of snap.docs) await db.doc("dias/" + d.id).delete();
+  } catch (err) { console.warn(err); }
+}
+
+// ---------- live feeds (bridge on the same site) ----------
+let mcp = true;
+let timer = null, running = false;
+const lastRun = {};
+function watchAll() {
+  clearInterval(timer);
+  for (const k of Object.keys(SOURCES)) if (!state.settings.enabled[k]) { delete state.live[k]; delete state.srcStatus[k]; }
+  render();
+  timer = setInterval(tick, 30000);
+  tick();
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") tick(); });
+function dueSources(force) {
+  const now = Date.now();
+  return Object.keys(SOURCES).filter((k) => state.settings.enabled[k] && (force || !lastRun[k] || now - lastRun[k] >= state.settings.intervals[k] * 60000 - 5000));
+}
+async function tick(force = false) {
+  if (running || document.visibilityState !== "visible") return;
+  const due = dueSources(force);
+  if (!due.length) return;
+  running = true; setRefreshing(true);
+  try {
+    const r = await fetch(`${BRIDGE}?src=${due.join(",")}`, { signal: AbortSignal.timeout(30000) });
+    if (!r.ok) throw new Error(`El puente respondió ${r.status}`);
+    const feed = await r.json();
+    const at = Date.parse(feed.generated) || Date.now();
+    banner(null);
+    for (const s of due) {
+      lastRun[s] = Date.now();
+      ingest(s, { status: feed.status, events: feed.events.filter((e) => sourceOf(e) === s) }, at);
+    }
+  } catch (err) {
+    banner(`No se pudieron traer las alertas: ${esc(err.message || err)}`, "warn", { label: "Reintentar", onClick: () => tick(true) });
+  } finally { running = false; setRefreshing(false); renderStatus(); }
+}
+function sourceOf(e) { return { usgs: "usgs", gdacs: "gdacs", tsunami: "tsunami", nhc: "nhc", nga: "navarea", gvp: "volcanes", nws: "nws" }[String(e.id).split(":")[0]]; }
+function setRefreshing(on) {
+  const b = document.getElementById("refreshBtn");
+  b.disabled = on; b.textContent = on ? "Actualizando…" : "Actualizar ahora";
+}
+document.getElementById("refreshBtn").onclick = () => tick(true);
+
+// History lives in this browser (IndexedDB), behind the same small interface the page uses.
+function localDb() {
+  const open = new Promise((res, rej) => { const r = indexedDB.open("world-alert", 1); r.onupgradeneeded = () => r.result.createObjectStore("docs"); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+  const tx = async (mode, fn) => { const d = await open; return new Promise((res, rej) => { const t = d.transaction("docs", mode); const out = fn(t.objectStore("docs")); t.oncomplete = () => res(out.result); t.onerror = () => rej(t.error); }); };
+  const snap = (id, v) => ({ id, exists: v !== undefined, data: () => v });
+  const doc = (path) => ({
+    get: async () => snap(path.split("/").pop(), await tx("readonly", (s) => s.get(path))),
+    set: (v) => tx("readwrite", (s) => s.put(v, path)),
+    delete: () => tx("readwrite", (s) => s.delete(path)),
+  });
+  const collection = (prefix, filters = []) => ({
+    where: (f, op, v) => collection(prefix, [...filters, [f, op, v]]),
+    get: async () => {
+      const keys = await tx("readonly", (s) => s.getAllKeys()), vals = await tx("readonly", (s) => s.getAll());
+      const ops = { ">=": (a, b) => a >= b, "<": (a, b) => a < b, "==": (a, b) => a === b };
+      const docs = keys.map((k, i) => [k, vals[i]]).filter(([k, v]) => String(k).startsWith(prefix + "/") && filters.every(([f, op, x]) => ops[op](v?.[f], x))).map(([k, v]) => snap(String(k).split("/").pop(), v));
+      return { docs, size: docs.length, empty: !docs.length };
+    },
+  });
+  return { doc, collection: (p) => collection(p) };
+}
+
+// ---------- settings ----------
+const sheet = document.getElementById("settings");
+function fmtMin(m) { return m < 60 ? `cada ${m} min` : m < 1440 ? `cada ${m / 60} h` : "cada día"; }
+function openSettings() {
+  document.getElementById("srcRows").innerHTML = Object.entries(SOURCES).map(([k, s]) => {
+    const st = state.srcStatus[k];
+    const sub = !state.settings.enabled[k] ? "Desactivada" : !st ? "Sin datos todavía" : st.ok ? `OK · ${st.n} alertas · ${rel(new Date(st.at).toISOString())}` : `Error: ${st.error}`;
+    return `<div class="srcrow">
+      <input type="checkbox" id="en_${k}" ${state.settings.enabled[k] ? "checked" : ""} aria-label="Activar ${esc(s.name)}">
+      <label class="nm" for="en_${k}">${esc(s.name)}</label>
+      <select id="iv_${k}" aria-label="Frecuencia de ${esc(s.name)}">${s.opts.map((o) => `<option value="${o}" ${o === +state.settings.intervals[k] ? "selected" : ""}>${fmtMin(o)}</option>`).join("")}</select>
+      <span class="sub${st && !st.ok ? " err" : ""}">${esc(sub)}</span></div>`;
+  }).join("");
+  document.getElementById("retention").value = String(state.settings.retention);
+  document.getElementById("clearZone").innerHTML = `<button class="btn" type="button" id="clearBtn">Borrar histórico</button>`;
+  document.getElementById("clearBtn").onclick = askClear;
+  sheet.hidden = false;
+}
+function askClear() {
+  document.getElementById("clearZone").innerHTML = `<div class="confirm">Se borrarán todas las alertas guardadas. ¿Seguro? <button class="btn" type="button" id="clearNo">No</button><button class="btn primary" type="button" id="clearYes">Sí, borrar</button></div>`;
+  document.getElementById("clearNo").onclick = openSettings;
+  document.getElementById("clearYes").onclick = async () => {
+    if (db) { try { const s = await db.collection("dias").get(); for (const d of s.docs) await db.doc("dias/" + d.id).delete(); } catch (e) { console.warn(e); } }
+    for (const [id, e] of state.events) if (!isLive(e)) state.events.delete(id);
+    sheet.hidden = true; render();
+  };
+}
+document.getElementById("settingsBtn").onclick = openSettings;
+document.getElementById("setCancel").onclick = () => (sheet.hidden = true);
+sheet.addEventListener("click", (e) => { if (e.target === sheet) sheet.hidden = true; });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") sheet.hidden = true; });
+document.getElementById("setSave").onclick = async () => {
+  for (const k of Object.keys(SOURCES)) {
+    state.settings.enabled[k] = document.getElementById("en_" + k).checked;
+    state.settings.intervals[k] = +document.getElementById("iv_" + k).value;
+  }
+  state.settings.retention = +document.getElementById("retention").value;
+  store.set("settings", state.settings);
+  sheet.hidden = true;
+  if (db) { try { await db.doc("config/ajustes").set(state.settings); } catch (e) { console.warn(e); } }
+  watchAll(); pruneHistory();
+};
+
+// ---------- boot ----------
+window.addEventListener("resize", () => { clearTimeout(window.__rz); window.__rz = setTimeout(layout, 120); });
+layout(); render();
+
+(async () => {
+  try { db = window.indexedDB ? localDb() : null; } catch { db = null; }
+  if (db) {
+    try { const s = await db.doc("config/ajustes").get(); if (s.exists) { mergeSettings(s.data()); store.set("settings", state.settings); } } catch {}
+    await loadHistory();
+    pruneHistory();
+  }
+  watchAll();
+})();
+})();
+</script>
+</body>
+</html>
