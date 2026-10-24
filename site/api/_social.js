@@ -35,6 +35,7 @@ const isQuakeBot = (t) => /(\b(m[blsw]?v?|mww?)\s?\d([.,]\d+)?\b|magnitu[dr]e?\W
 
 // Region names that are also everyday words ("Coast", "Islands", "Southern"…) say nothing about the place on their own.
 const GENERIC = new Set("islands island coast coastal southern northern eastern western central capital national north south east west north east lakes river valley mountain mountains highlands lowlands border upper lower greater interior littoral centre center metropolitan federal special region frontier sur norte este oeste centro costa islas frontera sierra valle rio capital oriental occidental".split(" "));
+const PREP = new Set("in off near at outside en frente cerca junto costa costas de del a".split(" "));
 const SPANISH = /(^|\s)(que|los|las|del|el|en|por|una|para|con|está|según|hoy|y)(\s|$)/i;
 
 // Reads place names from the text: hashtags or capitalised words, longest phrase first.
@@ -50,7 +51,9 @@ function placeOf(text, lang) {
       if (!first.tag && !/^\p{Lu}/u.test(first.w)) continue;
       const key = norm(words.slice(i, i + n).map((x) => x.w).join(" "));
       if (n === 1 && GENERIC.has(key)) continue;
-      if (g[key]) { hits.push({ key, cands: g[key] }); found = n; }
+      // A place right after "in", "off", "near", "en", "frente a"… is where it happened, not who is talked about.
+      const prev = norm(words[i - 1]?.w || "");
+      if (g[key]) { hits.push({ key, cands: g[key], at: PREP.has(prev) }); found = n; }
     }
     i += found || 1;
   }
@@ -58,12 +61,13 @@ function placeOf(text, lang) {
   const countries = new Set(hits.flatMap((h) => h.cands.filter((x) => x[3] === 1).map((x) => x[2])));
   const es = lang?.startsWith("es") || (!lang && SPANISH.test(text));
   let best = null, bestKey = "", bestScore = -1;
-  for (const { key, cands } of hits) for (const c of cands) {
+  for (const { key, cands, at } of hits) for (const c of cands) {
     // A city beats a region, a region beats a country; a place inside a country also named wins.
     let s = c[3] === 0 ? 3 : c[3] === 2 ? 2 : 1;
     if (c[3] !== 1 && countries.has(c[2])) s += 4;
     if (es && c[2] === "España" && c[3] !== 1) s += 2;
     if (cands[0] === c) s += 0.5;
+    if (at) s += 1.5;
     s += Math.min(0.4, (c[4] || 0) / 5e7);
     if (s > bestScore) { bestScore = s; best = c; bestKey = key; }
   }

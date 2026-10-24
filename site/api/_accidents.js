@@ -29,8 +29,11 @@ const KINDS = {
 };
 
 // Old stories, features and figures of speech ("el naufragio del macronismo").
-const NOT_NEWS = /\b(\d+ years|años despu[eé]s|aniversario|anniversary|documentar|movie|pel[ií]cula|novel|libro|book|museum|museo|laid to rest|remembered|recuerda|memorial|lawsuit|demanda|trial|juicio|verdict|sentencia|report finds|informe final)\b/i;
-const DEATHS = /(\d+)\s+(?:people\s+)?(?:dead|killed|die[ds]?|muertos|fallecidos|v[ií]ctimas mortales)|(?:kills?|killing|matan?|mueren)\s+(\d+)/i;
+const NOT_NEWS = /\b(\d+ years|años despu[eé]s|aniversario|anniversary|documentar|movie|pel[ií]cula|novel|libro|book|museum|museo|laid to rest|remembered|recuerda|memorial|lawsuit|demanda|trial|juicio|verdict|sentencia|report finds|informe final|year since|years since|one year|un a[ñn]o|se cumple)\b/i;
+const NUM = "\\d+|one|two|three|four|five|six|seven|eight|nine|ten|dozens|un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|decenas";
+const DEATHS = new RegExp(`\\b(${NUM})\\s+(?:[\\w-]+\\s+){0,3}(?:dead|killed|die[ds]?|muertos|fallecidos|v[ií]ctimas mortales|mueren)|(?:kills?|killing|matan?|mueren|muere)\\s+(?:at least\\s+|al menos\\s+)?(${NUM})\\b`, "i");
+const WORDS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, dozens: 24, un: 1, una: 1, uno: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10, decenas: 24 };
+const toNum = (w) => (w ? (/^\d+$/.test(w) ? +w : WORDS[w.toLowerCase()] || 0) : 0);
 
 async function search(lang, q) {
   const loc = lang === "es" ? "hl=es&gl=ES&ceid=ES:es" : "hl=en-US&gl=US&ceid=US:en";
@@ -61,9 +64,15 @@ export async function accidents(kind) {
     g.items.push(it); if (it.outlet) g.outlets.add(it.outlet);
     groups.set(key, g);
   }
+  // A story placed only at country level joins a city or coast of that country reported by other outlets.
+  for (const [key, g] of groups) {
+    if (g.place.name !== g.place.country) continue;
+    const finer = [...groups.values()].find((o) => o !== g && o.place.country === g.place.country && o.place.name !== o.place.country);
+    if (finer) { finer.items.push(...g.items); g.outlets.forEach((o) => finer.outlets.add(o)); groups.delete(key); }
+  }
   return [...groups.values()].map(({ place, items: list, outlets }) => {
     list.sort((a, b) => b.time - a.time);
-    const deaths = Math.max(0, ...list.map((x) => { const m = x.title.match(DEATHS); return m ? +(m[1] || m[2]) : 0; }));
+    const deaths = Math.max(0, ...list.map((x) => { const m = x.title.match(DEATHS); return m ? toNum(m[1] || m[2]) : 0; }));
     const minor = list.every((x) => /emergency landing|aterrizaje de emergencia|rescued|rescat/i.test(x.title));
     const where = place.name && place.name !== place.country ? `${place.name} (${place.country})` : place.country;
     const n = outlets.size;
