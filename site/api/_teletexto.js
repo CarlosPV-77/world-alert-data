@@ -64,9 +64,13 @@ export async function teletexto() {
   const now = new Date();
   return res.filter((r) => r.status === "fulfilled").map(({ value: s }) => {
     const text = `${s.title}. ${s.body}`;
-    const place = placeOf(text, s.area === "Nacional" ? "es" : "xx") || (s.area === "Nacional" ? MADRID : null);
+    // National stories stay in Spain: a Spanish politician speaking in Athens is still national news.
+    const found = placeOf(text, s.area === "Nacional" ? "es" : "xx");
+    const place = s.area === "Nacional" ? (found?.country === "España" ? found : MADRID) : found;
     if (!place) return null;
-    const topic = topicOf(text);
+    // The topic comes from the headline and first sentence; later sentences give background
+    // ("los rehenes", "la guerra") that would mislabel a protest as an attack.
+    const topic = topicOf(`${s.title}. ${s.body.split(/(?<=\.)\s/)[0]}`) || (/GUERRA|CONFLICTO/.test(s.section) ? topicOf("combates") : null);
     const president = PRESIDENT.test(text);
     const where = place.name && place.name !== place.country ? `${place.name} (${place.country})` : place.country;
     return {
