@@ -70,7 +70,7 @@ main { display: grid; grid-template-columns: 1fr 360px; min-height: 0; }
 .graticule { fill: none; stroke: var(--line); stroke-width: .4px; vector-effect: non-scaling-stroke; opacity: .6; }
 .night { fill: var(--night); fill-opacity: .14; stroke: none; pointer-events: none; }
 .sun { fill: var(--sun); stroke: var(--ocean); stroke-width: 1px; vector-effect: non-scaling-stroke; pointer-events: none; }
-.chip.solar svg circle { fill: var(--sun); }
+.litem .sun-ic { fill: var(--sun); }
 .sphere { fill: none; stroke: var(--line); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 .marker { cursor: pointer; stroke: var(--ocean); stroke-width: 1px; }
 .marker.sel { stroke: var(--fg); stroke-width: 2px; }
@@ -97,6 +97,27 @@ aside.side { background: var(--panel); border-left: 1px solid var(--line); displ
 .filters { padding: 12px 16px; border-bottom: 1px solid var(--line); display: grid; gap: 10px; }
 .label { font-family: var(--font-display); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.layers { display: grid; gap: 6px; max-height: 44vh; overflow-y: auto; overscroll-behavior: contain; }
+.lgroup { border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); }
+.lghead { display: flex; align-items: center; gap: 8px; padding: 6px 10px; }
+.gname { flex: 1; display: flex; align-items: center; gap: 8px; background: none; border: 0; padding: 2px 0; text-align: left; font-weight: 600; font-size: 13px; min-width: 0; }
+.gname .n, .litem .n { margin-left: auto; font-family: var(--font-data); color: var(--muted); font-weight: 400; font-size: 12px; }
+.gname .chev { color: var(--muted); display: inline-block; transition: transform .15s; width: 10px; }
+.gname[aria-expanded="true"] .chev { transform: rotate(90deg); }
+.tg { width: 28px; height: 16px; border-radius: 999px; background: var(--line); position: relative; flex: 0 0 auto; display: inline-block; }
+.tg::after { content: ""; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--muted); transition: transform .15s; }
+[aria-checked="true"] > .tg { background: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+[aria-checked="true"] > .tg::after { transform: translateX(12px); background: var(--accent); }
+[aria-checked="mixed"] > .tg::after { transform: translateX(6px); background: var(--accent); }
+.gtoggle { background: none; border: 0; padding: 4px 0; display: inline-flex; }
+.lgitems { display: grid; padding: 0 10px 6px; }
+.litem { display: flex; align-items: center; gap: 9px; padding: 6px 2px; background: none; border: 0; border-top: 1px solid var(--line); text-align: left; font-size: 13px; width: 100%; }
+.litem svg { width: 13px; height: 13px; flex: 0 0 auto; }
+.litem[aria-checked="false"] .nm { color: var(--muted); }
+.litem .hint { display: block; font-size: 11px; color: var(--muted); }
+.lrow { display: flex; gap: 8px; padding: 6px 0 2px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+.lrow .btn { flex: 0 0 auto; }
+.lrow select { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; flex: 1; min-width: 140px; }
 .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); font-size: 12px; }
 .chip[aria-pressed="false"] { opacity: .45; }
 .chip svg { width: 12px; height: 12px; }
@@ -151,6 +172,7 @@ aside.side { background: var(--panel); border-left: 1px solid var(--line); displ
   .list { overflow: visible; }
   .legend { font-size: 11px; padding: 8px 10px; }
   .legend .row.cats { display: none; }
+  .layers { max-height: none; }
 }
 </style>
 
@@ -186,11 +208,7 @@ aside.side { background: var(--panel); border-left: 1px solid var(--line); displ
     <aside class="side">
       <section class="filters">
         <div class="label">Capas</div>
-        <div class="chips" id="chips"></div>
-        <div class="frow">
-          <select id="fBase" aria-label="Fondo del mapa"></select>
-          <button type="button" class="btn" id="globeBtn" aria-pressed="false">Globo 3D</button>
-        </div>
+        <div class="layers" id="layers"></div>
         <div class="frow">
           <select id="fPeriod" aria-label="Periodo">
             <option value="1">Última hora</option>
@@ -252,18 +270,35 @@ const symDown = poly([[Math.PI, 1.25], [Math.PI / 3, 1.25], [-Math.PI / 3, 1.25]
 // Conflict: a thick X. Attack: an eight-point burst.
 const symX = poly(d3.range(4).flatMap((j) => { const t = Math.PI / 4 + j * Math.PI / 2; return [[t - 0.3, 1.3], [t + 0.3, 1.3], [t + Math.PI / 4, 0.45]]; }));
 const symBurst = poly(d3.range(16).map((i) => [i * Math.PI / 8, i % 2 ? 0.55 : 1.3]));
+const symPenta = poly(d3.range(5).map((i) => [i * 2 * Math.PI / 5, 1.1]));
 const CATS = {
-  sismo:      { name: "Terremotos",   sym: d3.symbolCircle },
-  volcan:     { name: "Volcanes",     sym: d3.symbolTriangle },
-  tsunami:    { name: "Tsunamis",     sym: d3.symbolDiamond },
-  ciclon:     { name: "Ciclones",     sym: d3.symbolStar },
-  inundacion: { name: "Inundaciones", sym: d3.symbolSquare },
-  meteo:      { name: "Avisos meteo", sym: d3.symbolWye },
-  maritimo:   { name: "Marítimo",     sym: d3.symbolCross },
-  incendio:   { name: "Incendios",    sym: symDown },
-  sequia:     { name: "Sequías",      sym: symHex },
-  conflicto:  { name: "Conflictos",   sym: symX },
-  atentado:   { name: "Atentados",    sym: symBurst },
+  sismo:      { name: "Terremotos",   sym: d3.symbolCircle,   group: "naturales" },
+  volcan:     { name: "Volcanes",     sym: d3.symbolTriangle, group: "naturales" },
+  tsunami:    { name: "Tsunamis",     sym: d3.symbolDiamond,  group: "naturales" },
+  ciclon:     { name: "Ciclones",     sym: d3.symbolStar,     group: "naturales" },
+  inundacion: { name: "Inundaciones", sym: d3.symbolSquare,   group: "naturales" },
+  incendio:   { name: "Incendios",    sym: symDown,           group: "naturales" },
+  sequia:     { name: "Sequías",      sym: symHex,            group: "naturales" },
+  meteo:      { name: "Avisos meteo del mundo", sym: d3.symbolWye, group: "meteo" },
+  aviso_es:   { name: "Avisos de AEMET (España)", sym: symPenta, group: "meteo" },
+  maritimo:   { name: "Avisos a navegantes", sym: d3.symbolCross, group: "mar" },
+  conflicto:  { name: "Conflictos",   sym: symX,              group: "seguridad" },
+  atentado:   { name: "Atentados",    sym: symBurst,          group: "seguridad" },
+};
+const GROUPS = {
+  naturales: "Desastres naturales",
+  meteo:     "Meteorología",
+  mar:       "Mar",
+  seguridad: "Conflictos y seguridad",
+  mapa:      "Mapa",
+};
+// Map overlays that are not alerts, shown in the "Mapa" group.
+const OVERLAYS = {
+  labels:   { name: "Ciudades y pueblos", hint: "Más nombres al acercar; en España, hasta aldeas y barrios" },
+  limits:   { name: "Regiones y provincias", hint: "En España, también límites municipales" },
+  zones:    { name: "Zonas de aviso de AEMET", hint: "Coloreadas por nivel: amarillo, naranja o rojo" },
+  disputed: { name: "Territorios disputados" },
+  solar:    { name: "Día y noche" },
 };
 const SOURCES = {
   usgs:     { name: "USGS · terremotos M2,5+", def: 2, opts: [1, 2, 5, 10, 15, 30] },
@@ -273,6 +308,7 @@ const SOURCES = {
   navarea:  { name: "NGA · avisos a navegantes", def: 60, opts: [15, 30, 60, 180] },
   volcanes: { name: "Smithsonian GVP · volcanes (semanal; ahora bloquea las descargas automáticas, los volcanes llegan por GDACS)", def: 720, opts: [180, 360, 720, 1440], off: true },
   nws:      { name: "NOAA NWS · avisos graves EE. UU.", def: 10, opts: [5, 10, 15, 30, 60] },
+  aemet:    { name: "AEMET · avisos meteorológicos de España", def: 10, opts: [5, 10, 15, 30, 60] },
   conflictos: { name: "GDELT · noticias de conflictos armados", def: 15, opts: [15, 30, 60] },
   atentados:  { name: "GDELT · noticias de atentados", def: 15, opts: [15, 30, 60] },
 };
@@ -285,7 +321,9 @@ const state = {
   live: {},                   // source -> Set(ids) seen in last fetch
   srcStatus: {},              // source -> {ok, at, n, error}
   cats: Object.fromEntries(Object.keys(CATS).map((c) => [c, true])),
-  period: 24, minSev: 1, selected: null, solar: true, base: "s2", globe: false,
+  period: 24, minSev: 1, selected: null, base: "s2", globe: false,
+  ov: Object.fromEntries(Object.keys(OVERLAYS).map((k) => [k, true])),
+  open: { naturales: true, meteo: true, mar: false, seguridad: true, mapa: false },
   settings: { intervals: Object.fromEntries(Object.entries(SOURCES).map(([k, v]) => [k, v.def])), enabled: Object.fromEntries(Object.keys(SOURCES).map((k) => [k, !SOURCES[k].off])), retention: 90 },
   lastUpdate: null,
 };
@@ -294,7 +332,11 @@ const store = {
   set(k, v) { try { localStorage.setItem("wa:" + k, JSON.stringify(v)); } catch {} },
 };
 const savedUi = store.get("ui");
-if (savedUi) { Object.assign(state.cats, savedUi.cats || {}); state.period = savedUi.period ?? 24; state.minSev = savedUi.minSev ?? 1; state.solar = savedUi.solar ?? true; state.base = savedUi.base || "s2"; state.globe = !!savedUi.globe; }
+if (savedUi) {
+  Object.assign(state.cats, savedUi.cats || {}); Object.assign(state.ov, savedUi.ov || {}); Object.assign(state.open, savedUi.open || {});
+  if (savedUi.solar != null && !savedUi.ov) state.ov.solar = savedUi.solar;
+  state.period = savedUi.period ?? 24; state.minSev = savedUi.minSev ?? 1; state.base = savedUi.base || "s2"; state.globe = !!savedUi.globe;
+}
 const localSettings = store.get("settings");
 if (localSettings) mergeSettings(localSettings);
 function mergeSettings(s) {
@@ -319,10 +361,46 @@ const BASES = {
   dark: { name: "Oscuro (solo fronteras)" },
 };
 if (!BASES[state.base]) state.base = "s2";
+// ---------- places and administrative limits (OpenFreeMap vector tiles, OpenStreetMap data) ----------
+// Worldwide: regions, cities and towns. Inside Spain (a slightly widened outline): provinces,
+// municipal limits, villages, hamlets and neighbourhoods.
+const SPAIN = await fetch("spain.json").then((r) => (r.ok ? r.json() : null)).catch(() => null);
+const NAME = ["coalesce", ["get", "name:es"], ["get", "name:latin"], ["get", "name"]];
+const inSpain = (f) => (SPAIN ? ["all", f, ["within", SPAIN]] : null);
+const LABEL_LAYERS = [], LIMIT_LAYERS = [];
+const HALO = { "text-color": "#eef4f8", "text-halo-color": "rgba(5,12,20,.88)", "text-halo-width": 1.4, "text-halo-blur": 0.3 };
+function addPlaceLayers() {
+  map.addSource("omt", { type: "vector", url: "https://tiles.openfreemap.org/planet",
+    attribution: '<a href="https://openfreemap.org" target="_blank" rel="noopener">OpenFreeMap</a> © <a href="https://www.openmaptiles.org/" target="_blank" rel="noopener">OpenMapTiles</a> datos de <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>' });
+  const line = (id, filter, minzoom, paint) => { if (!filter) return; map.addLayer({ id, type: "line", source: "omt", "source-layer": "boundary", minzoom, filter, layout: { "line-join": "round" }, paint }); LIMIT_LAYERS.push(id); };
+  const lvl = (n) => ["all", ["==", ["get", "admin_level"], n], ["==", ["get", "maritime"], 0]];
+  // Detailed national borders once zoomed in, where the Natural Earth outline is too coarse.
+  map.addLayer({ id: "adm-country", type: "line", source: "omt", "source-layer": "boundary", minzoom: 4, filter: ["all", ["==", ["get", "admin_level"], 2], ["==", ["get", "maritime"], 0]], layout: { "line-join": "round" }, paint: { "line-color": "rgba(235,242,248,.7)", "line-width": ["interpolate", ["linear"], ["zoom"], 4, 1, 10, 2], "line-opacity": ["interpolate", ["linear"], ["zoom"], 4, 0, 5, 1] } });
+  line("adm-region", lvl(4), 3, { "line-color": "rgba(235,242,248,.45)", "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.5, 9, 1.4], "line-dasharray": [3, 2] });
+  line("adm-es-prov", inSpain(lvl(6)), 5, { "line-color": "rgba(235,242,248,.4)", "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.5, 10, 1.2], "line-dasharray": [2, 2] });
+  line("adm-es-mun", inSpain(lvl(8)), 9, { "line-color": "rgba(235,242,248,.28)", "line-width": 0.6, "line-dasharray": [1, 2] });
+  const label = (id, filter, minzoom, maxzoom, size, extra = {}) => {
+    if (!filter) return;
+    map.addLayer({ id, type: "symbol", source: "omt", "source-layer": "place", minzoom, maxzoom, filter,
+      layout: { "text-field": NAME, "text-font": ["Noto Sans Regular"], "text-size": size, "text-max-width": 8, "symbol-sort-key": ["coalesce", ["get", "rank"], 99], "text-padding": 3, ...extra.layout },
+      paint: { ...HALO, ...extra.paint } });
+    LABEL_LAYERS.push(id);
+  };
+  const cls = (...c) => ["in", ["get", "class"], ["literal", c]];
+  const region = { layout: { "text-transform": "uppercase", "text-letter-spacing": 0.12, "text-font": ["Noto Sans Italic"] }, paint: { "text-color": "rgba(226,236,244,.8)" } };
+  label("lbl-region", cls("state"), 3.5, 8, ["interpolate", ["linear"], ["zoom"], 3.5, 9, 7, 12], region);
+  label("lbl-es-prov", inSpain(cls("province")), 5.5, 9.5, ["interpolate", ["linear"], ["zoom"], 5.5, 9, 9, 12], region);
+  const capital = { layout: { "text-font": ["case", ["==", ["get", "capital"], 2], ["literal", ["Noto Sans Bold"]], ["literal", ["Noto Sans Regular"]]] } };
+  label("lbl-city-major", ["all", cls("city"), ["<=", ["coalesce", ["get", "rank"], 99], 3]], 2.5, 24, ["interpolate", ["linear"], ["zoom"], 2.5, 10, 6, 13, 10, 16], capital);
+  label("lbl-city", ["all", cls("city"), [">", ["coalesce", ["get", "rank"], 99], 3]], 4.5, 24, ["interpolate", ["linear"], ["zoom"], 4.5, 10, 8, 13, 12, 15], capital);
+  label("lbl-town", cls("town"), 7, 24, ["interpolate", ["linear"], ["zoom"], 7, 10, 12, 14]);
+  label("lbl-es-village", inSpain(cls("village")), 9, 24, ["interpolate", ["linear"], ["zoom"], 9, 10, 14, 13]);
+  label("lbl-es-small", inSpain(cls("hamlet", "suburb", "quarter", "neighbourhood", "isolated_dwelling")), 12, 24, ["interpolate", ["linear"], ["zoom"], 12, 10, 16, 12], { paint: { "text-color": "rgba(226,236,244,.85)" } });
+}
 const HOME = { center: [15, 22], zoom: 1.4 };
 const map = new maplibregl.Map({
   container: "map",
-  style: { version: 8, projection: { type: state.globe ? "globe" : "mercator" }, sources: {}, layers: [{ id: "bg", type: "background", paint: { "background-color": "#0a1520" } }] },
+  style: { version: 8, glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf", projection: { type: state.globe ? "globe" : "mercator" }, sources: {}, layers: [{ id: "bg", type: "background", paint: { "background-color": "#0a1520" } }] },
   center: HOME.center, zoom: HOME.zoom, minZoom: 0.6, maxZoom: 17, attributionControl: { compact: true }, dragRotate: false,
 });
 map.touchZoomRotate.disableRotation();
@@ -353,9 +431,14 @@ map.on("load", () => {
   map.addSource("disputed", { type: "geojson", data: disputed });
   map.addLayer({ id: "land", type: "fill", source: "countries", layout: { visibility: "none" }, paint: { "fill-color": "#2f4559" } });
   map.addLayer({ id: "country-hit", type: "fill", source: "countries", paint: { "fill-color": "#000", "fill-opacity": 0 } });
-  map.addLayer({ id: "borders", type: "line", source: "countries", paint: { "line-color": "rgba(235,242,248,.6)", "line-width": ["interpolate", ["linear"], ["zoom"], 1, 0.5, 6, 1.4] } });
+  map.addLayer({ id: "borders", type: "line", source: "countries", paint: { "line-color": "rgba(235,242,248,.6)", "line-width": ["interpolate", ["linear"], ["zoom"], 1, 0.5, 6, 1.4], "line-opacity": ["interpolate", ["linear"], ["zoom"], 4, 1, 5, 0.15] } });
   map.addLayer({ id: "disputed-fill", type: "fill", source: "disputed", paint: { "fill-color": "#d6a24a", "fill-opacity": 0.28 } });
   map.addLayer({ id: "disputed-line", type: "line", source: "disputed", paint: { "line-color": "#f0bd5c", "line-width": 1.4, "line-dasharray": [2, 1.5] } });
+  addPlaceLayers();
+  map.addSource("zones", { type: "geojson", data: empty });
+  const zoneColor = ["match", ["get", "sev"], 4, "#ea4a4f", 3, "#ec8636", "#e2c050"];
+  map.addLayer({ id: "zones-fill", type: "fill", source: "zones", paint: { "fill-color": zoneColor, "fill-opacity": 0.3 } });
+  map.addLayer({ id: "zones-line", type: "line", source: "zones", paint: { "line-color": zoneColor, "line-width": ["interpolate", ["linear"], ["zoom"], 4, 0.8, 9, 2] } });
   map.addSource("night", { type: "geojson", data: empty });
   map.addLayer({ id: "night", type: "fill", source: "night", paint: { "fill-color": "#01060b", "fill-opacity": 0.2, "fill-antialias": false } });
   map.addSource("sun", { type: "geojson", data: empty });
@@ -367,8 +450,19 @@ map.on("load", () => {
     "icon-image": ["get", "icon"], "icon-size": ["get", "scale"], "icon-allow-overlap": true, "icon-ignore-placement": true, "symbol-sort-key": ["get", "sev"],
   }, paint: { "icon-opacity": ["get", "op"] } });
   map.addLayer({ id: "sel", type: "circle", source: "events", filter: ["==", ["get", "id"], ""], paint: { "circle-radius": 13, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#ffffff", "circle-stroke-width": 2.5 } });
-  applyBase(); renderNight(); renderMarkers();
+  // Place names sit above the night shading and alert zones, below the alert markers.
+  for (const id of LABEL_LAYERS) if (map.getLayer(id)) map.moveLayer(id, "crit");
+  applyBase(); applyOverlays(); renderNight(); renderMarkers();
 });
+
+function applyOverlays() {
+  const vis = (on) => (on ? "visible" : "none");
+  for (const id of LABEL_LAYERS) map.setLayoutProperty(id, "visibility", vis(state.ov.labels));
+  for (const id of LIMIT_LAYERS) map.setLayoutProperty(id, "visibility", vis(state.ov.limits));
+  for (const id of ["disputed-fill", "disputed-line"]) map.setLayoutProperty(id, "visibility", vis(state.ov.disputed));
+  for (const id of ["zones-fill", "zones-line"]) map.setLayoutProperty(id, "visibility", vis(state.ov.zones));
+  renderNight();
+}
 function applyBase() {
   for (const k of Object.keys(BASES)) if (BASES[k].tiles) map.setLayoutProperty("base-" + k, "visibility", state.base === k ? "visible" : "none");
   map.setLayoutProperty("land", "visibility", state.base === "dark" ? "visible" : "none");
@@ -410,10 +504,10 @@ function belowAltitude([sunLon, sunLat], alt) {
 }
 function renderNight() {
   const sun = solarPosition(Date.now());
-  document.getElementById("legendNight").hidden = !state.solar;
+  document.getElementById("legendNight").hidden = !state.ov.solar;
   if (!map.getSource("night")) return;
-  map.getSource("night").setData(state.solar ? { type: "FeatureCollection", features: [0, -6, -12, -18].map((a) => belowAltitude(sun, a)) } : empty);
-  map.getSource("sun").setData(state.solar ? { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [((sun[0] + 540) % 360) - 180, sun[1]] } } : empty);
+  map.getSource("night").setData(state.ov.solar ? { type: "FeatureCollection", features: [0, -6, -12, -18].map((a) => belowAltitude(sun, a)) } : empty);
+  map.getSource("sun").setData(state.ov.solar ? { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [((sun[0] + 540) % 360) - 180, sun[1]] } } : empty);
 }
 setInterval(renderNight, 60000);
 
@@ -433,8 +527,9 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 
 map.on("mousemove", (ev) => {
   if (!map.getLayer("events")) return;
-  const hit = map.queryRenderedFeatures(ev.point, { layers: ["events", "disputed-fill", "country-hit"] });
-  const e = hit.find((f) => f.layer.id === "events"), dsp = hit.find((f) => f.layer.id === "disputed-fill"), c = hit.find((f) => f.layer.id === "country-hit");
+  const layers = ["events", "zones-fill", "disputed-fill", "country-hit"].filter((l) => map.getLayer(l));
+  const hit = map.queryRenderedFeatures(ev.point, { layers });
+  const e = hit.find((f) => f.layer.id === "events") || hit.find((f) => f.layer.id === "zones-fill"), dsp = hit.find((f) => f.layer.id === "disputed-fill"), c = hit.find((f) => f.layer.id === "country-hit");
   map.getCanvas().style.cursor = e ? "pointer" : "";
   if (e) { const d = state.events.get(e.properties.id); if (d) return showTip(ev.originalEvent, `<b>${esc(d.title)}</b><span>${esc(CATS[d.cat]?.name || d.cat)} · ${rel(d.time)} · ${esc(d.src)}</span>`); }
   if (dsp) return showTip(ev.originalEvent, `<b>${esc(dsp.properties.n)} · territorio disputado</b><span>${esc(dsp.properties.note || "Soberanía en disputa")}</span>`);
@@ -443,7 +538,7 @@ map.on("mousemove", (ev) => {
 });
 map.on("mouseout", hideTip);
 map.on("click", (ev) => {
-  const e = map.getLayer("events") && map.queryRenderedFeatures(ev.point, { layers: ["events"] })[0];
+  const e = map.getLayer("events") && (map.queryRenderedFeatures(ev.point, { layers: ["events"] })[0] || map.queryRenderedFeatures(ev.point, { layers: ["zones-fill"] })[0]);
   if (e) return select(e.properties.id, false);
   if (state.selected) { state.selected = null; render(); }
 });
@@ -451,6 +546,7 @@ map.on("click", (ev) => {
 function markerSize(e) {
   if (e.cat === "sismo" && e.mag) return Math.max(18, Math.pow(e.mag, 2.2) * 4);
   if (e.cat === "maritimo") return 22 + (e.sev || 1) * 6;
+  if (e.cat === "aviso_es") return 30 + (e.sev || 1) * 14;
   return 40 + (e.sev || 1) * 22;
 }
 function visible() {
@@ -475,6 +571,8 @@ function renderMarkers() {
       pulse: sev >= 4 && live && Date.now() - Date.parse(e.time) < 24 * HOUR ? 1 : 0 } };
   });
   src.setData({ type: "FeatureCollection", features });
+  map.getSource("zones")?.setData({ type: "FeatureCollection", features: visible().filter((e) => e.poly).reverse()
+    .map((e) => ({ type: "Feature", geometry: e.poly, properties: { id: e.id, sev: Math.min(4, Math.max(1, e.sev || 1)) } })) });
   map.setFilter("sel", ["==", ["get", "id"], state.selected || ""]);
 }
 function placeMarkers() {}
@@ -484,35 +582,65 @@ function legendShape(cat, color = "currentColor") {
   const p = d3.symbol(CATS[cat].sym, 60)();
   return `<svg viewBox="-7 -7 14 14" aria-hidden="true"><path d="${p}" fill="${color}"></path></svg>`;
 }
-function renderChips() {
-  const counts = {};
-  const base = (() => { const s = state.cats; state.cats = Object.fromEntries(Object.keys(CATS).map((c) => [c, true])); const v = visible(); state.cats = s; return v; })();
-  base.forEach((e) => (counts[e.cat] = (counts[e.cat] || 0) + 1));
-  document.getElementById("chips").innerHTML = Object.entries(CATS).map(([k, c]) =>
-    `<button type="button" class="chip" data-cat="${k}" aria-pressed="${state.cats[k]}">${legendShape(k)}${c.name}<span class="n">${counts[k] || 0}</span></button>`).join("")
-    + `<button type="button" class="chip solar" data-layer="solar" aria-pressed="${state.solar}"><svg viewBox="-7 -7 14 14" aria-hidden="true"><circle r="4.5"></circle></svg>Día y noche</button>`;
+function counts() {
+  const all = state.cats; state.cats = Object.fromEntries(Object.keys(CATS).map((c) => [c, true]));
+  const v = visible(); state.cats = all;
+  const n = {}; v.forEach((e) => (n[e.cat] = (n[e.cat] || 0) + 1));
+  return n;
+}
+const sw = '<span class="tg" aria-hidden="true"></span>';
+function renderLayers() {
+  const n = counts(), box = document.getElementById("layers"), top = box.scrollTop;
+  box.innerHTML = Object.entries(GROUPS).map(([g, gname]) => {
+    const open = !!state.open[g];
+    let head, items;
+    if (g === "mapa") {
+      head = "";
+      items = `<div class="lrow"><select id="fBase" aria-label="Fondo del mapa">${Object.entries(BASES).map(([k, b]) => `<option value="${k}" ${k === state.base ? "selected" : ""}>${b.name}</option>`).join("")}</select>`
+        + `<button type="button" class="btn" id="globeBtn" aria-pressed="${!!state.globe}">Globo 3D</button></div>`
+        + Object.entries(OVERLAYS).map(([k, o]) => `<button type="button" class="litem" role="switch" data-ov="${k}" aria-checked="${!!state.ov[k]}">${sw}`
+          + (k === "solar" ? '<svg viewBox="-7 -7 14 14" aria-hidden="true"><circle class="sun-ic" r="4.5"></circle></svg>' : "")
+          + `<span class="nm">${o.name}${o.hint ? `<span class="hint">${o.hint}</span>` : ""}</span></button>`).join("");
+    } else {
+      const cats = Object.keys(CATS).filter((c) => CATS[c].group === g);
+      const on = cats.filter((c) => state.cats[c]).length;
+      const total = cats.reduce((a, c) => a + (n[c] || 0), 0);
+      head = `<button type="button" class="gtoggle" role="switch" data-group="${g}" aria-checked="${on === cats.length ? "true" : on ? "mixed" : "false"}" aria-label="Mostrar u ocultar ${gname}">${sw}</button>`;
+      items = cats.map((c) => `<button type="button" class="litem" role="switch" data-cat="${c}" aria-checked="${!!state.cats[c]}">${sw}${legendShape(c)}<span class="nm">${CATS[c].name}</span><span class="n">${n[c] || 0}</span></button>`).join("");
+      gname += `<span class="n">${total}</span>`;
+    }
+    return `<div class="lgroup">
+      <div class="lghead">${head}<button type="button" class="gname" data-open="${g}" aria-expanded="${open}"><span class="chev" aria-hidden="true">›</span>${gname}</button></div>
+      <div class="lgitems"${open ? "" : " hidden"}>${items}</div></div>`;
+  }).join("");
+  box.scrollTop = top;
   document.getElementById("legendCats").innerHTML = Object.entries(CATS).map(([k, c]) => `<span class="sw">${legendShape(k, "var(--muted)").replace("<svg", '<svg width="11" height="11"')}${c.name}</span>`).join("");
 }
-document.getElementById("chips").addEventListener("click", (ev) => {
-  const b = ev.target.closest(".chip"); if (!b) return;
-  if (b.dataset.layer === "solar") { state.solar = !state.solar; saveUi(); renderNight(); renderChips(); return; }
-  state.cats[b.dataset.cat] = !state.cats[b.dataset.cat]; saveUi(); render();
+document.getElementById("layers").addEventListener("click", (ev) => {
+  const t = ev.target.closest("button"); if (!t) return;
+  if (t.dataset.open) { state.open[t.dataset.open] = !state.open[t.dataset.open]; saveUi(); renderLayers(); return; }
+  if (t.dataset.group) {
+    const cats = Object.keys(CATS).filter((c) => CATS[c].group === t.dataset.group);
+    const all = cats.every((c) => state.cats[c]);
+    cats.forEach((c) => (state.cats[c] = !all)); saveUi(); render(); return;
+  }
+  if (t.dataset.cat) { state.cats[t.dataset.cat] = !state.cats[t.dataset.cat]; saveUi(); render(); return; }
+  if (t.dataset.ov) { state.ov[t.dataset.ov] = !state.ov[t.dataset.ov]; saveUi(); if (map.getLayer("land")) applyOverlays(); renderLayers(); return; }
+  if (t.id === "globeBtn") { state.globe = !state.globe; t.setAttribute("aria-pressed", String(state.globe)); saveUi(); map.setProjection({ type: state.globe ? "globe" : "mercator" }); }
 });
-document.getElementById("fBase").innerHTML = Object.entries(BASES).map(([k, b]) => `<option value="${k}">${b.name}</option>`).join("");
-document.getElementById("fBase").value = state.base;
-document.getElementById("fBase").onchange = (e) => { state.base = e.target.value; saveUi(); if (map.getLayer("land")) applyBase(); };
-const globeBtn = document.getElementById("globeBtn");
-globeBtn.setAttribute("aria-pressed", String(!!state.globe));
-globeBtn.onclick = () => { state.globe = !state.globe; globeBtn.setAttribute("aria-pressed", String(state.globe)); saveUi(); map.setProjection({ type: state.globe ? "globe" : "mercator" }); };
+document.getElementById("layers").addEventListener("change", (ev) => {
+  if (ev.target.id === "fBase") { state.base = ev.target.value; saveUi(); if (map.getLayer("land")) applyBase(); }
+});
 document.getElementById("fPeriod").value = String(state.period);
 document.getElementById("fSev").value = String(state.minSev);
 document.getElementById("fPeriod").onchange = (e) => { state.period = +e.target.value; saveUi(); render(); };
 document.getElementById("fSev").onchange = (e) => { state.minSev = +e.target.value; saveUi(); render(); };
-function saveUi() { store.set("ui", { cats: state.cats, period: state.period, minSev: state.minSev, solar: state.solar, base: state.base, globe: state.globe }); }
+function saveUi() { store.set("ui", { cats: state.cats, ov: state.ov, open: state.open, period: state.period, minSev: state.minSev, base: state.base, globe: state.globe }); }
 
 function rel(t) {
   const ms = Date.now() - Date.parse(t);
   if (!Number.isFinite(ms)) return "sin fecha";
+  if (ms < -60000) { const m = Math.round(-ms / 60000), h = Math.round(m / 60); return m < 60 ? `dentro de ${m} min` : h < 48 ? `dentro de ${h} h` : `dentro de ${Math.round(h / 24)} días`; }
   const m = Math.round(ms / 60000);
   if (m < 1) return "ahora";
   if (m < 60) return `hace ${m} min`;
@@ -555,7 +683,7 @@ function select(id, fly) {
   state.selected = id;
   const e = state.events.get(id);
   render();
-  if (fly && e) map.flyTo({ center: [+e.lon, +e.lat], zoom: Math.max(map.getZoom(), 4.5), duration: 900 });
+  if (fly && e) map.flyTo({ center: [+e.lon, +e.lat], zoom: Math.max(map.getZoom(), e.poly ? 7 : 4.5), duration: 900 });
 }
 function renderDetail() {
   const el = document.getElementById("detail");
@@ -570,7 +698,8 @@ function renderDetail() {
     e.mag != null ? ["Magnitud", `M${(+e.mag).toFixed(1)}${e.depth != null ? ` · ${Math.round(e.depth)} km de profundidad` : ""}`] : null,
     e.tsunami ? ["Tsunami", "Posible, revisa los avisos de tsunami"] : null,
     e.level ? ["Nivel", e.level] : null,
-    e.country ? ["País", e.country] : null,
+    e.country ? [e.cat === "aviso_es" ? "Provincia" : "País", e.country] : null,
+    e.prob ? ["Probabilidad", e.prob] : null,
     e.articles ? ["Noticias", `${e.articles} artículos`] : null,
     e.outlets?.length ? ["Medios", e.outlets.join(", ")] : null,
     e.src === "GDELT (prensa)" ? ["Aviso", "Ubicación y clasificación automáticas a partir de la prensa; pueden ser imprecisas."] : null,
@@ -589,7 +718,7 @@ function renderDetail() {
   document.getElementById("closeDetail").onclick = () => { state.selected = null; render(); };
 }
 
-function render() { renderChips(); renderMarkers(); renderList(); renderDetail(); renderStatus(); }
+function render() { renderLayers(); renderMarkers(); renderList(); renderDetail(); renderStatus(); }
 
 function renderStatus() {
   const ok = Object.values(state.srcStatus).filter((s) => s.ok).length;
@@ -654,7 +783,7 @@ const dayOf = (e) => (e.time || e.updated || new Date().toISOString()).slice(0, 
 const keyOf = (id) => id.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 120);
 function compact(e) {
   const o = {};
-  for (const k of ["id", "cat", "title", "lat", "lon", "time", "updated", "until", "sev", "mag", "depth", "tsunami", "level", "country", "url", "src", "approx", "verified"]) if (e[k] != null && e[k] !== "") o[k] = e[k];
+  for (const k of ["id", "cat", "title", "lat", "lon", "time", "updated", "until", "sev", "mag", "depth", "tsunami", "level", "country", "url", "src", "approx", "verified", "prob", "poly"]) if (e[k] != null && e[k] !== "") o[k] = e[k];
   if (e.desc) o.desc = String(e.desc).slice(0, 300);
   return o;
 }
@@ -736,7 +865,7 @@ async function tick(force = false) {
     banner(`No se pudieron traer las alertas: ${esc(err.message || err)}`, "warn", { label: "Reintentar", onClick: () => tick(true) });
   } finally { running = false; setRefreshing(false); renderStatus(); }
 }
-function sourceOf(e) { if (String(e.id).startsWith("gdelt:")) return e.cat === "atentado" ? "atentados" : "conflictos"; return { usgs: "usgs", gdacs: "gdacs", tsunami: "tsunami", nhc: "nhc", nga: "navarea", gvp: "volcanes", nws: "nws" }[String(e.id).split(":")[0]]; }
+function sourceOf(e) { if (String(e.id).startsWith("gdelt:")) return e.cat === "atentado" ? "atentados" : "conflictos"; return { usgs: "usgs", gdacs: "gdacs", tsunami: "tsunami", nhc: "nhc", nga: "navarea", gvp: "volcanes", nws: "nws", aemet: "aemet" }[String(e.id).split(":")[0]]; }
 function setRefreshing(on) {
   const b = document.getElementById("refreshBtn");
   b.disabled = on; b.textContent = on ? "Actualizando…" : "Actualizar ahora";
