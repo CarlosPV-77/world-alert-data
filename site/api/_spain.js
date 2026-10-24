@@ -42,7 +42,9 @@ function deep(o, key) {
 }
 
 const SMALL = new Set(["de", "del", "la", "las", "los", "el", "y", "e", "en", "a"]);
-const titleCase = (s) => String(s).toLowerCase().split(/\s+/).map((w, i) => (i && SMALL.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1))).join(" ");
+const titleCase = (s) => String(s).toLowerCase().split(/\s+/).map((w, i) => (i && SMALL.has(w) ? w : w.replace(/(^|-)(\p{L})/gu, (_, a, b) => a + b.toUpperCase()))).join(" ");
+// IGN province codes for places outside Spain (Morocco, Algeria, Portugal, France, Andorra).
+const IGN_ABROAD = new Set(["MAC", "ARL", "POR", "FRA", "AND"]);
 
 // ---------- national ----------
 
@@ -66,7 +68,7 @@ async function ign() {
       title: `Terremoto M${mag.toFixed(1)} · ${name}`, desc, lat, lon, mag,
       time: iso(`${m[5]}-${m[4]}-${m[3]}T${m[6].padStart(2, "0")}:${m[7]}:${m[8]}Z`),
       sev: mag >= 5 ? 4 : mag >= 4 ? 3 : mag >= 3 ? 2 : 1, level: `Magnitud ${mag.toFixed(1)}`,
-      country: "España", url: txt(it.link), src: "IGN",
+      country: prov && !IGN_ABROAD.has(prov) ? "España" : undefined, url: txt(it.link), src: "IGN",
     };
   }).filter(Boolean);
 }

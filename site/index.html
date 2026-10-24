@@ -602,6 +602,9 @@ const CATS = {
   sequia:     { name: "Sequías",      pic: "drought", group: "naturales" },
   meteo:      { name: "Avisos meteo del mundo", pic: "storm", group: "meteo" },
   aviso_es:   { name: "Avisos de AEMET (España)", pic: "rain", group: "meteo" },
+  es_nac:     { name: "Nacionales · IGN y DGT", pic: "siren", group: "espana" },
+  es_aut:     { name: "Autonómicas · Protección Civil, 112 y servicios regionales", pic: "siren", group: "espana" },
+  es_loc:     { name: "Locales · ayuntamientos", pic: "siren", group: "espana" },
   maritimo:   { name: "Avisos a navegantes", pic: "ship", group: "mar" },
   conflicto:  { name: "Conflictos",   pic: "clash",   group: "seguridad" },
   atentado:   { name: "Atentados",    pic: "blast",   group: "seguridad" },
@@ -631,6 +634,9 @@ const PICS = {
   clash:   "M4 4l16 16 M20 4 4 20 M4 4h4.5 M4 4v4.5 M20 4h-4.5 M20 4v4.5 M15 17l2-2 M7 15l2 2",
   chat:    "M4 4.5h16v11H11l-5 4v-4H4z M8 9h8 M8 12h5",
   plane:   "M12 2.5c.8 0 1.5.7 1.5 1.5v5l7 4v2l-7-2v4.5l2.2 1.7V21L12 20l-3.7 1v-1.8l2.2-1.7V13l-7 2v-2l7-4V4c0-.8.7-1.5 1.5-1.5z",
+  car:     "M5 11l1.6-4.4A2 2 0 0 1 8.5 5.2h7a2 2 0 0 1 1.9 1.4L19 11 M3.5 11h17v6h-17z M6.5 17v2.5 M17.5 17v2.5 M7 14h.01 M17 14h.01",
+  road:    "M8 3 4 21 M16 3l4 18 M12 4v3 M12 10.5v3 M12 17v3",
+  siren:   "M6 18v-6a6 6 0 0 1 12 0v6 M4 18h16v3H4z M12 2v1.5 M3.8 5.3l1.1 1.1 M20.2 5.3l-1.1 1.1 M12 9.5V14",
   wreck:   "M3.5 13.5l12.5-4 1.6 4.6-12.6 4z M8.5 11.9 7.3 6.6l4.6-1.4 1.6 5 M2 21c2 0 3-1.5 5-1.5s3 1.5 5 1.5 3-1.5 5-1.5 3 1.5 5 1.5",
   blast:   "M12 2l1.9 5.1 4.9-2.2-2.2 4.9L21.7 12l-5.1 1.9 2.2 4.9-4.9-2.2L12 21.7l-1.9-5.1-4.9 2.2 2.2-4.9L2.3 12l5.1-1.9-2.2-4.9 4.9 2.2z",
 };
@@ -646,7 +652,8 @@ const WEATHER_WORDS = [
 function picOf(e) {
   if (e.cat === "redes") return PICS[e.pic] ? e.pic : "chat";   // social posts carry the topic they talk about
   const base = CATS[e.cat]?.pic || "quake";
-  if (e.cat !== "meteo" && e.cat !== "aviso_es") return base;
+  if (String(e.cat).startsWith("es_") && PICS[e.pic]) return e.pic;   // official Spanish alerts say what they are about
+  if (e.cat !== "meteo" && e.cat !== "aviso_es" && !String(e.cat).startsWith("es_")) return base;
   const t = `${e.title || ""} ${e.desc || ""}`;
   return WEATHER_WORDS.find(([re]) => re.test(t))?.[1] || base;
 }
@@ -654,6 +661,7 @@ const picSvg = (key, cls = "pic") => `<svg class="${cls}" viewBox="0 0 24 24" ar
 const GROUPS = {
   naturales: "Desastres naturales",
   meteo:     "Meteorología",
+  espana:    "España · alertas oficiales",
   mar:       "Mar",
   seguridad: "Conflictos y seguridad",
   accidentes: "Accidentes de transporte",
@@ -677,6 +685,13 @@ const SOURCES = {
   volcanes: { name: "Smithsonian GVP · volcanes (bloquea las descargas automáticas; los volcanes llegan por GDACS)", def: 720, opts: [180, 360, 720, 1440], off: true },
   nws:      { name: "NOAA NWS · avisos graves EE. UU.", def: 10, opts: [5, 10, 15, 30, 60] },
   aemet:    { name: "AEMET · avisos meteorológicos de España", def: 10, opts: [5, 10, 15, 30, 60] },
+  ign:      { name: "IGN · terremotos en España y alrededores", def: 5, opts: [2, 5, 10, 15, 30] },
+  dgt:      { name: "DGT · accidentes, cortes y meteorología en carreteras", def: 5, opts: [2, 5, 10, 15, 30] },
+  catalunya: { name: "Protecció Civil de Catalunya · planes activados", def: 10, opts: [5, 10, 15, 30, 60] },
+  canarias: { name: "Gobierno de Canarias · prealertas y alertas", def: 15, opts: [10, 15, 30, 60] },
+  meteogalicia: { name: "MeteoGalicia · avisos por concello", def: 15, opts: [10, 15, 30, 60] },
+  euskadi:  { name: "Tráfico Euskadi · accidentes e incidencias graves", def: 5, opts: [2, 5, 10, 15, 30] },
+  madrid:   { name: "Ayuntamiento de Madrid · accidentes, cortes y contaminación", def: 10, opts: [5, 10, 15, 30, 60] },
   conflictos: { name: "GDELT · noticias de conflictos armados", def: 15, opts: [15, 30, 60] },
   atentados:  { name: "GDELT · noticias de atentados", def: 15, opts: [15, 30, 60] },
   aereos:     { name: "Prensa · accidentes aéreos (Google Noticias)", def: 15, opts: [10, 15, 30, 60] },
@@ -691,6 +706,7 @@ const TG_DEFAULT = "euronews, france24_en, elpais, insiderpaper, WorldNews, wart
 const SOURCE_CATS = {
   usgs: ["sismo"], gdacs: ["sismo", "volcan", "tsunami", "ciclon", "inundacion", "incendio", "sequia"], tsunami: ["tsunami"],
   nhc: ["ciclon"], navarea: ["maritimo"], volcanes: ["volcan"], nws: ["meteo"], aemet: ["aviso_es"],
+  ign: ["es_nac"], dgt: ["es_nac"], catalunya: ["es_aut"], canarias: ["es_aut"], meteogalicia: ["es_aut"], euskadi: ["es_aut"], madrid: ["es_loc"],
   conflictos: ["conflicto"], atentados: ["atentado"],
   aereos: ["aereo"], maritimos: ["naval"],
   mastodon: ["redes"], bluesky: ["redes"], telegram: ["redes"],
@@ -1066,7 +1082,7 @@ map.on("click", (ev) => {
 bindMapUi(map);
 
 function markerSize(e) {
-  if (e.cat === "sismo" && e.mag) return Math.max(18, Math.pow(e.mag, 2.2) * 4);
+  if ((e.cat === "sismo" || e.pic === "quake") && e.mag) return Math.max(18, Math.pow(e.mag, 2.2) * 4);
   if (e.cat === "maritimo") return 22 + (e.sev || 1) * 6;
   if (e.cat === "aviso_es") return 30 + (e.sev || 1) * 14;
   return 40 + (e.sev || 1) * 22;
@@ -1515,7 +1531,7 @@ function renderAlerts() {
     e.until ? ["Hasta", fmt(e.until)] : null,
     e.mag != null ? ["Magnitud", `M${(+e.mag).toFixed(1)}${e.depth != null ? ` · ${Math.round(e.depth)} km de profundidad` : ""}`] : null,
     e.level ? ["Nivel", e.level] : null,
-    e.country ? [e.cat === "aviso_es" ? "Provincia" : "País", e.country] : null,
+    e.country ? [e.cat === "aviso_es" ? "Provincia" : String(e.cat).startsWith("es_") ? "Lugar" : "País", e.country] : null,
     e.prob ? ["Probabilidad", e.prob] : null,
     e.articles ? ["Noticias", `${e.articles} ${+e.articles === 1 ? "artículo" : "artículos"}`] : null,
     e.outlets?.length ? ["Medios", e.outlets.join(", ")] : null,
@@ -1643,7 +1659,7 @@ function detailHtml(e) {
     e.mag != null ? ["Magnitud", `M${(+e.mag).toFixed(1)}${e.depth != null ? ` · ${Math.round(e.depth)} km de profundidad` : ""}`] : null,
     e.tsunami ? ["Tsunami", "Posible, revisa los avisos de tsunami"] : null,
     e.level ? ["Nivel", e.level] : null,
-    e.country ? [e.cat === "aviso_es" ? "Provincia" : "País", e.country] : null,
+    e.country ? [e.cat === "aviso_es" ? "Provincia" : String(e.cat).startsWith("es_") ? "Lugar" : "País", e.country] : null,
     e.prob ? ["Probabilidad", e.prob] : null,
     e.articles ? ["Noticias", `${e.articles} ${+e.articles === 1 ? "artículo" : "artículos"}`] : null,
     e.outlets?.length ? ["Medios", e.outlets.join(", ")] : null,
@@ -1995,7 +2011,7 @@ async function tick(force = false) {
     banner(`No se pudieron traer las alertas: ${esc(why)}.`, "warn", { label: "Reintentar", onClick: () => tick(true) });
   } finally { running = false; setRefreshing(false); renderStatus(); if (again) { again = false; tick(); } }
 }
-function sourceOf(e) { if (String(e.id).startsWith("gdelt:")) return e.cat === "atentado" ? "atentados" : "conflictos"; return { usgs: "usgs", gdacs: "gdacs", tsunami: "tsunami", nhc: "nhc", nga: "navarea", gvp: "volcanes", nws: "nws", aemet: "aemet", mastodon: "mastodon", bluesky: "bluesky", telegram: "telegram", aereo: "aereos", naval: "maritimos" }[String(e.id).split(":")[0]]; }
+function sourceOf(e) { if (String(e.id).startsWith("gdelt:")) return e.cat === "atentado" ? "atentados" : "conflictos"; return { usgs: "usgs", gdacs: "gdacs", tsunami: "tsunami", nhc: "nhc", nga: "navarea", gvp: "volcanes", nws: "nws", aemet: "aemet", mastodon: "mastodon", bluesky: "bluesky", telegram: "telegram", aereo: "aereos", naval: "maritimos", ign: "ign", dgt: "dgt", cat: "catalunya", canarias: "canarias", meteogalicia: "meteogalicia", euskadi: "euskadi", madrid: "madrid" }[String(e.id).split(":")[0]]; }
 function setRefreshing(on) {
   const b = document.getElementById("refreshBtn");
   b.disabled = on; b.innerHTML = on ? "Actualizando…" : 'Actualizar<span class="lbl-long"> ahora</span>';
@@ -2114,7 +2130,7 @@ const PAPER_SECTIONS = [
   { key: "seguridad", name: "Seguridad", kick: "Conflictos y atentados", cats: ["conflicto", "atentado"] },
   { key: "naturales", name: "Catástrofes", kick: "Naturales", cats: ["sismo", "volcan", "tsunami", "ciclon", "inundacion", "incendio", "sequia"] },
   { key: "meteo", name: "El tiempo", kick: "Avisos en el mundo", cats: ["meteo"] },
-  { key: "espana", name: "España", kick: "Todo lo que pasa aquí", cats: ["aviso_es"] },
+  { key: "espana", name: "España", kick: "Todo lo que pasa aquí", cats: ["aviso_es", "es_nac", "es_aut", "es_loc"] },
   { key: "mar", name: "Mar", kick: "Navegantes y naufragios", cats: ["maritimo", "naval"] },
   { key: "accidentes", name: "Accidentes", kick: "Aéreos", cats: ["aereo"] },
 ];
@@ -2197,9 +2213,9 @@ function paperRank(a, b) {
   return (b.sev || 1) - (a.sev || 1) || trusted(b) - trusted(a) || (b.outlets?.length || 0) - (a.outlets?.length || 0)
     || (Date.parse(b.updated || b.time) || 0) - (Date.parse(a.updated || a.time) || 0);
 }
-const inSpainEv = (e) => e.cat === "aviso_es" || countriesOf(e).has("ESP");
+const inSpainEv = (e) => e.cat === "aviso_es" || String(e.cat).startsWith("es_") || countriesOf(e).has("ESP");
 function paperWhere(e) {
-  if (e.cat === "aviso_es") return e.country?.replace(" (España)", "") || "España";
+  if (e.cat === "aviso_es" || String(e.cat).startsWith("es_")) return e.country?.replace(" (España)", "") || "España";
   // GDELT places repeat the country: "Hebron, Israel (general), Israel" -> "Hebron, Israel".
   if (e.src === "GDELT (prensa)") return [...new Set(String(e.title).split(": ").slice(1).join(": ").replace(/ \(general\)/g, "").split(", "))].join(", ");
   if (e.cat === "aereo" || e.cat === "naval") return String(e.title).split(" · ")[1] || e.country || "";

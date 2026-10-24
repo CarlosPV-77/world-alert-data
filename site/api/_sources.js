@@ -4,6 +4,7 @@ import { inflateRawSync, gunzipSync } from "node:zlib";
 import { social } from "./_social.js";
 import { accidents } from "./_accidents.js";
 import { notAlert, slugText } from "./_notalert.js";
+import { SPAIN_SOURCES } from "./_spain.js";
 
 const UA = "WorldAlert/1.0 (personal hazard map)";
 const xml = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "@", removeNSPrefix: false });
@@ -317,6 +318,8 @@ const SOURCES = {
 
   async aereos() { return accidents("aereo"); },
   async maritimos() { return accidents("naval"); },
+
+  ...SPAIN_SOURCES,
 };
 
 export async function collect(q = {}) {
