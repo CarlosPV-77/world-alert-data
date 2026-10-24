@@ -571,8 +571,9 @@ function renderDetail() {
     e.tsunami ? ["Tsunami", "Posible, revisa los avisos de tsunami"] : null,
     e.level ? ["Nivel", e.level] : null,
     e.country ? ["País", e.country] : null,
-    e.articles ? ["Noticias", `${e.articles} artículos en 24 h`] : null,
+    e.articles ? ["Noticias", `${e.articles} artículos en la última hora`] : null,
     e.outlets?.length ? ["Medios", e.outlets.join(", ")] : null,
+    e.src === "GDELT (prensa)" ? ["Aviso", "Ubicación y clasificación automáticas a partir de la prensa; pueden ser imprecisas."] : null,
     ["Fuente", e.src],
   ].filter(Boolean);
   el.innerHTML = `
