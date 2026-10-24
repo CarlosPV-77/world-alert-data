@@ -375,7 +375,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
     <p class="hint">Cada fuente solo se consulta mientras tienes el mapa abierto y alguna de sus capas activada. Al abrir la página todas las capas empiezan apagadas. Elige cada cuánto consulta cada fuente.</p>
     <div id="srcRows"></div>
     <div class="frow" style="align-items:center">
-      <label for="retention" class="label" style="flex:0 0 auto">Guardar histórico</label>
+      <label for="retention" class="label" style="flex:0 0 auto">Conservar el histórico</label>
       <select id="retention">
         <option value="30">30 días</option>
         <option value="90">90 días</option>
@@ -440,7 +440,7 @@ const SOURCES = {
   tsunami:  { name: "NOAA · avisos de tsunami", def: 5, opts: [1, 2, 5, 10, 15] },
   nhc:      { name: "NOAA NHC · ciclones tropicales", def: 15, opts: [5, 10, 15, 30, 60] },
   navarea:  { name: "NGA · avisos a navegantes", def: 60, opts: [15, 30, 60, 180] },
-  volcanes: { name: "Smithsonian GVP · volcanes (semanal; ahora bloquea las descargas automáticas, los volcanes llegan por GDACS)", def: 720, opts: [180, 360, 720, 1440], off: true },
+  volcanes: { name: "Smithsonian GVP · volcanes (bloquea las descargas automáticas; los volcanes llegan por GDACS)", def: 720, opts: [180, 360, 720, 1440], off: true },
   nws:      { name: "NOAA NWS · avisos graves EE. UU.", def: 10, opts: [5, 10, 15, 30, 60] },
   aemet:    { name: "AEMET · avisos meteorológicos de España", def: 10, opts: [5, 10, 15, 30, 60] },
   conflictos: { name: "GDELT · noticias de conflictos armados", def: 15, opts: [15, 30, 60] },
@@ -973,8 +973,8 @@ function renderAlerts() {
   tab.setAttribute("aria-expanded", String(aOpen));
   const where = (x) => [...countriesOf(x)].map((c) => BY_ISO.get(c)?.name).filter(Boolean).join(", ");
   tab.innerHTML = `${sevIcon(top.sev, top.sev >= 4 && !aOpen ? "pulse" : "")}
-    <span class="txt"><span class="kind">${aOpen ? "Toca para recoger" : `${shown.find((x) => x.id === top.id)?.up ? `Sube a ${prioOf(top.sev)}` : `Incidencia entrante · ${prioOf(top.sev)}`} · ${esc(CATS[top.cat]?.name || top.cat)}${where(top) ? ` · ${esc(where(top))}` : ""}`}</span>
-    <span class="ttl">${aOpen ? `${list.length} ${list.length === 1 ? "aviso" : "avisos"} sin revisar` : esc(top.title)}</span></span>
+    <span class="txt"><span class="kind">${aOpen ? "Pulsa para recoger" : `${shown.find((x) => x.id === top.id)?.up ? `Sube a ${prioOf(top.sev)}` : `Incidencia entrante · ${prioOf(top.sev)}`} · ${esc(CATS[top.cat]?.name || top.cat)}${where(top) ? ` · ${esc(where(top))}` : ""}`}</span>
+    <span class="ttl">${aOpen ? `${list.length} ${list.length === 1 ? "incidencia" : "incidencias"} sin revisar` : esc(top.title)}</span></span>
     ${list.length > 1 ? `<span class="count">${list.length}</span>` : ""}
     <svg class="chev" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
   const rows = [
@@ -999,7 +999,7 @@ function renderAlerts() {
       <button type="button" class="btn primary" data-act="see">Ver en el mapa</button>
       ${newsBtn(e)}${saveBtn(e.id)}
       <button type="button" class="btn" data-act="dismiss">Descartar</button>
-      ${list.length > 1 ? `<span class="pager"><button type="button" class="btn" data-act="prev" aria-label="Aviso anterior">‹</button>${aIdx + 1} / ${list.length}<button type="button" class="btn" data-act="next" aria-label="Aviso siguiente">›</button></span>` : ""}
+      ${list.length > 1 ? `<span class="pager"><button type="button" class="btn" data-act="prev" aria-label="Incidencia anterior">‹</button>${aIdx + 1} / ${list.length}<button type="button" class="btn" data-act="next" aria-label="Incidencia siguiente">›</button></span>` : ""}
     </div>`);
 }
 document.getElementById("atab").addEventListener("click", () => {
@@ -1062,7 +1062,7 @@ function renderList() {
   if (state.showSaved) {
     const v = [...state.saved.values()].sort((a, b) => (b.savedAt || "").localeCompare(a.savedAt || ""));
     const box = document.getElementById("list");
-    keepFocus(box, () => box.innerHTML = v.length ? v.map((e) => evRow(e, true)).join("") : `<div class="empty">No tienes alertas guardadas. Pulsa «Guardar alerta» en un aviso o en su ficha.</div>`);
+    keepFocus(box, () => box.innerHTML = v.length ? v.map((e) => evRow(e, true)).join("") : `<div class="empty">No tienes alertas guardadas. Pulsa «Guardar alerta» en una incidencia o en su ficha.</div>`);
     return;
   }
   const v = visible();
@@ -1072,7 +1072,7 @@ function renderList() {
   const list = document.getElementById("list");
   if (!v.length) {
     const anyOn = Object.values(state.cats).some(Boolean);
-    list.innerHTML = `<div class="empty">${!anyOn ? "Todas las capas están apagadas. Activa en el panel de arriba las que quieras ver." : state.events.size ? "No hay alertas con estos filtros. Prueba a ampliar el periodo o a bajar la gravedad mínima." : "Aún no hay alertas cargadas. Cuando el mapa conecte con las fuentes aparecerán aquí, ordenadas de la más reciente a la más antigua."}</div>`;
+    list.innerHTML = `<div class="empty">${!anyOn ? "Todas las capas están apagadas. Enciende en «Capas» las que quieras vigilar." : state.events.size ? "No hay alertas con estos filtros. Prueba a ampliar el periodo o a bajar la gravedad mínima." : "Aún no hay alertas cargadas. Cuando el mapa conecte con las fuentes aparecerán aquí, ordenadas de la más reciente a la más antigua."}</div>`;
     return;
   }
   keepFocus(list, () => list.innerHTML = v.slice(0, 400).map((e) => evRow(e)).join("") + (v.length > 400 ? `<div class="empty">Se muestran las 400 más recientes de ${v.length}. Usa los filtros para acotar.</div>` : ""));
@@ -1136,7 +1136,7 @@ function renderStatus() {
   const live = ok > 0;
   document.getElementById("liveDot").classList.toggle("live", live);
   document.getElementById("status").textContent = state.lastUpdate
-    ? `${live ? "En directo" : "Sin conexión"} · ${ok}/${total} fuentes · actualizado ${rel(state.lastUpdate)} · ${state.events.size} alertas guardadas`
+    ? `${live ? "En directo" : "Ninguna fuente responde"} · ${ok}/${total} fuentes · actualizado ${rel(state.lastUpdate)} · ${state.events.size} en el histórico`
     : !Object.keys(SOURCES).some(wanted) ? "Sin capas activas: no se consulta ninguna fuente"
     : state.mcpState || "Conectando con las fuentes…";
 }
@@ -1281,7 +1281,7 @@ async function tick(force = false) {
   running = true; setRefreshing(true);
   try {
     const r = await fetch(`${BRIDGE}?src=${due.join(",")}`, { signal: AbortSignal.timeout(30000) });
-    if (!r.ok) throw new Error(`El puente respondió ${r.status}`);
+    if (!r.ok) throw new Error(`el servidor de alertas respondió con un error (${r.status})`);
     const feed = await r.json();
     const at = Date.parse(feed.generated) || Date.now();
     banner(null);
@@ -1361,7 +1361,7 @@ sheet.addEventListener("keydown", (e) => {
   else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
 });
 function askClear() {
-  document.getElementById("clearZone").innerHTML = `<div class="confirm">Se borrarán todas las alertas guardadas. ¿Seguro? <button class="btn" type="button" id="clearNo">No</button><button class="btn primary" type="button" id="clearYes">Sí, borrar</button></div>`;
+  document.getElementById("clearZone").innerHTML = `<div class="confirm">Se borrará el histórico de este navegador. Las alertas que hayas guardado tú se conservan. ¿Seguro? <button class="btn" type="button" id="clearNo">No</button><button class="btn primary" type="button" id="clearYes">Sí, borrar</button></div>`;
   document.getElementById("clearNo").onclick = openSettings;
   document.getElementById("clearYes").onclick = async () => {
     if (db) { try { const s = await db.collection("dias").get(); for (const d of s.docs) await db.doc("dias/" + d.id).delete(); } catch (e) { console.warn(e); } }
