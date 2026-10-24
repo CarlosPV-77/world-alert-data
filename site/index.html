@@ -114,6 +114,10 @@ main { display: grid; grid-template-columns: 1fr minmax(320px, 380px); min-heigh
 .plabel select { font: inherit; letter-spacing: inherit; text-transform: inherit; background: transparent; border: 0; padding: 0 2px; max-width: 100%; }
 .plabel .n { font-family: var(--font-data); font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--muted); font-size: 12px; white-space: nowrap; }
 .mapwrap[data-view="split"] .plabel { top: 54px; }
+/* Date of the satellite picture under the centre of each map. */
+.imgdate { position: absolute; z-index: 3; right: 10px; top: 10px; background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--line-2); border-radius: var(--r); padding: 4px 8px; font-family: var(--font-data); font-size: 11px; color: var(--fg); max-width: calc(100% - 20px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; }
+.imgdate b { font-family: var(--font-sign); font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-right: 6px; }
+.mapwrap[data-view="split"] > .imgdate, .mapwrap.has-dock > .imgdate { top: auto; bottom: calc(var(--attrib-h, 24px) + 10px); right: 60px; }
 .viewsw { position: absolute; z-index: 4; left: 10px; top: 10px; display: flex; background: var(--panel); border: 1px solid var(--line-2); border-radius: var(--r); }
 .viewsw button { display: flex; align-items: center; gap: 6px; padding: 6px 10px; font-family: var(--font-sign); font-weight: 600; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; background: transparent; border: 0; color: var(--muted); }
 .viewsw button + button { border-left: 1px solid var(--line-2); }
@@ -272,6 +276,10 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 .detail a { color: var(--accent); }
 .ebadge.sm { width: 26px; height: 26px; }
 .dcat { font-family: var(--font-sign); font-weight: 600; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.mcard .maplibregl-popup-content { padding: 0; background: var(--panel-2); border: 1px solid var(--line-2); border-top: 3px solid var(--accent); border-radius: var(--r); box-shadow: 0 10px 30px rgba(0,0,0,.55); color: var(--fg); font-family: var(--font-body, inherit); }
+.mcard .maplibregl-popup-tip { border-top-color: var(--line-2) !important; border-bottom-color: var(--line-2) !important; }
+.mcard .detail { border-bottom: 0; max-height: min(60vh, 460px); overflow-y: auto; width: min(320px, calc(100vw - 60px)); }
+.mcard .detail h2 { font-size: 18px; }
 .detail .x { margin-left: auto; background: none; border: 0; color: var(--muted); line-height: 1; padding: 6px; display: inline-grid; place-items: center; }
 .detail .x:hover { color: var(--fg); }
 .sevpill { display: inline-block; padding: 2px 8px; border-radius: var(--r); font-family: var(--font-sign); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); }
@@ -369,8 +377,9 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
   <main>
     <div class="mapwrap" id="mapwrap">
       <div id="map" role="region" aria-label="Mapa del mundo con alertas"></div>
-      <div class="pane" id="paneA" hidden><div class="pmap" role="region" aria-label="Mapa del primer país"></div><div class="plabel"></div></div>
-      <div class="pane" id="paneB" hidden><div class="pmap" role="region" aria-label="Mapa del segundo país"></div><div class="plabel"></div></div>
+      <div class="imgdate" id="imgdate" hidden></div>
+      <div class="pane" id="paneA" hidden><div class="pmap" role="region" aria-label="Mapa del primer país"></div><div class="plabel"></div><div class="imgdate" hidden></div></div>
+      <div class="pane" id="paneB" hidden><div class="pmap" role="region" aria-label="Mapa del segundo país"></div><div class="plabel"></div><div class="imgdate" hidden></div></div>
       <div class="viewsw" id="viewsw" role="group" aria-label="Vista del mapa" hidden>
         <button type="button" data-view="world" aria-pressed="true"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Mundo</button>
         <button type="button" data-view="split" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 2.5v11" stroke="currentColor" stroke-width="1.5"/></svg>Dividida</button>
@@ -792,6 +801,7 @@ function applyBase() {
   for (const k of Object.keys(BASES)) if (BASES[k].tiles) map.setLayoutProperty("base-" + k, "visibility", state.base === k ? "visible" : "none");
   map.setLayoutProperty("land", "visibility", state.base === "dark" ? "visible" : "none");
   syncPanesSoon();
+  for (const f of imageryRefresh) f();
 }
 function layout() {
   map.resize();
@@ -805,6 +815,40 @@ if (attribBox && window.ResizeObserver) new ResizeObserver(() => {
 }).observe(attribBox);
 // On phones the attribution starts folded behind its (i) button so it does not cover the map.
 if (matchMedia("(max-width: 760px)").matches) map.once("idle", () => { const a = document.querySelector("#map .maplibregl-ctrl-attrib"); a?.classList.remove("maplibregl-compact-show"); a?.removeAttribute("open"); });
+
+// ---------- date of the satellite imagery ----------
+// Sentinel-2 cloudless is a single mosaic of 2020. Esri World Imagery mixes pictures of different dates,
+// so its public "Citations" layer is asked which picture is under the centre of the map at this zoom.
+const MONTH = new Intl.DateTimeFormat("es-ES", { month: "short", year: "numeric" });
+function imageryDate(m, el) {
+  let timer = null, seq = 0;
+  const show = (html) => { el.innerHTML = html; el.hidden = !html; };
+  const run = async () => {
+    if (state.base === "s2") return show(`<b>Imagen</b>Sentinel-2 · mosaico de 2020`);
+    if (state.base !== "esri") return show("");
+    const my = ++seq, c = m.getCenter(), b = m.getBounds(), cv = m.getCanvas();
+    const level = Math.min(19, Math.max(0, Math.floor(m.getZoom() + 1)));
+    const q = new URLSearchParams({ geometry: `${c.lng.toFixed(5)},${c.lat.toFixed(5)}`, geometryType: "esriGeometryPoint", sr: "4326", layers: "all:4", tolerance: "0",
+      mapExtent: [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()].map((x) => x.toFixed(5)).join(","), imageDisplay: `${cv.clientWidth},${cv.clientHeight},96`, returnGeometry: "false", f: "json" });
+    try {
+      const r = await fetch(`https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/identify?${q}`, { signal: AbortSignal.timeout(8000) });
+      const d = await r.json();
+      if (my !== seq) return;
+      const hit = (d.results || []).map((x) => x.attributes)
+        .filter((a) => +a.FROM_CACHE_LEVEL <= level && level <= +a.TO_CACHE_LEVEL)
+        .sort((a, b) => +b.DRAW_ORDER - +a.DRAW_ORDER)[0];
+      if (!hit) return show(`<b>Imagen</b>Esri · fecha no disponible`);
+      const t = Date.parse(hit.DATE);
+      const res = +hit["RESOLUTION (M)"];
+      show(`<b>Imagen</b>${Number.isFinite(t) ? MONTH.format(t) : "sin fecha"} · ${esc(hit.SOURCE || "Esri")}${res ? ` · ${String(res).replace(".", ",")} m` : ""}`);
+    } catch { if (my === seq) show(`<b>Imagen</b>Esri · fecha no disponible`); }
+  };
+  const soon = () => { clearTimeout(timer); timer = setTimeout(run, 500); };
+  m.on("moveend", soon);
+  return soon;
+}
+const imageryRefresh = [];
+imageryRefresh.push(imageryDate(map, document.getElementById("imgdate")));
 
 // ---------- day / night (NOAA solar position formulas) ----------
 const RAD = Math.PI / 180;
@@ -878,7 +922,7 @@ map.on("mousemove", (ev) => {
 map.on("mouseout", hideTip);
 map.on("click", (ev) => {
   const e = map.getLayer("events") && (map.queryRenderedFeatures(ev.point, { layers: ["events"] })[0] || map.queryRenderedFeatures(ev.point, { layers: ["zones-fill"] })[0]);
-  if (e) return select(e.properties.id, false);
+  if (e) { hideTip(); select(e.properties.id, false); const d = eventOf(e.properties.id); if (d) openCard(map, d); return; }
   if (state.selected) { state.selected = null; render(); }
 });
 }
@@ -960,6 +1004,8 @@ function makePane(p) {
   p.map.touchZoomRotate.disableRotation();
   p.map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
   iconsOnDemand(p.map);
+  const refresh = imageryDate(p.map, p.el.querySelector(".imgdate"));
+  imageryRefresh.push(refresh); p.map.once("load", refresh);
   bindMapUi(p.map);
   p.map.on("load", () => { p.loaded = true; syncPanesSoon(); });
   // Attribution starts folded behind its (i) button so it does not cover the small maps.
@@ -1339,11 +1385,7 @@ function select(id, fly) {
   if (state.view !== "world") { const inside = countriesOf(e); for (const p of PANES) if (p.map && inside.has(p.iso)) to(p.map); }
   if (state.view !== "split") to(map);
 }
-function renderDetail() {
-  const el = document.getElementById("detail");
-  const e = state.selected && eventOf(state.selected);
-  if (!e) { el.hidden = true; return; }
-  el.hidden = false;
+function detailHtml(e) {
   const rows = [
     ["Fecha", fmt(e.time)],
     e.updated && e.updated !== e.time ? ["Actualizado", fmt(e.updated)] : null,
@@ -1361,21 +1403,46 @@ function renderDetail() {
     e.social ? ["Aviso", "Lugar y tema deducidos del texto de las publicaciones; pueden ser erróneos. No es información contrastada."] : null,
     ["Fuente", e.src],
   ].filter(Boolean);
-  keepFocus(el, () => el.innerHTML = `
+  return `
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       ${eventBadge(e).replace('class="ebadge', 'class="ebadge sm')}<span class="sevpill" style="background:${sevColor(e.sev)}">${prioOf(e.sev)} · ${SEV[e.sev || 1]}</span>
       <span class="dcat">${esc(CATS[e.cat]?.name || e.cat)}</span>${oldBadge(e)}
-      <button type="button" class="x" id="closeDetail" aria-label="Cerrar ficha"><svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.6"/></svg></button>
+      <button type="button" class="x" data-close="1" aria-label="Cerrar ficha"><svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.6"/></svg></button>
     </div>
     <h2>${esc(e.title)}</h2>
     ${e.desc ? `<p>${esc(e.desc)}</p>` : ""}
     <dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
     ${postList(e)}
     ${vmark(e)}
-    <div class="aacts">${newsBtn(e)}${saveBtn(e.id)}</div>`);
-  document.getElementById("closeDetail").onclick = () => { state.selected = null; render(); };
-  el.querySelector("[data-save]").onclick = (ev) => toggleSave(ev.currentTarget.dataset.save);
+    <div class="aacts">${newsBtn(e)}${saveBtn(e.id)}</div>`;
 }
+function renderDetail() {
+  const el = document.getElementById("detail");
+  const e = state.selected && eventOf(state.selected);
+  if (!e) { el.hidden = true; closeCard(); return; }
+  el.hidden = false;
+  keepFocus(el, () => el.innerHTML = detailHtml(e));
+  if (card && card.id === e.id) { const box = card.popup.getElement()?.querySelector(".detail"); if (box) keepFocus(box, () => (box.innerHTML = detailHtml(e))); }
+  else closeCard();
+}
+// The same card opens on the map, next to the alert that was pressed there.
+let card = null;
+function openCard(m, e) {
+  closeCard();
+  const box = document.createElement("div");
+  box.className = "detail mcard-body"; box.innerHTML = detailHtml(e);
+  const popup = new maplibregl.Popup({ className: "mcard", closeButton: false, closeOnClick: false, maxWidth: "340px", offset: 18, focusAfterOpen: false })
+    .setLngLat([+e.lon, +e.lat]).setDOMContent(box).addTo(m);
+  card = { id: e.id, popup };
+}
+function closeCard() { if (card) { const c = card; card = null; c.popup.remove(); } }
+for (const id of ["detail"]) document.getElementById(id).addEventListener("click", detailClick);
+function detailClick(ev) {
+  const b = ev.target.closest("[data-close],[data-save]"); if (!b) return;
+  if (b.dataset.save) return toggleSave(b.dataset.save);
+  state.selected = null; render();
+}
+document.getElementById("mapwrap").addEventListener("click", (ev) => { if (ev.target.closest(".mcard")) detailClick(ev); });
 
 function render() { const v = visible(); renderLayers(); renderMarkers(v); renderList(v); renderDetail(); renderStatus(); renderPanes(v); }
 // Several sources can answer in one go; draw once after all of them are in.
