@@ -30,8 +30,11 @@ const TOPICS = [
 const topicOf = (t) => TOPICS.find(([, , , re]) => re.test(t));
 
 // Earthquake bots repeat the seismic networks word for word; the USGS layer already has those.
-const isQuakeBot = (t) => /\bM\s?\d[.,]\d\b/.test(t) && /(sismo|earthquake|quake|magnitud)/i.test(t) && /(km|UTC|hace \d|ago|depth|profundidad)/i.test(t);
+const isQuakeBot = (t) => /(\b(m[blsw]?v?|mww?)\s?\d([.,]\d+)?\b|magnitu[dr]e?\W{0,6}(de\s*)?\d)/i.test(t)
+  && /(\bkm\b|UTC|hace \d|\bago\b|depth|profundidad|epicent|\d{1,2}:\d{2}|USGS|EMSC|GFZ|INETER|sismol|detected)/i.test(t);
 
+// Region names that are also everyday words ("Coast", "Islands", "Southern"…) say nothing about the place on their own.
+const GENERIC = new Set("islands island coast coastal southern northern eastern western central capital national north south east west north east lakes river valley mountain mountains highlands lowlands border upper lower greater interior littoral centre center metropolitan federal special region frontier sur norte este oeste centro costa islas frontera sierra valle rio capital oriental occidental".split(" "));
 const SPANISH = /(^|\s)(que|los|las|del|el|en|por|una|para|con|está|según|hoy|y)(\s|$)/i;
 
 // Reads place names from the text: hashtags or capitalised words, longest phrase first.
@@ -46,6 +49,7 @@ function placeOf(text, lang) {
       const first = words[i];
       if (!first.tag && !/^\p{Lu}/u.test(first.w)) continue;
       const key = norm(words.slice(i, i + n).map((x) => x.w).join(" "));
+      if (n === 1 && GENERIC.has(key)) continue;
       if (g[key]) { hits.push({ key, cands: g[key] }); found = n; }
     }
     i += found || 1;
@@ -86,7 +90,7 @@ async function mastodon() {
     return list.map((s) => ({
       net: "Mastodon", id: s.uri || s.id, time: s.created_at, lang: s.language, url: s.url || s.uri,
       author: s.account?.acct || s.account?.username || "", text: clean(s.content), bot: !!s.account?.bot,
-    }));
+    })).filter((p) => !p.bot);
   }));
 }
 
@@ -124,9 +128,8 @@ function toEvents(posts, net) {
   for (const p of posts) {
     const t = Date.parse(p.time);
     if (!p.text || !Number.isFinite(t) || now - t > DAY) continue;
-    if (isQuakeBot(p.text)) continue;
     const topic = topicOf(p.text);
-    if (!topic) continue;
+    if (!topic || ((topic[0] === "sismo" || topic[0] === "tsunami") && isQuakeBot(p.text))) continue;
     const place = placeOf(p.text, p.lang);
     if (!place) continue;
     const key = `${topic[0]}|${place.lat.toFixed(1)}|${place.lon.toFixed(1)}`;
