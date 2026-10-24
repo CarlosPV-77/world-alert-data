@@ -106,17 +106,53 @@ aside.side { background: var(--panel); border-left: 1px solid var(--line); displ
 .cchip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 9px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 20%, var(--panel-2)); border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line)); font-size: 12px; }
 .cchip button { background: none; border: 0; color: var(--muted); font-size: 14px; line-height: 1; padding: 0 4px; }
 .linkbtn { background: none; border: 0; color: var(--accent); font-size: 12px; padding: 2px 0; }
-.alerts { position: absolute; top: 12px; right: 12px; z-index: 7; display: grid; gap: 8px; width: min(340px, calc(100% - 24px)); max-height: calc(100% - 90px); overflow-y: auto; }
-.acard { background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--s2); border-radius: 8px; padding: 10px 12px; display: grid; gap: 6px; box-shadow: 0 10px 28px rgba(0,0,0,.5); animation: slidein .25s ease-out; }
-.acard .top { display: flex; gap: 8px; align-items: center; font-size: 11px; color: var(--muted); }
-.acard .top .x { margin-left: auto; background: none; border: 0; color: var(--muted); font-size: 18px; line-height: 1; }
-.acard b { font-size: 14px; line-height: 1.3; }
-.acard p { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.45; max-height: 5.8em; overflow: hidden; }
-.acard .foot { display: flex; gap: 8px; align-items: center; font-size: 11px; color: var(--muted); font-family: var(--font-data); flex-wrap: wrap; }
-.acard .foot .btn { margin-left: auto; padding: 3px 10px; font-size: 12px; font-family: var(--font-body); }
-.alerts .more { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: 12px; color: var(--muted); display: flex; gap: 8px; align-items: center; }
+.dock { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: min(580px, calc(100% - 24px)); z-index: 7; display: grid; justify-items: center; }
+.atab { display: flex; align-items: center; gap: 10px; max-width: 100%; background: var(--panel); border: 1px solid var(--line); border-top: 0; border-radius: 0 0 14px 14px; padding: 8px 14px 9px; box-shadow: 0 10px 26px rgba(0,0,0,.5); text-align: left; border-bottom: 3px solid var(--sev); }
+.atab:hover { background: var(--panel-2); }
+.atab .txt { min-width: 0; display: grid; }
+.atab .kind { font-size: 11px; color: var(--muted); font-family: var(--font-data); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.atab .ttl { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.atab .count { font-family: var(--font-data); font-size: 11px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; flex: 0 0 auto; }
+.atab .chev { color: var(--muted); transition: transform .2s; flex: 0 0 auto; }
+.dock.open .atab .chev { transform: rotate(180deg); }
+.dock.open .atab { border-radius: 0; border-bottom-color: transparent; box-shadow: none; }
+.dock.new .atab { animation: drop .45s cubic-bezier(.2,.9,.3,1.2); }
+@keyframes drop { from { transform: translateY(-110%); } }
+.asheet { width: 100%; background: var(--panel); border: 1px solid var(--line); border-top: 3px solid var(--sev); border-radius: 0 0 14px 14px; box-shadow: 0 16px 40px rgba(0,0,0,.55); display: grid; grid-template-rows: 0fr; transition: grid-template-rows .3s ease; }
+.dock:not(.open) .asheet { border-width: 0; box-shadow: none; }
+.dock.open .asheet { grid-template-rows: 1fr; }
+.asheet > div { overflow: hidden; min-height: 0; }
+.asheet .body { padding: 14px 16px; display: grid; gap: 10px; max-height: calc(100vh - 160px); overflow-y: auto; }
+.asheet .head { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; }
+.asheet .lvl { font-family: var(--font-display); font-size: 13px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--sev); }
+.asheet h2 { margin: 2px 0 0; font-family: var(--font-display); font-weight: 600; font-size: 22px; line-height: 1.1; text-wrap: balance; }
+.asheet p { margin: 0; color: var(--muted); line-height: 1.5; font-size: 13px; max-height: 7.5em; overflow-y: auto; }
+.asheet dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: 12px; }
+.asheet dt { color: var(--muted); }
+.asheet dd { margin: 0; font-family: var(--font-data); overflow-wrap: anywhere; }
+.aacts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 10px; }
+.aacts .btn, .detail .btn { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: inherit; }
+.aacts .btn.primary { color: var(--ocean); }
+.aacts svg, .detail .btn svg { width: 15px; height: 15px; }
+.btn.saved { border-color: var(--accent); color: var(--accent); }
+.btn.saved svg path { fill: currentColor; }
+.aacts .pager { margin-left: auto; display: flex; gap: 6px; align-items: center; font-family: var(--font-data); font-size: 12px; color: var(--muted); }
+.aacts .pager .btn { padding: 4px 9px; }
+.sico { width: 30px; height: 30px; flex: 0 0 auto; }
+.asheet .head .sico { width: 46px; height: 46px; }
+.sico.pulse { animation: spulse 1.2s ease-in-out infinite; }
+@keyframes spulse { 50% { transform: scale(1.12); filter: drop-shadow(0 0 8px var(--s4)); } }
+.vmark { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; letter-spacing: .04em; margin-top: 4px; }
+.vmark svg { width: 18px; height: 18px; }
+.vmark.yes { color: var(--ok); }
+.vmark.no { color: var(--s3); }
+.mapwrap.has-dock .banner { top: 64px; }
+.savedbar { display: flex; align-items: center; gap: 8px; padding: 6px 16px; border-bottom: 1px solid var(--line); font-size: 12px; }
+.savedbar .btn { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; font-size: 12px; }
+.savedbar svg { width: 13px; height: 13px; }
+.ev .sv { color: var(--accent); }
 @keyframes slidein { from { transform: translateY(-8px); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .acard { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .asheet, .atab .chev { transition: none; } .dock.new .atab, .sico.pulse { animation: none; } }
 .layers { display: grid; gap: 6px; max-height: 44vh; overflow-y: auto; overscroll-behavior: contain; }
 .lgroup { border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); }
 .lghead { display: flex; align-items: center; gap: 8px; padding: 6px 10px; }
@@ -211,7 +247,10 @@ aside.side { background: var(--panel); border-left: 1px solid var(--line); displ
     <div class="mapwrap" id="mapwrap">
       <div id="map" role="region" aria-label="Mapa del mundo con alertas"></div>
       <div class="banner" id="banner" hidden></div>
-      <div class="alerts" id="alerts" aria-live="assertive"></div>
+      <div class="dock" id="dock" hidden aria-live="assertive">
+        <button type="button" class="atab" id="atab" aria-expanded="false" aria-controls="asheet"></button>
+        <div class="asheet" id="asheet"><div><div class="body" id="abody"></div></div></div>
+      </div>
       <div class="tip" id="tip" hidden></div>
       <div class="legend" aria-label="Leyenda">
         <div class="row cats" id="legendCats"></div>
@@ -256,6 +295,7 @@ aside.side { background: var(--panel); border-left: 1px solid var(--line); displ
       <div>
         <div class="detail" id="detail" hidden></div>
         <div class="summary" id="summary"></div>
+        <div class="savedbar" id="savedbar"></div>
       </div>
       <div class="list" id="list" aria-live="polite"></div>
     </aside>
@@ -771,33 +811,126 @@ document.getElementById("csel").addEventListener("click", (ev) => {
 });
 renderCountrySel();
 
-// Pop-up cards for new alerts (or alerts that go up a level) inside the followed countries.
+// New alerts (or alerts that go up a level) inside the followed countries arrive as a tab at the top
+// center of the map; pressing it unfolds the details downwards.
 const shown = [];
+let aIdx = 0, aOpen = false;
+// One shape per level so it reads without color: circle, triangle, diamond, octagon.
+function sevIcon(sev, cls = "") {
+  sev = Math.min(4, Math.max(1, sev || 1));
+  const c = sevColor(sev), mark = sev === 1
+    ? `<circle cx="16" cy="10" r="1.9" fill="#0a1520"/><rect x="14.4" y="13.5" width="3.2" height="9" rx="1.2" fill="#0a1520"/>`
+    : `<rect x="14.4" y="${sev === 2 ? 11 : 8.5}" width="3.2" height="${sev === 2 ? 8.5 : 10}" rx="1.2" fill="#0a1520"/><circle cx="16" cy="${sev === 2 ? 23 : 22.5}" r="1.9" fill="#0a1520"/>`;
+  const shape = [null,
+    `<circle cx="16" cy="16" r="13.5" fill="${c}"/>`,
+    `<path d="M16 3.5 L29.5 27.5 H2.5 Z" fill="${c}" stroke="${c}" stroke-width="2" stroke-linejoin="round"/>`,
+    `<path d="M16 2 L30 16 L16 30 L2 16 Z" fill="${c}" stroke="${c}" stroke-width="1.5" stroke-linejoin="round"/>`,
+    `<path d="M10.2 2 H21.8 L30 10.2 V21.8 L21.8 30 H10.2 L2 21.8 V10.2 Z" fill="${c}"/>`][sev];
+  return `<svg class="sico ${cls}" viewBox="0 0 32 32" aria-hidden="true">${shape}${mark}</svg>`;
+}
+// Extra mark: official sources and stories carried by 2+ outlets count as contrasted.
+const VICO = {
+  yes: `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.8l2.6 1.9 3.2-.1 1 3 2.6 1.9-1 3.1 1 3.1-2.6 1.9-1 3-3.2-.1L12 22.2l-2.6-1.9-3.2.1-1-3-2.6-1.9 1-3.1-1-3.1 2.6-1.9 1-3 3.2.1z" fill="var(--ok)"/><path d="M7.6 12.2l3 3 5.8-6" fill="none" stroke="#0a1520" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  no: `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="var(--s3)" stroke-width="2" stroke-dasharray="3.2 2.4"/><text x="12" y="16.4" text-anchor="middle" font-size="12.5" font-weight="700" fill="var(--s3)" font-family="IBM Plex Sans, sans-serif">?</text></svg>`,
+};
+const ICO_SAVE = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 1.5h9v13L8 11.2 3.5 14.5z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>`;
+const ICO_NEWS = `<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9 2.5h4.5V7M13.5 2.5L7.5 8.5M11.5 9.5v4h-9v-9h4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const isNews = (e) => e.verified === false || !!e.vlabel;
+function vmark(e) {
+  const ok = e.verified !== false;
+  return `<div class="vmark ${ok ? "yes" : "no"}">${VICO[ok ? "yes" : "no"]}${!ok ? "Sin contrastar · un solo medio" : e.vlabel ? `Noticia contrastada · ${esc(e.vlabel)}` : "Fuente oficial"}</div>`;
+}
+function newsBtn(e) {
+  return e.url ? `<a class="btn" href="${esc(e.url)}" target="_blank" rel="noopener">${ICO_NEWS}${isNews(e) ? "Ir a la noticia" : "Ver en la fuente"}</a>` : "";
+}
+function saveBtn(id) {
+  const on = state.saved.has(id);
+  return `<button type="button" class="btn${on ? " saved" : ""}" data-save="${esc(id)}" aria-pressed="${on}">${ICO_SAVE}${on ? "Guardada" : "Guardar alerta"}</button>`;
+}
+
+// Saved alerts keep a copy of the event, so they survive after the feed drops it.
+state.saved = new Map((store.get("saved") || []).map((e) => [e.id, e]));
+state.showSaved = false;
+const eventOf = (id) => state.events.get(id) || state.saved.get(id);
+function toggleSave(id) {
+  const e = eventOf(id); if (!e) return;
+  if (state.saved.has(id)) state.saved.delete(id); else state.saved.set(id, { ...compact(e), savedAt: new Date().toISOString() });
+  store.set("saved", [...state.saved.values()]);
+  renderAlerts(); renderList(); renderDetail();
+}
+
 function notify(e, old) {
-  if (shown.some((x) => x.id === e.id)) shown.splice(shown.findIndex((x) => x.id === e.id), 1);
+  const i = shown.findIndex((x) => x.id === e.id);
+  if (i >= 0) shown.splice(i, 1);
   shown.unshift({ id: e.id, up: !!old, at: Date.now() });
   if (shown.length > 30) shown.length = 30;
+  aIdx = 0;
+  const dock = document.getElementById("dock");
+  dock.classList.remove("new"); void dock.offsetWidth; dock.classList.add("new");
   renderAlerts();
 }
 function renderAlerts() {
-  const box = document.getElementById("alerts"), max = 4;
-  const cards = shown.slice(0, max).map(({ id, up }) => {
-    const e = state.events.get(id); if (!e) return "";
-    const where = [...countriesOf(e)].map((c) => BY_ISO.get(c)?.name).filter(Boolean).join(", ");
-    return `<div class="acard" style="border-left-color:${sevColor(e.sev)}" role="alert">
-      <div class="top"><span class="sevpill" style="background:${sevColor(e.sev)}">${SEV[e.sev || 1]}</span><span>${up ? "Sube de nivel" : "Nueva alerta"} · ${esc(CATS[e.cat]?.name || e.cat)}</span>
-        <button type="button" class="x" data-close="${esc(id)}" aria-label="Cerrar aviso">×</button></div>
-      <b>${esc(e.title)}</b>
-      ${e.desc ? `<p>${esc(e.desc)}</p>` : ""}
-      <div class="foot"><span>${esc(where || "")}</span><span>${fmt(e.time)}</span><span>${esc(e.src)}</span>${badge(e)}
-        <button type="button" class="btn" data-see="${esc(id)}">Ver en el mapa</button></div></div>`;
-  }).join("");
-  box.innerHTML = cards + (shown.length > max ? `<div class="more">${shown.length - max} avisos más<button type="button" class="linkbtn" data-close="*" style="margin-left:auto">Cerrar todos</button></div>` : "");
+  const dock = document.getElementById("dock"), tab = document.getElementById("atab");
+  const list = shown.filter((x) => state.events.has(x.id));
+  document.getElementById("mapwrap").classList.toggle("has-dock", list.length > 0);
+  if (!list.length) { shown.length = 0; dock.hidden = true; aOpen = false; return; }
+  dock.hidden = false;
+  aIdx = Math.min(aIdx, list.length - 1);
+  // Folded, the tab shows the most serious pending alert.
+  const top = list.map((x) => state.events.get(x.id)).sort((a, b) => (b.sev || 1) - (a.sev || 1))[0];
+  const cur = list[aIdx], e = aOpen ? state.events.get(cur.id) : top;
+  dock.style.setProperty("--sev", sevColor(e.sev));
+  dock.classList.toggle("open", aOpen);
+  tab.setAttribute("aria-expanded", String(aOpen));
+  const where = (x) => [...countriesOf(x)].map((c) => BY_ISO.get(c)?.name).filter(Boolean).join(", ");
+  tab.innerHTML = `${sevIcon(top.sev, top.sev >= 4 && !aOpen ? "pulse" : "")}
+    <span class="txt"><span class="kind">${aOpen ? "Toca para recoger" : `${shown.find((x) => x.id === top.id)?.up ? "Sube de nivel" : "Nueva alerta"} · ${esc(CATS[top.cat]?.name || top.cat)}${where(top) ? ` · ${esc(where(top))}` : ""}`}</span>
+    <span class="ttl">${aOpen ? `${list.length} ${list.length === 1 ? "aviso" : "avisos"} sin revisar` : esc(top.title)}</span></span>
+    ${list.length > 1 ? `<span class="count">${list.length}</span>` : ""}
+    <svg class="chev" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
+  const rows = [
+    where(e) ? ["Lugar", where(e)] : null,
+    ["Hora", `${fmt(e.time)} (${rel(e.time)})`],
+    e.until ? ["Hasta", fmt(e.until)] : null,
+    e.mag != null ? ["Magnitud", `M${(+e.mag).toFixed(1)}${e.depth != null ? ` · ${Math.round(e.depth)} km de profundidad` : ""}`] : null,
+    e.level ? ["Nivel", e.level] : null,
+    e.country ? [e.cat === "aviso_es" ? "Provincia" : "País", e.country] : null,
+    e.prob ? ["Probabilidad", e.prob] : null,
+    e.articles ? ["Noticias", `${e.articles} ${+e.articles === 1 ? "artículo" : "artículos"}`] : null,
+    e.outlets?.length ? ["Medios", e.outlets.join(", ")] : null,
+  ].filter(Boolean);
+  document.getElementById("abody").innerHTML = `
+    <div class="head">${sevIcon(e.sev, e.sev >= 4 ? "pulse" : "")}<div>
+      <div class="lvl">${cur.up && aOpen ? "Sube a gravedad" : "Gravedad"} ${SEV[e.sev || 1].toLowerCase()} · ${esc(CATS[e.cat]?.name || e.cat)}</div>
+      <h2>${esc(e.title)}</h2>${vmark(e)}</div></div>
+    ${e.desc ? `<p>${esc(e.desc)}</p>` : ""}
+    <dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("")}<dt>Fuente</dt><dd>${esc(e.src)} ${badge(e)}</dd></dl>
+    <div class="aacts">
+      <button type="button" class="btn primary" data-act="see">Ver en el mapa</button>
+      ${newsBtn(e)}${saveBtn(e.id)}
+      <button type="button" class="btn" data-act="dismiss">Descartar</button>
+      ${list.length > 1 ? `<span class="pager"><button type="button" class="btn" data-act="prev" aria-label="Aviso anterior">‹</button>${aIdx + 1} / ${list.length}<button type="button" class="btn" data-act="next" aria-label="Aviso siguiente">›</button></span>` : ""}
+    </div>`;
 }
-document.getElementById("alerts").addEventListener("click", (ev) => {
-  const c = ev.target.closest("[data-close]"), v = ev.target.closest("[data-see]");
-  if (c) { if (c.dataset.close === "*") shown.length = 0; else shown.splice(shown.findIndex((x) => x.id === c.dataset.close), 1); renderAlerts(); }
-  if (v) { const id = v.dataset.see; shown.splice(shown.findIndex((x) => x.id === id), 1); renderAlerts(); select(id, true); }
+document.getElementById("atab").addEventListener("click", () => {
+  aOpen = !aOpen;
+  if (aOpen) {   // open on the most serious one
+    const list = shown.filter((x) => state.events.has(x.id));
+    let best = 0; list.forEach((x, i) => { if ((state.events.get(x.id).sev || 1) > (state.events.get(list[best].id).sev || 1)) best = i; });
+    aIdx = best;
+  }
+  renderAlerts();
+});
+document.getElementById("abody").addEventListener("click", (ev) => {
+  const b = ev.target.closest("[data-act],[data-save]"); if (!b) return;
+  const list = shown.filter((x) => state.events.has(x.id)), cur = list[aIdx];
+  if (b.dataset.save) return toggleSave(b.dataset.save);
+  const act = b.dataset.act;
+  if (act === "next") aIdx = (aIdx + 1) % list.length;
+  if (act === "prev") aIdx = (aIdx - 1 + list.length) % list.length;
+  if (act === "dismiss" || act === "see") shown.splice(shown.indexOf(cur), 1);
+  if (act === "see") { aOpen = false; renderAlerts(); select(cur.id, true); return; }
+  renderAlerts();
 });
 
 function rel(t) {
@@ -813,7 +946,29 @@ function rel(t) {
 }
 const fmt = (t) => { const d = new Date(t); return isNaN(d) ? "—" : d.toLocaleString("es-ES", { dateStyle: "medium", timeStyle: "short" }); };
 
+function renderSavedBar() {
+  const n = state.saved.size;
+  document.getElementById("savedbar").innerHTML = state.showSaved
+    ? `<button type="button" class="btn saved" id="savedToggle" aria-pressed="true">${ICO_SAVE}Alertas guardadas · ${n}</button><button type="button" class="linkbtn" id="savedBack">Volver a todas</button>`
+    : `<button type="button" class="btn" id="savedToggle" aria-pressed="false"${n ? "" : " disabled"}>${ICO_SAVE}Alertas guardadas · ${n}</button>`;
+}
+document.getElementById("savedbar").addEventListener("click", (ev) => {
+  if (ev.target.closest("#savedToggle,#savedBack")) { state.showSaved = !state.showSaved; renderList(); }
+});
 function renderList() {
+  renderSavedBar();
+  if (state.showSaved) {
+    const v = [...state.saved.values()].sort((a, b) => (b.savedAt || "").localeCompare(a.savedAt || ""));
+    document.getElementById("list").innerHTML = v.length ? v.map((e) => `
+      <button type="button" class="ev${e.id === state.selected ? " sel" : ""}" data-id="${esc(e.id)}">
+        <span class="bar" style="background:${sevColor(e.sev)}"></span>
+        <span>
+          <span class="meta"><span>${esc(CATS[e.cat]?.name || e.cat)}</span><span>${fmt(e.time)}</span><span>${esc(e.src)}</span>${badge(e)}</span>
+          <span class="title" style="display:block">${esc(e.title)}</span>
+        </span>
+      </button>`).join("") : `<div class="empty">No tienes alertas guardadas. Pulsa «Guardar alerta» en un aviso o en su ficha.</div>`;
+    return;
+  }
   const v = visible();
   const s = [1, 2, 3, 4].map((n) => v.filter((e) => (e.sev || 1) === n).length);
   document.getElementById("summary").innerHTML = [4, 3, 2, 1].map((n) =>
@@ -829,7 +984,7 @@ function renderList() {
       <span class="bar" style="background:${sevColor(e.sev)}"></span>
       <span>
         <span class="meta"><span>${esc(CATS[e.cat]?.name || e.cat)}</span><span>${rel(e.time)}</span><span>${esc(e.src)}</span>${badge(e)}</span>
-        <span class="title" style="display:block">${esc(e.title)}</span>
+        <span class="title" style="display:block">${state.saved.has(e.id) ? `<span class="sv" title="Guardada">★ </span>` : ""}${esc(e.title)}</span>
       </span>
     </button>`).join("") + (v.length > 400 ? `<div class="empty">Se muestran las 400 más recientes de ${v.length}. Usa los filtros para acotar.</div>` : "");
 }
@@ -845,13 +1000,13 @@ document.getElementById("list").addEventListener("click", (ev) => {
 
 function select(id, fly) {
   state.selected = id;
-  const e = state.events.get(id);
+  const e = eventOf(id);
   render();
   if (fly && e) map.flyTo({ center: [+e.lon, +e.lat], zoom: Math.max(map.getZoom(), e.poly ? 7 : 4.5), duration: 900 });
 }
 function renderDetail() {
   const el = document.getElementById("detail");
-  const e = state.selected && state.events.get(state.selected);
+  const e = state.selected && eventOf(state.selected);
   if (!e) { el.hidden = true; return; }
   el.hidden = false;
   const rows = [
@@ -864,7 +1019,7 @@ function renderDetail() {
     e.level ? ["Nivel", e.level] : null,
     e.country ? [e.cat === "aviso_es" ? "Provincia" : "País", e.country] : null,
     e.prob ? ["Probabilidad", e.prob] : null,
-    e.articles ? ["Noticias", `${e.articles} artículos`] : null,
+    e.articles ? ["Noticias", `${e.articles} ${+e.articles === 1 ? "artículo" : "artículos"}`] : null,
     e.outlets?.length ? ["Medios", e.outlets.join(", ")] : null,
     e.src === "GDELT (prensa)" ? ["Aviso", "Ubicación y clasificación automáticas a partir de la prensa; pueden ser imprecisas."] : null,
     ["Fuente", e.src],
@@ -878,8 +1033,10 @@ function renderDetail() {
     <h2>${esc(e.title)}</h2>
     ${e.desc ? `<p>${esc(e.desc)}</p>` : ""}
     <dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
-    ${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">Ver en la fuente original ↗</a>` : ""}`;
+    ${vmark(e)}
+    <div class="aacts">${newsBtn(e)}${saveBtn(e.id)}</div>`;
   document.getElementById("closeDetail").onclick = () => { state.selected = null; render(); };
+  el.querySelector("[data-save]").onclick = (ev) => toggleSave(ev.currentTarget.dataset.save);
 }
 
 function render() { renderLayers(); renderMarkers(); renderList(); renderDetail(); renderStatus(); }
@@ -953,7 +1110,7 @@ const dayOf = (e) => (e.time || e.updated || new Date().toISOString()).slice(0, 
 const keyOf = (id) => id.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 120);
 function compact(e) {
   const o = {};
-  for (const k of ["id", "cat", "title", "lat", "lon", "time", "updated", "until", "sev", "mag", "depth", "tsunami", "level", "country", "url", "src", "approx", "verified", "prob", "poly"]) if (e[k] != null && e[k] !== "") o[k] = e[k];
+  for (const k of ["id", "cat", "title", "lat", "lon", "time", "updated", "until", "sev", "mag", "depth", "tsunami", "level", "country", "url", "src", "approx", "verified", "vlabel", "articles", "outlets", "prob", "poly"]) if (e[k] != null && e[k] !== "") o[k] = e[k];
   if (e.desc) o.desc = String(e.desc).slice(0, 300);
   return o;
 }
