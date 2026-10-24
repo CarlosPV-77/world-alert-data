@@ -1,5 +1,6 @@
 // World Alert sources: official hazard feeds and geolocated news, normalized to one event shape.
 import { XMLParser } from "fast-xml-parser";
+import { inflateRawSync } from "node:zlib";
 
 const UA = "WorldAlert/1.0 (personal hazard map)";
 const xml = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "@", removeNSPrefix: false });
@@ -9,6 +10,8 @@ const BROWSER_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, l
 async function get(url, type = "json") {
   const r = await fetch(url, { headers: { "User-Agent": url.includes("volcano.si.edu") ? BROWSER_UA : UA, Accept: type === "json" ? "application/json, application/geo+json" : "application/xml, text/xml, */*" }, signal: AbortSignal.timeout(12000) });
   if (!r.ok) throw new Error(`${r.status} ${url}`);
+  if (type === "text") return r.text();
+  if (type === "buffer") return Buffer.from(await r.arrayBuffer());
   return type === "json" ? r.json() : xml.parse(await r.text());
 }
 
@@ -20,25 +23,82 @@ const clip = (s, n = 400) => { s = String(s || "").replace(/<[^>]+>/g, " ").repl
 
 function ngaDate(s) { const m = String(s || "").match(/(\d{2})(\d{2})(\d{2})Z (\w{3}) (\d{4})/); return m ? iso(`${m[1]} ${m[4]} ${m[5]} ${m[2]}:${m[3]}:00 UTC`) : null; }
 
-// GDELT GEO 2.0: news articles of the last 24 h geolocated by GDELT, grouped by place.
-// One article is unverified; several articles from different outlets count as confirmed.
-async function gdelt(cat, query) {
-  const url = `https://api.gdeltproject.org/api/v2/geo/geo?query=${encodeURIComponent(query)}&mode=PointData&format=GeoJSON&timespan=24h&maxpoints=500`;
-  const d = await get(url);
-  const day = new Date().toISOString().slice(0, 10);
-  return arr(d.features).map((f) => {
-    const p = f.properties || {}, [lon, lat] = f.geometry?.coordinates || [];
-    const links = [...String(p.html || "").matchAll(/<a href="([^"]+)"[^>]*title="([^"]*)"/g)].map((m) => ({ url: m[1], title: m[2].replace(/&quot;/g, '"').replace(/&amp;/g, "&").replace(/&#39;/g, "'") }));
-    const domains = [...new Set(links.map((l) => { try { return new URL(l.url).hostname.replace(/^www\./, ""); } catch { return ""; } }).filter(Boolean))];
-    const n = num(p.count) || links.length || 1;
-    const top = links[0];
+// GDELT 2.0 event files: machine-coded news events with coordinates, one file every 15 min.
+// The GEO 2.0 API was retired (404), so we read the raw export.CSV.zip files instead.
+// A place reported by one outlet stays unverified; several outlets count as confirmed.
+const GDELT_BASE = "http://data.gdeltproject.org/gdeltv2/";
+
+// Each export.CSV.zip holds a single deflated entry; read it without a zip library.
+function unzipOne(buf) {
+  if (buf.readUInt32LE(0) !== 0x04034b50) throw new Error("not a zip");
+  const method = buf.readUInt16LE(8), nameLen = buf.readUInt16LE(26), extraLen = buf.readUInt16LE(28);
+  const body = buf.subarray(30 + nameLen + extraLen);
+  return method === 0 ? body.toString("utf8") : inflateRawSync(body).toString("utf8");
+}
+
+function gdeltStamps(latest, n) {
+  const m = String(latest).match(/(\d{14})\.export\.CSV\.zip/);
+  if (!m) throw new Error("no export file in lastupdate.txt");
+  const s = m[1], t = Date.UTC(+s.slice(0, 4), +s.slice(4, 6) - 1, +s.slice(6, 8), +s.slice(8, 10), +s.slice(10, 12));
+  return Array.from({ length: n }, (_, i) => new Date(t - i * 15 * 60000).toISOString().replace(/[-:T]/g, "").slice(0, 14));
+}
+
+const gdeltCache = new Map(); // stamp -> promise of parsed rows, so both news sources share one download
+
+function gdeltRows(stamp) {
+  if (!gdeltCache.has(stamp)) gdeltCache.set(stamp, loadGdelt(stamp).catch((e) => { gdeltCache.delete(stamp); throw e; }));
+  return gdeltCache.get(stamp);
+}
+
+async function loadGdelt(stamp) {
+  return unzipOne(await get(`${GDELT_BASE}${stamp}.export.CSV.zip`, "buffer"))
+    .split("\n").filter(Boolean).map((l) => l.split("\t"))
+    .map((f) => ({
+      root: f[28], code: f[26], articles: num(f[33]) || 1, tone: num(f[34]),
+      place: f[f.length - 9], cc: f[f.length - 8], lat: num(f[f.length - 5]), lon: num(f[f.length - 4]),
+      added: f[f.length - 2], url: f[f.length - 1]?.trim(),
+    }))
+    .filter((e) => Number.isFinite(e.lat) && Number.isFinite(e.lon) && e.place);
+}
+
+const domainOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return ""; } };
+const gdeltTime = (s) => iso(`${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}T${s.slice(8, 10)}:${s.slice(10, 12)}:00Z`);
+
+// CAMEO codes: 18 assault (attacks, bombings), 19 fight (armed clashes), 20 mass violence.
+const isAtentado = (e) => e.root === "18";
+const isConflicto = (e) => e.root === "19" || e.root === "20";
+
+async function gdeltNews(cat, keep, files = 4) {
+  const latest = await get(`${GDELT_BASE}lastupdate.txt`, "text");
+  const stamps = gdeltStamps(latest, files);
+  const rows = [];
+  for (const s of stamps) {
+    try { rows.push(...(await gdeltRows(s))); } catch { /* a 15-min file can be missing */ }
+  }
+  const groups = new Map();
+  for (const e of rows.filter(keep)) {
+    const key = `${e.place}|${e.lat.toFixed(1)}|${e.lon.toFixed(1)}`;
+    const g = groups.get(key) || { place: e.place, cc: e.cc, lat: e.lat, lon: e.lon, n: 0, articles: 0, time: null, domains: new Set(), url: null };
+    g.n++; g.articles += e.articles;
+    const t = gdeltTime(e.added);
+    if (t && (!g.time || t > g.time)) g.time = t;
+    const d = domainOf(e.url);
+    if (d) { g.domains.add(d); if (!g.url) g.url = e.url; }
+    groups.set(key, g);
+  }
+  const label = cat === "atentado" ? "Ataques y atentados" : "Choques armados";
+  return [...groups.values()].map((g) => {
+    const outlets = [...g.domains];
     return {
-      id: `gdelt:${cat}:${day}:${p.name}`, cat, title: `${p.name}: ${clip(top?.title || "noticias", 120)}`,
-      desc: links.slice(0, 5).map((l) => "• " + clip(l.title, 110)).join(" "), lat, lon,
-      time: new Date().toISOString(), sev: n >= 30 ? 4 : n >= 10 ? 3 : n >= 3 ? 2 : 1, articles: n, outlets: domains.slice(0, 6),
-      url: top?.url, src: "GDELT (prensa)", verified: domains.length >= 2, vlabel: domains.length >= 2 ? `${domains.length} medios` : "1 medio",
+      id: `gdelt:${cat}:${g.place}:${g.lat.toFixed(1)},${g.lon.toFixed(1)}`, cat,
+      title: `${label}: ${clip(g.place, 90)}`,
+      desc: `${g.n} ${g.n === 1 ? "suceso" : "sucesos"} codificados por GDELT en la última hora, con ${g.articles} ${g.articles === 1 ? "artículo" : "artículos"} de prensa${outlets.length ? ` (${outlets.slice(0, 4).join(", ")})` : ""}.`,
+      lat: g.lat, lon: g.lon, time: g.time || new Date().toISOString(),
+      sev: g.articles >= 40 ? 4 : g.articles >= 15 ? 3 : g.articles >= 5 ? 2 : 1,
+      articles: g.articles, outlets: outlets.slice(0, 6), url: g.url, src: "GDELT (prensa)",
+      verified: outlets.length >= 2, vlabel: outlets.length >= 2 ? `${outlets.length} medios` : "1 medio",
     };
-  }).filter((e) => Number.isFinite(e.lat) && Number.isFinite(e.lon));
+  });
 }
 
 function quakeSev(m) { return m >= 7 ? 4 : m >= 6 ? 3 : m >= 4.5 ? 2 : 1; }
@@ -123,8 +183,8 @@ const SOURCES = {
     }).filter(Boolean);
   },
 
-  async conflictos() { return gdelt("conflicto", "theme:ARMEDCONFLICT"); },
-  async atentados() { return gdelt("atentado", "theme:TERROR"); },
+  async conflictos() { return gdeltNews("conflicto", isConflicto); },
+  async atentados() { return gdeltNews("atentado", isAtentado); },
 };
 
 export async function collect(q = {}) {
