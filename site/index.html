@@ -155,10 +155,6 @@ main { display: grid; grid-template-columns: 1fr minmax(320px, 380px); min-heigh
 .btn.saved svg path { fill: currentColor; }
 .aacts .pager { margin-left: auto; display: flex; gap: 6px; align-items: center; font-family: var(--font-data); font-size: 12px; color: var(--muted); }
 .aacts .pager .btn { padding: 4px 9px; }
-.sico { width: 30px; height: 30px; flex: 0 0 auto; }
-.asheet .head .sico { width: 46px; height: 46px; }
-.sico.pulse { animation: spulse 1.2s ease-in-out infinite; }
-@keyframes spulse { 50% { transform: scale(1.12); filter: drop-shadow(0 0 8px var(--s4)); } }
 .vmark { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 600; letter-spacing: .04em; margin-top: 4px; }
 .vmark svg { width: 18px; height: 18px; }
 .vmark.yes { color: var(--ok); }
@@ -229,7 +225,14 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 .prio { display: grid; place-items: center; height: 26px; font-family: var(--font-sign); font-weight: 700; font-size: 14px; letter-spacing: .04em; color: var(--ink); background: var(--sev); border: 1px solid var(--sev); }
 .prio.unv { background: transparent; color: var(--sev); border-style: dashed; }
 .ev .meta { display: flex; gap: 6px 8px; align-items: center; font-size: 11px; color: var(--muted); flex-wrap: wrap; }
-.ev .cat { font-family: var(--font-sign); font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--fg); }
+.ev .cat { font-family: var(--font-sign); font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--fg); display: inline-flex; align-items: center; gap: 5px; }
+.ev .cat .pic { width: 14px; height: 14px; color: var(--sev); flex: 0 0 auto; }
+.ebadge { width: 32px; height: 32px; flex: 0 0 auto; display: grid; place-items: center; background: var(--sev); color: var(--ink); border: 1px solid rgba(5,8,12,.85); border-radius: 3px; }
+.ebadge .pic { width: 72%; height: 72%; }
+.ebadge.unv { background: var(--room); color: var(--sev); border: 2px dashed var(--sev); }
+.asheet .head .ebadge { width: 50px; height: 50px; }
+.ebadge.pulse { animation: bpulse 1.2s ease-in-out infinite; }
+@keyframes bpulse { 50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--s4) 35%, transparent); } }
 .ev .title { display: block; font-weight: 500; margin: 3px 0 0; line-height: 1.35; overflow-wrap: anywhere; }
 .ev .sv { color: var(--accent); }
 .ev .elapsed { font-family: var(--font-data); font-size: 12px; color: var(--fg); font-variant-numeric: tabular-nums; white-space: nowrap; padding-top: 4px; }
@@ -245,6 +248,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 .detail h2 { font-family: var(--font-sign); font-weight: 600; font-size: 21px; margin: 0; line-height: 1.15; text-wrap: balance; }
 .detail p { margin: 0; color: var(--muted); line-height: 1.5; font-size: 13px; max-height: 9em; overflow-y: auto; overflow-wrap: anywhere; }
 .detail a { color: var(--accent); }
+.ebadge.sm { width: 26px; height: 26px; }
 .dcat { font-family: var(--font-sign); font-weight: 600; font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 .detail .x { margin-left: auto; background: none; border: 0; color: var(--muted); line-height: 1; padding: 6px; display: inline-grid; place-items: center; }
 .detail .x:hover { color: var(--fg); }
@@ -263,7 +267,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 .confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--s3); }
 
 @media (prefers-reduced-motion: reduce) {
-  .brand .dot.live, .sico.pulse, .dock.new .atab { animation: none; }
+  .brand .dot.live, .ebadge.pulse, .dock.new .atab { animation: none; }
   .asheet, .atab .chev, .gname .chev, .tg::after { transition: none; }
 }
 
@@ -413,27 +417,58 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 const BRIDGE = "/api/feed";
 const HOUR = 3600e3;
 
-const poly = (pts) => ({ draw(ctx, size) { const r = Math.sqrt(size / 2.6); pts.forEach(([a, k], i) => { const x = Math.sin(a) * r * k, y = -Math.cos(a) * r * k; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.closePath(); } });
-const symHex = poly(d3.range(6).map((i) => [i * Math.PI / 3 + Math.PI / 6, 1]));
-const symDown = poly([[Math.PI, 1.25], [Math.PI / 3, 1.25], [-Math.PI / 3, 1.25]]);
-// Conflict: a thick X. Attack: an eight-point burst.
-const symX = poly(d3.range(4).flatMap((j) => { const t = Math.PI / 4 + j * Math.PI / 2; return [[t - 0.3, 1.3], [t + 0.3, 1.3], [t + Math.PI / 4, 0.45]]; }));
-const symBurst = poly(d3.range(16).map((i) => [i * Math.PI / 8, i % 2 ? 0.55 : 1.3]));
-const symPenta = poly(d3.range(5).map((i) => [i * 2 * Math.PI / 5, 1.1]));
 const CATS = {
-  sismo:      { name: "Terremotos",   sym: d3.symbolCircle,   group: "naturales" },
-  volcan:     { name: "Volcanes",     sym: d3.symbolTriangle, group: "naturales" },
-  tsunami:    { name: "Tsunamis",     sym: d3.symbolDiamond,  group: "naturales" },
-  ciclon:     { name: "Ciclones",     sym: d3.symbolStar,     group: "naturales" },
-  inundacion: { name: "Inundaciones", sym: d3.symbolSquare,   group: "naturales" },
-  incendio:   { name: "Incendios",    sym: symDown,           group: "naturales" },
-  sequia:     { name: "Sequías",      sym: symHex,            group: "naturales" },
-  meteo:      { name: "Avisos meteo del mundo", sym: d3.symbolWye, group: "meteo" },
-  aviso_es:   { name: "Avisos de AEMET (España)", sym: symPenta, group: "meteo" },
-  maritimo:   { name: "Avisos a navegantes", sym: d3.symbolCross, group: "mar" },
-  conflicto:  { name: "Conflictos",   sym: symX,              group: "seguridad" },
-  atentado:   { name: "Atentados",    sym: symBurst,          group: "seguridad" },
+  sismo:      { name: "Terremotos",   pic: "quake",   group: "naturales" },
+  volcan:     { name: "Volcanes",     pic: "volcano", group: "naturales" },
+  tsunami:    { name: "Tsunamis",     pic: "tsunami", group: "naturales" },
+  ciclon:     { name: "Ciclones",     pic: "cyclone", group: "naturales" },
+  inundacion: { name: "Inundaciones", pic: "flood",   group: "naturales" },
+  incendio:   { name: "Incendios",    pic: "fire",    group: "naturales" },
+  sequia:     { name: "Sequías",      pic: "drought", group: "naturales" },
+  meteo:      { name: "Avisos meteo del mundo", pic: "storm", group: "meteo" },
+  aviso_es:   { name: "Avisos de AEMET (España)", pic: "rain", group: "meteo" },
+  maritimo:   { name: "Avisos a navegantes", pic: "ship", group: "mar" },
+  conflicto:  { name: "Conflictos",   pic: "clash",   group: "seguridad" },
+  atentado:   { name: "Atentados",    pic: "blast",   group: "seguridad" },
 };
+// Pictograms on a 24 px grid, drawn as 2 px strokes: one per kind of event, so the map says what happened.
+const PICS = {
+  quake:   "M2 13h4l2-6 3 12 3-10 2 4h6",
+  volcano: "M3 20l6-9h6l6 9z M12 7.5V3 M8.5 7 6.8 4.5 M15.5 7l1.7-2.5",
+  tsunami: "M3 13c.8-4.6 4-8 8.5-8 3.4 0 5.5 2.2 5.5 4.6 0 2.1-1.6 3.4-3.4 3.4-1.4 0-2.3-.9-2.3-2 M2 19c2 0 3-1.5 5-1.5s3 1.5 5 1.5 3-1.5 5-1.5 3 1.5 5 1.5",
+  cyclone: "M14.5 12a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z M12 9.5C12 5.5 14.5 3 19 3 M12 14.5c0 4-2.5 6.5-7 6.5",
+  flood:   "M4 11l8-7 8 7 M6.5 9v5 M17.5 9v5 M2 17c2 0 3-1.5 5-1.5s3 1.5 5 1.5 3-1.5 5-1.5 3 1.5 5 1.5 M2 21c2 0 3-1.5 5-1.5s3 1.5 5 1.5 3-1.5 5-1.5 3 1.5 5 1.5",
+  fire:    "M12 2.5c.6 3.4 5.5 5.6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.6 1.3-4.3 2.6-5.4 0 2.2.9 3.4 2.2 3.6-.4-3.4.1-6.6.7-9.2z",
+  drought: "M15 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0z M12 2v1.3 M5.5 8H4.2 M19.8 8h-1.3 M7.4 3.4l.9.9 M16.6 3.4l-.9.9 M2 15h20 M7.5 15l-1 2.6 1.6 1.4-.6 2.5 M14 15l1.6 2.2-1.2 3.3 M19 15l-.8 2.4",
+  storm:   "M7 16.5a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 17.6 7a4.5 4.5 0 0 1 .4 9 M12.5 12l-2.5 4.5h4L11.5 21",
+  rain:    "M7 14.5a4.5 4.5 0 0 1-.6-8.96A6 6 0 0 1 17.6 5a4.5 4.5 0 0 1 .4 9 M8 17.5l-1 3 M12.5 17.5l-1 3 M17 17.5l-1 3",
+  wind:    "M3 8.5h10.5a2.5 2.5 0 1 0-2.5-2.5 M3 12.5h15a3 3 0 1 1-3 3 M3 16.5h7",
+  snow:    "M12 2.5v19 M3.8 7.25l16.4 9.5 M3.8 16.75l16.4-9.5 M9.5 3.8 12 6l2.5-2.2 M9.5 20.2 12 18l2.5 2.2",
+  heat:    "M10 13.6V4.5a2 2 0 1 1 4 0v9.1a4 4 0 1 1-4 0z M12 9v7.5 M18 4.5l1.5-1.5 M19 9h2.5 M18 13.5l1.5 1.5",
+  cold:    "M10 13.6V4.5a2 2 0 1 1 4 0v9.1a4 4 0 1 1-4 0z M12 14v2.5 M19 3v6 M16.4 4.5l5.2 3 M16.4 7.5l5.2-3",
+  fog:     "M3 7h12 M5 11h16 M3 15h14 M7 19h12",
+  coast:   "M2 9c2 0 3-2 5-2s3 2 5 2 3-2 5-2 3 2 5 2 M2 14c2 0 3-2 5-2s3 2 5 2 3-2 5-2 3 2 5 2 M2 19c2 0 3-2 5-2s3 2 5 2 3-2 5-2 3 2 5 2",
+  tornado: "M3 4h18 M5 8h14 M7.5 12h10 M10 16h6 M12 20h2",
+  ship:    "M2.5 15h19l-2.5 5H5z M12 15V3 M12 4.5 18 13h-6",
+  clash:   "M4 4l16 16 M20 4 4 20 M4 4h4.5 M4 4v4.5 M20 4h-4.5 M20 4v4.5 M15 17l2-2 M7 15l2 2",
+  blast:   "M12 2l1.9 5.1 4.9-2.2-2.2 4.9L21.7 12l-5.1 1.9 2.2 4.9-4.9-2.2L12 21.7l-1.9-5.1-4.9 2.2 2.2-4.9L2.3 12l5.1-1.9-2.2-4.9 4.9 2.2z",
+};
+// The pictogram for one event: the category's own, refined by the warning's wording for weather.
+const WEATHER_WORDS = [
+  [/tornad/i, "tornado"], [/hurrican|tropical|tifón|ciclón/i, "cyclone"], [/tsunami/i, "tsunami"],
+  [/flood|inundac/i, "flood"], [/thunder|tormenta|lightning/i, "storm"],
+  [/snow|blizzard|winter|ice|nieve|nevad|alud|hielo/i, "snow"], [/heat|calor|máxim/i, "heat"],
+  [/cold|freez|frost|chill|frío|mínim|helad/i, "cold"], [/fog|smoke|dust|niebla|polvo|calima/i, "fog"],
+  [/fire|red flag|incendi/i, "fire"], [/surf|rip current|coastal|marine|gale|costero|galern|rissag|oleaje/i, "coast"],
+  [/wind|viento/i, "wind"], [/rain|lluvia|precipit/i, "rain"],
+];
+function picOf(e) {
+  const base = CATS[e.cat]?.pic || "quake";
+  if (e.cat !== "meteo" && e.cat !== "aviso_es") return base;
+  const t = `${e.title || ""} ${e.desc || ""}`;
+  return WEATHER_WORDS.find(([re]) => re.test(t))?.[1] || base;
+}
+const picSvg = (key, cls = "pic") => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true"><path d="${PICS[key]}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const GROUPS = {
   naturales: "Desastres naturales",
   meteo:     "Meteorología",
@@ -614,19 +649,27 @@ map.touchZoomRotate.disableRotation();
 const mapReady = new Promise((r) => map.on("load", r));
 const empty = { type: "FeatureCollection", features: [] };
 
-// One icon per category and severity, drawn with the same d3 symbols as the legend.
+// One marker per pictogram and severity: a square badge in the severity colour with the pictogram in ink.
+// Unverified items ("-u") are hollow: dark badge, dashed coloured edge, coloured pictogram.
 function addIcons() {
-  const px = 2, size = 26;
-  // Unverified items ("-u") are drawn hollow: colored outline on a dark fill.
-  for (const [cat, c] of Object.entries(CATS)) for (const sev of [1, 2, 3, 4]) for (const unv of [false, true]) {
-    const cv = document.createElement("canvas"); cv.width = cv.height = size * px;
-    const ctx = cv.getContext("2d"); ctx.translate(size * px / 2, size * px / 2); ctx.scale(px, px);
-    ctx.beginPath(); d3.symbol(c.sym, 150).context(ctx)();
-    const col = getComputedStyle(document.documentElement).getPropertyValue(`--s${sev}`).trim();
-    if (unv) { ctx.fillStyle = "rgba(5,12,20,.75)"; ctx.strokeStyle = col; ctx.lineWidth = 2.2; ctx.setLineDash([2.5, 1.5]); }
-    else { ctx.fillStyle = col; ctx.strokeStyle = "rgba(5,12,20,.9)"; ctx.lineWidth = 1.6; }
-    ctx.fill(); ctx.stroke();
-    map.addImage(`${cat}-${sev}${unv ? "-u" : ""}`, ctx.getImageData(0, 0, cv.width, cv.height), { pixelRatio: px });
+  const px = 2, size = 28, root = getComputedStyle(document.documentElement);
+  const ink = root.getPropertyValue("--ink").trim() || "#05080c";
+  for (const key of Object.keys(PICS)) {
+    const path = new Path2D(PICS[key]);
+    for (const sev of [1, 2, 3, 4]) for (const unv of [false, true]) {
+      const col = root.getPropertyValue(`--s${sev}`).trim();
+      const cv = document.createElement("canvas"); cv.width = cv.height = size * px;
+      const ctx = cv.getContext("2d"); ctx.scale(px, px);
+      ctx.beginPath(); ctx.roundRect(2, 2, size - 4, size - 4, 3);
+      ctx.fillStyle = unv ? "rgba(5,8,12,.88)" : col; ctx.fill();
+      ctx.lineWidth = unv ? 2 : 1.4; ctx.strokeStyle = unv ? col : "rgba(5,8,12,.85)";
+      if (unv) ctx.setLineDash([3, 2]);
+      ctx.stroke(); ctx.setLineDash([]);
+      ctx.save(); ctx.translate(5, 5); ctx.scale(18 / 24, 18 / 24);
+      ctx.lineWidth = 2.4; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = unv ? col : ink;
+      ctx.stroke(path); ctx.restore();
+      map.addImage(`${key}-${sev}${unv ? "-u" : ""}`, ctx.getImageData(0, 0, cv.width, cv.height), { pixelRatio: px });
+    }
   }
 }
 map.on("load", () => {
@@ -789,7 +832,7 @@ function renderMarkers(v = visible()) {
   const features = v.map((e) => {
     const sev = Math.min(4, Math.max(1, e.sev || 1)), live = isLive(e);
     return { type: "Feature", geometry: { type: "Point", coordinates: [+e.lon, +e.lat] }, properties: {
-      id: e.id, sev, icon: `${CATS[e.cat] ? e.cat : "sismo"}-${sev}${e.verified === false ? "-u" : ""}`, scale: Math.sqrt(markerSize(e) / 150) * 1.15, op: live ? 0.95 : 0.5,
+      id: e.id, sev, icon: `${picOf(e)}-${sev}${e.verified === false ? "-u" : ""}`, scale: Math.min(1.5, Math.max(0.8, Math.sqrt(markerSize(e) / 150) * 1.05)), op: live ? 0.95 : 0.5,
       pulse: sev >= 4 && live && Date.now() - Date.parse(e.time) < 24 * HOUR ? 1 : 0 } };
   });
   src.setData({ type: "FeatureCollection", features });
@@ -801,8 +844,7 @@ function placeMarkers() {}
 
 // ---------- side panel ----------
 function legendShape(cat, color = "currentColor") {
-  const p = d3.symbol(CATS[cat].sym, 60)();
-  return `<svg viewBox="-7 -7 14 14" aria-hidden="true"><path d="${p}" fill="${color}"></path></svg>`;
+  return picSvg(CATS[cat].pic).replace('stroke="currentColor"', `stroke="${color}"`);
 }
 // Per-layer counts with the other filters applied, whether or not the layer is on.
 function counts() {
@@ -844,7 +886,7 @@ function renderLayers() {
       <div class="lgitems"${open ? "" : " hidden"}>${items}</div></div>`;
   }).join(""));
   box.scrollTop = top;
-  document.getElementById("legendCats").innerHTML = Object.entries(CATS).map(([k, c]) => `<span class="sw">${legendShape(k, "var(--muted)").replace("<svg", '<svg width="11" height="11"')}${c.name}</span>`).join("");
+  document.getElementById("legendCats").innerHTML = Object.entries(CATS).map(([k, c]) => `<span class="sw">${legendShape(k, "var(--muted)").replace("<svg", '<svg width="13" height="13"')}${c.name}</span>`).join("");
 }
 document.getElementById("layers").addEventListener("click", (ev) => {
   const t = ev.target.closest("button"); if (!t) return;
@@ -933,18 +975,9 @@ renderCountrySel();
 // center of the map; pressing it unfolds the details downwards.
 const shown = [];
 let aIdx = 0, aOpen = false;
-// One shape per level so it reads without color: circle, triangle, diamond, octagon.
-function sevIcon(sev, cls = "") {
-  sev = Math.min(4, Math.max(1, sev || 1));
-  const c = sevColor(sev), mark = sev === 1
-    ? `<circle cx="16" cy="10" r="1.9" fill="#05080c"/><rect x="14.4" y="13.5" width="3.2" height="9" rx="1.2" fill="#05080c"/>`
-    : `<rect x="14.4" y="${sev === 2 ? 11 : 8.5}" width="3.2" height="${sev === 2 ? 8.5 : 10}" rx="1.2" fill="#05080c"/><circle cx="16" cy="${sev === 2 ? 23 : 22.5}" r="1.9" fill="#05080c"/>`;
-  const shape = [null,
-    `<circle cx="16" cy="16" r="13.5" fill="${c}"/>`,
-    `<path d="M16 3.5 L29.5 27.5 H2.5 Z" fill="${c}" stroke="${c}" stroke-width="2" stroke-linejoin="round"/>`,
-    `<path d="M16 2 L30 16 L16 30 L2 16 Z" fill="${c}" stroke="${c}" stroke-width="1.5" stroke-linejoin="round"/>`,
-    `<path d="M10.2 2 H21.8 L30 10.2 V21.8 L21.8 30 H10.2 L2 21.8 V10.2 Z" fill="${c}"/>`][sev];
-  return `<svg class="sico ${cls}" viewBox="0 0 32 32" aria-hidden="true">${shape}${mark}</svg>`;
+// The event's pictogram on its severity colour, the same badge the map draws.
+function eventBadge(e, cls = "") {
+  return `<span class="ebadge${e.verified === false ? " unv" : ""}${cls ? " " + cls : ""}" style="--sev:${sevColor(e.sev)}">${picSvg(picOf(e))}</span>`;
 }
 // Extra mark: official sources and stories carried by 2+ outlets count as contrasted.
 const VICO = {
@@ -1003,7 +1036,7 @@ function renderAlerts() {
   document.getElementById("mapwrap").classList.toggle("dock-open", aOpen);
   tab.setAttribute("aria-expanded", String(aOpen));
   const where = (x) => [...countriesOf(x)].map((c) => BY_ISO.get(c)?.name).filter(Boolean).join(", ");
-  tab.innerHTML = `${sevIcon(top.sev, top.sev >= 4 && !aOpen ? "pulse" : "")}
+  tab.innerHTML = `${eventBadge(top, top.sev >= 4 && !aOpen ? "pulse" : "")}
     <span class="txt">${aOpen ? "" : `<span class="kind">${shown.find((x) => x.id === top.id)?.up ? `Sube a ${prioOf(top.sev)}` : `Incidencia entrante · ${prioOf(top.sev)}`} · ${esc(CATS[top.cat]?.name || top.cat)}${where(top) ? ` · ${esc(where(top))}` : ""}</span>`}
     <span class="ttl">${aOpen ? `${list.length} ${list.length === 1 ? "incidencia" : "incidencias"} sin revisar` : esc(top.title)}</span></span>
     ${list.length > 1 ? `<span class="count">${list.length}</span>` : ""}
@@ -1021,7 +1054,7 @@ function renderAlerts() {
   ].filter(Boolean);
   const abody = document.getElementById("abody");
   keepFocus(abody, () => abody.innerHTML = `
-    <div class="head">${sevIcon(e.sev, e.sev >= 4 ? "pulse" : "")}<div>
+    <div class="head">${eventBadge(e, e.sev >= 4 ? "pulse" : "")}<div>
       <h2>${esc(e.title)}</h2>
       <div class="lvl">${prioOf(e.sev)} · ${cur.up && aOpen ? "Sube a gravedad" : "Gravedad"} ${SEV[e.sev || 1].toLowerCase()} · ${esc(CATS[e.cat]?.name || e.cat)}</div>${vmark(e)}</div></div>
     ${e.desc ? `<p>${esc(e.desc)}</p>` : ""}
@@ -1082,7 +1115,7 @@ function evRow(e, savedView) {
   return `<button type="button" class="ev${e.id === state.selected ? " sel" : ""}${live || savedView ? "" : " old"}" data-id="${esc(e.id)}" style="--sev:${sevColor(e.sev)}">
     <span class="prio${unv ? " unv" : ""}" title="Prioridad ${prioOf(e.sev)}: gravedad ${SEV[e.sev || 1].toLowerCase()}">${prioOf(e.sev)}</span>
     <span>
-      <span class="meta"><span class="cat">${esc(CATS[e.cat]?.name || e.cat)}</span><span>${esc(e.src)}</span>${badge(e)}</span>
+      <span class="meta"><span class="cat">${picSvg(picOf(e))}${esc(CATS[e.cat]?.name || e.cat)}</span><span>${esc(e.src)}</span>${badge(e)}</span>
       <span class="title">${!savedView && state.saved.has(e.id) ? `<span class="sv" title="Guardada">${ICO_SAVE.replace("<svg", '<svg width="11" height="11" style="vertical-align:-1px"')} </span>` : ""}${esc(e.title)}</span>
     </span>
     <time class="elapsed${fut ? " future" : ""}" data-t="${esc(e.time || "")}" datetime="${esc(e.time || "")}" title="${esc(fmt(e.time))}">${savedView ? esc(fmt(e.time).split(",")[0]) : elapsed(e.time)}</time>
@@ -1148,7 +1181,7 @@ function renderDetail() {
   ].filter(Boolean);
   keepFocus(el, () => el.innerHTML = `
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <span class="sevpill" style="background:${sevColor(e.sev)}">${prioOf(e.sev)} · ${SEV[e.sev || 1]}</span>
+      ${eventBadge(e).replace('class="ebadge', 'class="ebadge sm')}<span class="sevpill" style="background:${sevColor(e.sev)}">${prioOf(e.sev)} · ${SEV[e.sev || 1]}</span>
       <span class="dcat">${esc(CATS[e.cat]?.name || e.cat)}</span>${oldBadge(e)}
       <button type="button" class="x" id="closeDetail" aria-label="Cerrar ficha"><svg viewBox="0 0 12 12" width="14" height="14" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.6"/></svg></button>
     </div>
