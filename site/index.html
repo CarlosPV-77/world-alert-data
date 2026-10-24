@@ -499,9 +499,10 @@ map.on("load", () => {
   map.addSource("disputed", { type: "geojson", data: disputed });
   map.addLayer({ id: "land", type: "fill", source: "countries", layout: { visibility: "none" }, paint: { "fill-color": "#2f4559" } });
   map.addLayer({ id: "country-hit", type: "fill", source: "countries", paint: { "fill-color": "#000", "fill-opacity": 0 } });
-  map.addLayer({ id: "country-sel-fill", type: "fill", source: "countries", filter: ["in", ["get", "a"], ["literal", []]], paint: { "fill-color": "#8cc4e8", "fill-opacity": 0.1 } });
-  map.addLayer({ id: "country-sel-line", type: "line", source: "countries", filter: ["in", ["get", "a"], ["literal", []]], paint: { "line-color": "#8cc4e8", "line-width": 2.2 } });
-  map.addLayer({ id: "borders", type: "line", source: "countries", paint: { "line-color": "rgba(235,242,248,.6)", "line-width": ["interpolate", ["linear"], ["zoom"], 1, 0.5, 6, 1.4], "line-opacity": ["interpolate", ["linear"], ["zoom"], 4, 1, 5, 0.15] } });
+  map.addSource("country-sel", { type: "geojson", data: empty });
+  map.addLayer({ id: "country-sel-fill", type: "fill", source: "country-sel", paint: { "fill-color": "#8cc4e8", "fill-opacity": 0.1 } });
+  map.addLayer({ id: "country-sel-line", type: "line", source: "country-sel", layout: { "line-join": "round" }, paint: { "line-color": "#8cc4e8", "line-width": ["interpolate", ["linear"], ["zoom"], 2, 1.4, 8, 2.6] } });
+  map.addLayer({ id: "borders", type: "line", source: "countries", paint: { "line-color": "rgba(235,242,248,.6)", "line-width": ["interpolate", ["linear"], ["zoom"], 1, 0.5, 6, 1.4], "line-opacity": ["interpolate", ["linear"], ["zoom"], 4, 1, 5.5, 0] } });
   map.addLayer({ id: "disputed-fill", type: "fill", source: "disputed", paint: { "fill-color": "#d6a24a", "fill-opacity": 0.28 } });
   map.addLayer({ id: "disputed-line", type: "line", source: "disputed", paint: { "line-color": "#f0bd5c", "line-width": 1.4, "line-dasharray": [2, 1.5] } });
   addPlaceLayers();
@@ -732,11 +733,17 @@ function setCountries(change) {
   change(); isoCache.size > 20000 && isoCache.clear();
   saveUi(); renderCountrySel(); applyCountries(true); render();
 }
+// Highlighted outlines use detailed 1:10m borders, fetched per country when it is chosen.
+const outlines = new Map();
+async function drawOutlines() {
+  const want = [...state.countries];
+  await Promise.all(want.filter((c) => !outlines.has(c)).map((c) =>
+    fetch(`countries/${c}.json`).then((r) => (r.ok ? r.json() : BY_ISO.get(c)?.f)).catch(() => BY_ISO.get(c)?.f).then((f) => f && outlines.set(c, f))));
+  map.getSource("country-sel")?.setData({ type: "FeatureCollection", features: [...state.countries].map((c) => outlines.get(c)).filter(Boolean) });
+}
 function applyCountries(fly) {
   if (!map.getLayer("country-sel-fill")) return;
-  const list = ["literal", [...state.countries]];
-  map.setFilter("country-sel-fill", ["in", ["get", "a"], list]);
-  map.setFilter("country-sel-line", ["in", ["get", "a"], list]);
+  drawOutlines();
   if (!fly || !state.countries.size) return;
   const fc = { type: "FeatureCollection", features: [...state.countries].map((c) => BY_ISO.get(c)?.f).filter(Boolean) };
   const [[w, s], [e, n]] = d3.geoBounds(fc);
