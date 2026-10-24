@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>World Alert</title>
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -57,7 +58,12 @@ header.top { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; bac
 
 main { display: grid; grid-template-columns: 1fr 360px; min-height: 0; }
 .mapwrap { position: relative; min-width: 0; min-height: 0; background: radial-gradient(ellipse at 50% 40%, var(--ocean-2), var(--ocean) 70%); }
-#map { width: 100%; height: 100%; display: block; touch-action: none; }
+#map { position: absolute; inset: 0; }
+#globeBtn[aria-pressed="true"] { background: var(--accent); color: var(--ocean); border-color: var(--accent); }
+.frow .btn { flex: 0 0 auto; }
+.maplibregl-ctrl-attrib { background: color-mix(in srgb, var(--panel) 85%, transparent) !important; color: var(--muted); font-size: 10px; }
+.maplibregl-ctrl-attrib a { color: var(--accent); }
+.maplibregl-ctrl-bottom-right { bottom: 0; right: 56px; }
 .country { fill: var(--land); stroke: var(--border); stroke-width: .6px; vector-effect: non-scaling-stroke; }
 .country:hover { fill: var(--land-hover); }
 .disputed { fill: url(#hatch); stroke: var(--disputed); stroke-width: 1px; stroke-dasharray: 3 2; vector-effect: non-scaling-stroke; }
@@ -73,9 +79,9 @@ main { display: grid; grid-template-columns: 1fr 360px; min-height: 0; }
 @keyframes pulse { 70% { box-shadow: 0 0 0 8px transparent; } }
 @media (prefers-reduced-motion: reduce) { .ring, .brand .dot.live { animation: none; } }
 
-.zoom { position: absolute; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 4px; }
+.zoom { z-index: 2; position: absolute; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 4px; }
 .zoom button { width: 34px; height: 34px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; font-size: 18px; line-height: 1; }
-.legend { position: absolute; left: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 12px; display: grid; gap: 6px; max-width: calc(100% - 80px); }
+.legend { z-index: 2; position: absolute; left: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); background: color-mix(in srgb, var(--panel) 92%, transparent); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; font-size: 12px; display: grid; gap: 6px; max-width: calc(100% - 80px); }
 .legend .row { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
 .legend .sw { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); }
 .legend .sev { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
@@ -161,16 +167,7 @@ aside.side { background: var(--panel); border-left: 1px solid var(--line); displ
   </header>
   <main>
     <div class="mapwrap" id="mapwrap">
-      <svg id="map" role="img" aria-label="Mapa del mundo con alertas">
-        <defs>
-          <pattern id="hatch" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-            <rect width="5" height="5" style="fill:var(--land)"></rect>
-            <line x1="0" y1="0" x2="0" y2="5" style="stroke:var(--disputed);stroke-width:1.6;stroke-opacity:.55"></line>
-          </pattern>
-        </defs>
-        <g id="zoomLayer"><path class="sphere" id="sphere"></path><path class="graticule" id="grat"></path><g id="countries"></g><g id="disputed"></g><g id="night"></g><path class="sun" id="sun"></path></g>
-        <g id="markers"></g>
-      </svg>
+      <div id="map" role="region" aria-label="Mapa del mundo con alertas"></div>
       <div class="banner" id="banner" hidden></div>
       <div class="tip" id="tip" hidden></div>
       <div class="legend" aria-label="Leyenda">
@@ -190,6 +187,10 @@ aside.side { background: var(--panel); border-left: 1px solid var(--line); displ
       <section class="filters">
         <div class="label">Capas</div>
         <div class="chips" id="chips"></div>
+        <div class="frow">
+          <select id="fBase" aria-label="Fondo del mapa"></select>
+          <button type="button" class="btn" id="globeBtn" aria-pressed="false">Globo 3D</button>
+        </div>
         <div class="frow">
           <select id="fPeriod" aria-label="Periodo">
             <option value="1">Última hora</option>
@@ -235,6 +236,7 @@ aside.side { background: var(--panel); border-left: 1px solid var(--line); displ
   </div>
 </div>
 
+<script src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
 
@@ -276,7 +278,7 @@ const state = {
   live: {},                   // source -> Set(ids) seen in last fetch
   srcStatus: {},              // source -> {ok, at, n, error}
   cats: Object.fromEntries(Object.keys(CATS).map((c) => [c, true])),
-  period: 24, minSev: 1, selected: null, solar: true,
+  period: 24, minSev: 1, selected: null, solar: true, base: "s2", globe: false,
   settings: { intervals: Object.fromEntries(Object.entries(SOURCES).map(([k, v]) => [k, v.def])), enabled: Object.fromEntries(Object.keys(SOURCES).map((k) => [k, !SOURCES[k].off])), retention: 90 },
   lastUpdate: null,
 };
@@ -285,7 +287,7 @@ const store = {
   set(k, v) { try { localStorage.setItem("wa:" + k, JSON.stringify(v)); } catch {} },
 };
 const savedUi = store.get("ui");
-if (savedUi) { Object.assign(state.cats, savedUi.cats || {}); state.period = savedUi.period ?? 24; state.minSev = savedUi.minSev ?? 1; state.solar = savedUi.solar ?? true; }
+if (savedUi) { Object.assign(state.cats, savedUi.cats || {}); state.period = savedUi.period ?? 24; state.minSev = savedUi.minSev ?? 1; state.solar = savedUi.solar ?? true; state.base = savedUi.base || "s2"; state.globe = !!savedUi.globe; }
 const localSettings = store.get("settings");
 if (localSettings) mergeSettings(localSettings);
 function mergeSettings(s) {
@@ -299,29 +301,69 @@ function mergeSettings(s) {
 const WORLD_URL = "https://cdn.jsdelivr.net/gh/CarlosPV-77/world-alert-data@9331bebaef71694f012c0987be391382ade3d67c/web/world.json";
 const world = await fetch(WORLD_URL).then((r) => { if (!r.ok) throw r; return r.json(); })
   .catch(() => fetch(WORLD_URL.replace("https://cdn.jsdelivr.net/gh/CarlosPV-77/world-alert-data@", "https://raw.githubusercontent.com/CarlosPV-77/world-alert-data/")).then((r) => r.json()));
-const svg = d3.select("#map"), zl = d3.select("#zoomLayer"), mk = d3.select("#markers");
-const projection = d3.geoNaturalEarth1();
-const path = d3.geoPath(projection);
-const countries = topojson.feature(world, world.objects.countries).features;
-const disputed = topojson.feature(world, world.objects.disputed).features;
+const countries = topojson.feature(world, world.objects.countries);
+const disputed = topojson.feature(world, world.objects.disputed);
 const tip = document.getElementById("tip");
-let transform = d3.zoomIdentity, W = 0, H = 0;
+const BASES = {
+  s2: { name: "Satélite · Sentinel-2", tiles: ["https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2020_3857/default/g/{z}/{y}/{x}.jpg"], maxzoom: 15,
+        attribution: '<a href="https://s2maps.eu" target="_blank" rel="noopener">Sentinel-2 cloudless 2020</a> de EOX IT Services GmbH (datos Copernicus Sentinel modificados, CC BY-NC-SA 4.0)' },
+  esri: { name: "Satélite · Esri (más detalle)", tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"], maxzoom: 18,
+        attribution: 'Imágenes © Esri, Maxar, Earthstar Geographics y la comunidad GIS' },
+  dark: { name: "Oscuro (solo fronteras)" },
+};
+if (!BASES[state.base]) state.base = "s2";
+const HOME = { center: [15, 22], zoom: 1.4 };
+const map = new maplibregl.Map({
+  container: "map",
+  style: { version: 8, projection: { type: state.globe ? "globe" : "mercator" }, sources: {}, layers: [{ id: "bg", type: "background", paint: { "background-color": "#0a1520" } }] },
+  center: HOME.center, zoom: HOME.zoom, minZoom: 0.6, maxZoom: 17, attributionControl: { compact: true }, dragRotate: false,
+});
+map.touchZoomRotate.disableRotation();
+const mapReady = new Promise((r) => map.on("load", r));
+const empty = { type: "FeatureCollection", features: [] };
 
-function layout() {
-  const box = document.getElementById("mapwrap").getBoundingClientRect();
-  W = box.width; H = box.height;
-  svg.attr("viewBox", `0 0 ${W} ${H}`);
-  projection.fitExtent([[8, 8], [W - 8, H - 8]], { type: "Sphere" });
-  d3.select("#sphere").attr("d", path({ type: "Sphere" }));
-  d3.select("#grat").attr("d", path(d3.geoGraticule10()));
-  zl.select("#countries").selectAll("path").data(countries).join("path").attr("class", "country").attr("d", path)
-    .on("mousemove", (ev, d) => showTip(ev, `<b>${esc(d.properties.n)}</b>`)).on("mouseleave", hideTip);
-  zl.select("#disputed").selectAll("path").data(disputed).join("path").attr("class", "disputed").attr("d", path)
-    .on("mousemove", (ev, d) => showTip(ev, `<b>${esc(d.properties.n)} · territorio disputado</b><span>${esc(d.properties.note || "Soberanía en disputa")}</span>`)).on("mouseleave", hideTip);
-  zoom.extent([[0, 0], [W, H]]).translateExtent([[0, 0], [W, H]]);
-  renderNight();
-  renderMarkers();
+// One icon per category and severity, drawn with the same d3 symbols as the legend.
+function addIcons() {
+  const px = 2, size = 26;
+  for (const [cat, c] of Object.entries(CATS)) for (const sev of [1, 2, 3, 4]) {
+    const cv = document.createElement("canvas"); cv.width = cv.height = size * px;
+    const ctx = cv.getContext("2d"); ctx.translate(size * px / 2, size * px / 2); ctx.scale(px, px);
+    ctx.beginPath(); d3.symbol(c.sym, 150).context(ctx)();
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue(`--s${sev}`).trim();
+    ctx.strokeStyle = "rgba(5,12,20,.9)"; ctx.lineWidth = 1.6; ctx.fill(); ctx.stroke();
+    map.addImage(`${cat}-${sev}`, ctx.getImageData(0, 0, cv.width, cv.height), { pixelRatio: px });
+  }
 }
+map.on("load", () => {
+  for (const [k, b] of Object.entries(BASES)) if (b.tiles) {
+    map.addSource("base-" + k, { type: "raster", tiles: b.tiles, tileSize: 256, maxzoom: b.maxzoom, attribution: b.attribution });
+    map.addLayer({ id: "base-" + k, type: "raster", source: "base-" + k, layout: { visibility: "none" }, paint: { "raster-fade-duration": 150 } });
+  }
+  map.addSource("countries", { type: "geojson", data: countries });
+  map.addSource("disputed", { type: "geojson", data: disputed });
+  map.addLayer({ id: "land", type: "fill", source: "countries", layout: { visibility: "none" }, paint: { "fill-color": "#2f4559" } });
+  map.addLayer({ id: "country-hit", type: "fill", source: "countries", paint: { "fill-color": "#000", "fill-opacity": 0 } });
+  map.addLayer({ id: "borders", type: "line", source: "countries", paint: { "line-color": "rgba(235,242,248,.6)", "line-width": ["interpolate", ["linear"], ["zoom"], 1, 0.5, 6, 1.4] } });
+  map.addLayer({ id: "disputed-fill", type: "fill", source: "disputed", paint: { "fill-color": "#d6a24a", "fill-opacity": 0.28 } });
+  map.addLayer({ id: "disputed-line", type: "line", source: "disputed", paint: { "line-color": "#f0bd5c", "line-width": 1.4, "line-dasharray": [2, 1.5] } });
+  map.addSource("night", { type: "geojson", data: empty });
+  map.addLayer({ id: "night", type: "fill", source: "night", paint: { "fill-color": "#01060b", "fill-opacity": 0.2, "fill-antialias": false } });
+  map.addSource("sun", { type: "geojson", data: empty });
+  map.addLayer({ id: "sun", type: "circle", source: "sun", paint: { "circle-radius": 7, "circle-color": "#f3c94b", "circle-stroke-color": "rgba(243,201,75,.35)", "circle-stroke-width": 6 } });
+  addIcons();
+  map.addSource("events", { type: "geojson", data: empty });
+  map.addLayer({ id: "crit", type: "circle", source: "events", filter: ["==", ["get", "pulse"], 1], paint: { "circle-radius": 15, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#ea4a4f", "circle-stroke-width": 2, "circle-stroke-opacity": 0.8 } });
+  map.addLayer({ id: "events", type: "symbol", source: "events", layout: {
+    "icon-image": ["get", "icon"], "icon-size": ["get", "scale"], "icon-allow-overlap": true, "icon-ignore-placement": true, "symbol-sort-key": ["get", "sev"],
+  }, paint: { "icon-opacity": ["get", "op"] } });
+  map.addLayer({ id: "sel", type: "circle", source: "events", filter: ["==", ["get", "id"], ""], paint: { "circle-radius": 13, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": "#ffffff", "circle-stroke-width": 2.5 } });
+  applyBase(); renderNight(); renderMarkers();
+});
+function applyBase() {
+  for (const k of Object.keys(BASES)) if (BASES[k].tiles) map.setLayoutProperty("base-" + k, "visibility", state.base === k ? "visible" : "none");
+  map.setLayoutProperty("land", "visibility", state.base === "dark" ? "visible" : "none");
+}
+function layout() { map.resize(); }
 
 // ---------- day / night (NOAA solar position formulas) ----------
 const RAD = Math.PI / 180;
@@ -341,20 +383,33 @@ function meanLongitude(c) { const l = (280.46646 + c * (36000.76983 + c * 0.0003
 function equationOfCenter(c) { const m = meanAnomaly(c); return (Math.sin(m) * (1.914602 - c * (0.004817 + 0.000014 * c)) + Math.sin(2 * m) * (0.019993 - 0.000101 * c) + Math.sin(3 * m) * 0.000289) * RAD; }
 function obliquity(c) { const m = (23 + (26 + (21.448 - c * (46.815 + c * (0.00059 - c * 0.001813))) / 60) / 60) * RAD; return m + 0.00256 * Math.cos((125.04 - 1934.136 * c) * RAD) * RAD; }
 function eccentricity(c) { return 0.016708634 - c * (0.000042037 + 0.0000001267 * c); }
-// Night = sun below the horizon (90° from the antisolar point); then civil, nautical and astronomical twilight limits.
+// Region where the sun is below altitude `alt` (0 = sunset line, -6/-12/-18 = civil, nautical and astronomical twilight).
+// Solves sin(alt) = sin(lat)·sin(dec) + cos(lat)·cos(dec)·cos(H) for the latitude at each longitude.
+function belowAltitude([sunLon, sunLat], alt) {
+  const dec = sunLat * RAD, a = Math.sin(dec), pole = dec >= 0 ? -90 : 90, ring = [];
+  for (let lon = -180; lon <= 180; lon += 2) {
+    const b = Math.cos(dec) * Math.cos((lon - sunLon) * RAD), r = Math.hypot(a, b), d = Math.atan2(b, a);
+    const s = Math.asin(Math.max(-1, Math.min(1, Math.sin(alt * RAD) / r)));
+    const wrap = (x) => Math.atan2(Math.sin(x), Math.cos(x));
+    const c1 = wrap(s - d), c2 = wrap(Math.PI - s - d);
+    const lat = Math.abs(c1) <= Math.PI / 2 ? c1 : c2;
+    ring.push([lon, Math.max(-89.9, Math.min(89.9, lat / RAD))]);
+  }
+  ring.push([180, pole], [-180, pole], ring[0]);
+  return { type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: [dec >= 0 ? ring : ring.slice().reverse()] } };
+}
 function renderNight() {
-  const sun = solarPosition(Date.now()), anti = [sun[0] + 180, -sun[1]];
-  const radii = state.solar ? [90, 84, 78, 72] : [];
-  zl.select("#night").selectAll("path").data(radii).join("path").attr("class", "night").attr("d", (r) => path(d3.geoCircle().center(anti).radius(r)()));
-  d3.select("#sun").attr("d", state.solar ? path(d3.geoCircle().center(sun).radius(1.6)()) : null);
+  const sun = solarPosition(Date.now());
   document.getElementById("legendNight").hidden = !state.solar;
+  if (!map.getSource("night")) return;
+  map.getSource("night").setData(state.solar ? { type: "FeatureCollection", features: [0, -6, -12, -18].map((a) => belowAltitude(sun, a)) } : empty);
+  map.getSource("sun").setData(state.solar ? { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [((sun[0] + 540) % 360) - 180, sun[1]] } } : empty);
 }
 setInterval(renderNight, 60000);
-const zoom = d3.zoom().scaleExtent([1, 40]).on("zoom", (ev) => { transform = ev.transform; zl.attr("transform", transform); placeMarkers(); hideTip(); });
-svg.call(zoom).on("dblclick.zoom", null);
-document.getElementById("zin").onclick = () => svg.transition().duration(300).call(zoom.scaleBy, 1.8);
-document.getElementById("zout").onclick = () => svg.transition().duration(300).call(zoom.scaleBy, 1 / 1.8);
-document.getElementById("zreset").onclick = () => svg.transition().duration(400).call(zoom.transform, d3.zoomIdentity);
+
+document.getElementById("zin").onclick = () => map.zoomIn();
+document.getElementById("zout").onclick = () => map.zoomOut();
+document.getElementById("zreset").onclick = () => map.flyTo({ ...HOME, duration: 800 });
 
 function showTip(ev, html) {
   const box = document.getElementById("mapwrap").getBoundingClientRect();
@@ -366,6 +421,23 @@ function showTip(ev, html) {
 function hideTip() { tip.hidden = true; }
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+map.on("mousemove", (ev) => {
+  if (!map.getLayer("events")) return;
+  const hit = map.queryRenderedFeatures(ev.point, { layers: ["events", "disputed-fill", "country-hit"] });
+  const e = hit.find((f) => f.layer.id === "events"), dsp = hit.find((f) => f.layer.id === "disputed-fill"), c = hit.find((f) => f.layer.id === "country-hit");
+  map.getCanvas().style.cursor = e ? "pointer" : "";
+  if (e) { const d = state.events.get(e.properties.id); if (d) return showTip(ev.originalEvent, `<b>${esc(d.title)}</b><span>${esc(CATS[d.cat]?.name || d.cat)} · ${rel(d.time)} · ${esc(d.src)}</span>`); }
+  if (dsp) return showTip(ev.originalEvent, `<b>${esc(dsp.properties.n)} · territorio disputado</b><span>${esc(dsp.properties.note || "Soberanía en disputa")}</span>`);
+  if (c) return showTip(ev.originalEvent, `<b>${esc(c.properties.n)}</b>`);
+  hideTip();
+});
+map.on("mouseout", hideTip);
+map.on("click", (ev) => {
+  const e = map.getLayer("events") && map.queryRenderedFeatures(ev.point, { layers: ["events"] })[0];
+  if (e) return select(e.properties.id, false);
+  if (state.selected) { state.selected = null; render(); }
+});
+
 function markerSize(e) {
   if (e.cat === "sismo" && e.mag) return Math.max(18, Math.pow(e.mag, 2.2) * 4);
   if (e.cat === "maritimo") return 22 + (e.sev || 1) * 6;
@@ -376,38 +448,26 @@ function visible() {
   return [...state.events.values()].filter((e) => {
     if (!state.cats[e.cat]) return false;
     if ((e.sev || 1) < state.minSev) return false;
-    const t = Date.parse(e.time || e.updated || 0) || 0;
-    if (from && t < from && !isLive(e)) return false;
+    const t = Math.max(Date.parse(e.time) || 0, Date.parse(e.updated) || 0);
+    if (from && t < from) return false;
     return true;
   }).sort((a, b) => (Date.parse(b.time) || 0) - (Date.parse(a.time) || 0));
 }
 const isLive = (e) => Object.values(state.live).some((s) => s.has(e.id));
 
 function renderMarkers() {
-  const data = visible().slice().sort((a, b) => (a.sev || 1) - (b.sev || 1));
-  const g = mk.selectAll("g.m").data(data, (d) => d.id).join((en) => {
-    const g = en.append("g").attr("class", "m");
-    g.append("path").attr("class", "marker");
-    return g;
+  const src = map.getSource("events");
+  if (!src) return;
+  const features = visible().map((e) => {
+    const sev = Math.min(4, Math.max(1, e.sev || 1)), live = isLive(e);
+    return { type: "Feature", geometry: { type: "Point", coordinates: [+e.lon, +e.lat] }, properties: {
+      id: e.id, sev, icon: `${CATS[e.cat] ? e.cat : "sismo"}-${sev}`, scale: Math.sqrt(markerSize(e) / 150) * 1.15, op: live ? 0.95 : 0.5,
+      pulse: sev >= 4 && live && Date.now() - Date.parse(e.time) < 24 * HOUR ? 1 : 0 } };
   });
-  g.select("path.marker")
-    .attr("d", (d) => d3.symbol((CATS[d.cat] || CATS.sismo).sym, markerSize(d))())
-    .attr("fill", (d) => sevColor(d.sev)).attr("fill-opacity", (d) => (isLive(d) ? 0.92 : 0.45))
-    .classed("sel", (d) => d.id === state.selected)
-    .on("mousemove", (ev, d) => showTip(ev, `<b>${esc(d.title)}</b><span>${esc(CATS[d.cat]?.name || d.cat)} · ${rel(d.time)} · ${esc(d.src)}</span>`))
-    .on("mouseleave", hideTip)
-    .on("click", (ev, d) => { ev.stopPropagation(); select(d.id, false); });
-  g.selectAll("circle.ring").data((d) => (d.sev >= 4 && isLive(d) && Date.now() - Date.parse(d.time) < 24 * HOUR ? [d] : [])).join("circle").attr("class", "ring").attr("r", 6).attr("stroke", (d) => sevColor(d.sev));
-  placeMarkers();
+  src.setData({ type: "FeatureCollection", features });
+  map.setFilter("sel", ["==", ["get", "id"], state.selected || ""]);
 }
-function placeMarkers() {
-  mk.selectAll("g.m").attr("transform", (d) => {
-    const p = projection([d.lon, d.lat]);
-    if (!p) return "translate(-99,-99)";
-    const [x, y] = transform.apply(p);
-    return `translate(${x},${y})`;
-  });
-}
+function placeMarkers() {}
 
 // ---------- side panel ----------
 function legendShape(cat, color = "currentColor") {
@@ -428,11 +488,17 @@ document.getElementById("chips").addEventListener("click", (ev) => {
   if (b.dataset.layer === "solar") { state.solar = !state.solar; saveUi(); renderNight(); renderChips(); return; }
   state.cats[b.dataset.cat] = !state.cats[b.dataset.cat]; saveUi(); render();
 });
+document.getElementById("fBase").innerHTML = Object.entries(BASES).map(([k, b]) => `<option value="${k}">${b.name}</option>`).join("");
+document.getElementById("fBase").value = state.base;
+document.getElementById("fBase").onchange = (e) => { state.base = e.target.value; saveUi(); if (map.getLayer("land")) applyBase(); };
+const globeBtn = document.getElementById("globeBtn");
+globeBtn.setAttribute("aria-pressed", String(!!state.globe));
+globeBtn.onclick = () => { state.globe = !state.globe; globeBtn.setAttribute("aria-pressed", String(state.globe)); saveUi(); map.setProjection({ type: state.globe ? "globe" : "mercator" }); };
 document.getElementById("fPeriod").value = String(state.period);
 document.getElementById("fSev").value = String(state.minSev);
 document.getElementById("fPeriod").onchange = (e) => { state.period = +e.target.value; saveUi(); render(); };
 document.getElementById("fSev").onchange = (e) => { state.minSev = +e.target.value; saveUi(); render(); };
-function saveUi() { store.set("ui", { cats: state.cats, period: state.period, minSev: state.minSev, solar: state.solar }); }
+function saveUi() { store.set("ui", { cats: state.cats, period: state.period, minSev: state.minSev, solar: state.solar, base: state.base, globe: state.globe }); }
 
 function rel(t) {
   const ms = Date.now() - Date.parse(t);
@@ -472,16 +538,12 @@ function badge(e) {
 document.getElementById("list").addEventListener("click", (ev) => {
   const b = ev.target.closest(".ev"); if (b) select(b.dataset.id, true);
 });
-svg.on("click", () => { if (state.selected) { state.selected = null; render(); } });
 
 function select(id, fly) {
   state.selected = id;
   const e = state.events.get(id);
   render();
-  if (fly && e) {
-    const p = projection([e.lon, e.lat]);
-    if (p) { const k = Math.max(transform.k, 4); svg.transition().duration(600).call(zoom.transform, d3.zoomIdentity.translate(W / 2 - p[0] * k, H / 2 - p[1] * k).scale(k)); }
-  }
+  if (fly && e) map.flyTo({ center: [+e.lon, +e.lat], zoom: Math.max(map.getZoom(), 4.5), duration: 900 });
 }
 function renderDetail() {
   const el = document.getElementById("detail");
@@ -733,7 +795,7 @@ document.getElementById("setSave").onclick = async () => {
 
 // ---------- boot ----------
 window.addEventListener("resize", () => { clearTimeout(window.__rz); window.__rz = setTimeout(layout, 120); });
-layout(); render();
+render();
 
 (async () => {
   try { db = window.indexedDB ? localDb() : null; } catch { db = null; }
