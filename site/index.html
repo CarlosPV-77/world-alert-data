@@ -766,7 +766,7 @@ const SOURCE_CATS = {
   mastodon: ["redes"], bluesky: ["redes"], telegram: ["redes"], teletexto: ["teletexto"],
 };
 // The ticker also needs these, whatever layers are on: world disasters and news, plus Spain's top official alerts.
-const TICKER_SOURCES = ["usgs", "gdacs", "tsunami", "nhc", "conflictos", "atentados", "aereos", "maritimos", "aemet", "ign", "catalunya", "canarias"];
+const TICKER_SOURCES = ["usgs", "gdacs", "tsunami", "nhc", "conflictos", "atentados", "aereos", "maritimos", "aemet", "ign", "catalunya", "canarias", "teletexto"];
 const wanted = (k) => state.settings.enabled[k] && (SOURCE_CATS[k].some((c) => state.cats[c]) || (state.ov.ticker && TICKER_SOURCES.includes(k)));
 const SEV = ["", "Baja", "Media", "Alta", "Crítica"];
 const sevColor = (s) => `var(--s${Math.min(4, Math.max(1, s || 1))})`;
@@ -2281,7 +2281,7 @@ const TICK_WORLD = 24, TICK_SPAIN = 10;   // items kept from each pool
 const ICO_PAUSE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3v10M11 3v10" stroke="currentColor" stroke-width="2.2"/></svg>';
 const ICO_PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.5v11l9-5.5z" fill="currentColor"/></svg>';
 const tk = { sig: "", offset: 0, paused: false, hover: false, raf: 0, last: 0 };
-const TICK_CAT = { sismo: "Terremoto", volcan: "Volcán", tsunami: "Tsunami", ciclon: "Ciclón", inundacion: "Inundación", incendio: "Incendio", sequia: "Sequía",
+const TICK_CAT = { teletexto: "Teletexto", sismo: "Terremoto", volcan: "Volcán", tsunami: "Tsunami", ciclon: "Ciclón", inundacion: "Inundación", incendio: "Incendio", sequia: "Sequía",
   meteo: "Aviso meteo", aviso_es: "Aviso AEMET", es_nac: "Alerta oficial", es_aut: "Alerta oficial", es_loc: "Alerta oficial", maritimo: "Aviso a navegantes",
   conflicto: "Conflicto", atentado: "Atentado", aereo: "Accidente aéreo", naval: "Accidente marítimo" };
 const inSpainTick = (e) => e.cat === "aviso_es" || String(e.cat).startsWith("es_") || countriesOf(e).has("ESP");
@@ -2292,8 +2292,10 @@ function tickerItems() {
     if (Math.max(Date.parse(e.time) || 0, Date.parse(e.updated) || 0) < from) continue;
     const sev = e.sev || 1;
     if ((opt.show === "p12" && sev < 3) || (opt.show === "ok" && e.verified === false)) continue;
+    // RTVE teletext already picks its headlines: everything above low goes in, national or international.
     // Spain: orange and red weather warnings, and from the other official sources anything above low.
-    if (inSpainTick(e)) { if (opt.spain && sev >= (e.cat === "aviso_es" ? 3 : 2)) spain.push(e); }
+    if (e.cat === "teletexto") { if (sev >= 2 && (opt.spain || !inSpainTick(e))) world.push(e); }
+    else if (inSpainTick(e)) { if (opt.spain && sev >= (e.cat === "aviso_es" ? 3 : 2)) spain.push(e); }
     else if (sev >= 3) world.push(e);
   }
   return [...world.sort(paperRank).slice(0, TICK_WORLD), ...spain.sort(paperRank).slice(0, TICK_SPAIN)].sort(paperRank);
