@@ -1,6 +1,6 @@
 // Fetches the requested sources and writes data/<source>.json for the World Alert map.
 import { mkdirSync, writeFileSync } from "node:fs";
-import { collect } from "./sources.js";
+import { collect } from "../site/api/_sources.js";
 
 const wanted = (process.env.SOURCES || "all").trim() || "all";
 const feed = await collect({ src: wanted });
@@ -13,5 +13,6 @@ for (const [src, st] of Object.entries(feed.status)) {
 
 function sourceOf(e) {
   const p = e.id.split(":")[0];
+  if (p === "gdelt") return e.cat === "atentado" ? "atentados" : "conflictos";
   return { usgs: "usgs", gdacs: "gdacs", tsunami: "tsunami", nhc: "nhc", nga: "navarea", gvp: "volcanes", nws: "nws" }[p];
 }
