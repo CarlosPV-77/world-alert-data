@@ -224,11 +224,11 @@ The scale is applied through a local `--sev` custom property set per row, tab or
 
 The app is a full-height grid: the header rail on top, then the map wall (flexible) beside a side column of 320 to 380px. The side column stacks filters (countries, layers, period and minimum severity), then the detail block, the priority tally and saved bar, then the scrolling incident queue. The map and the queue scroll independently; the page itself does not scroll on desktop.
 
-Side gutters are 16px, widened to the safe-area inset where larger. Map overlays sit 12px from the wall edges (zoom stack bottom right, legend bottom left). The incoming-incident dock hangs from the top centre of the map wall, up to 580px wide.
+Side gutters are 16px, widened to the safe-area inset where larger. Map overlays sit 10 to 12px from the wall edges, each in its own place: the incoming-incident dock hangs from the top centre (up to 580px wide), the view switch and the imagery date stack at the top left, the legend sits bottom left and the zoom stack bottom right. When the wall is too narrow for the dock and the top-left stack side by side, the stack (and the country labels of split views) steps down below the dock. Country maps carry their label top left with their imagery date under it. Split views hide the legend.
 
 Spacing rhythm is small and tight: 2px between stacked clocks and zoom buttons, 6px between buttons and chips, 10 to 12px inside rows and sections, 16px for the column gutter.
 
-**Responsive.** At 1100px and below, long button labels drop and the brand tightens. At 760px and below, the rail becomes a grid (brand and actions on row one, the two clocks sharing row two, status on row three, single line with ellipsis), the map wall takes 58vh above the column, the page scrolls, and the queue lists in full.
+**Responsive.** At 1100px and below, long button labels drop and the brand tightens. At 900px and below (phones and portrait tablets), the map wall takes 58vh above the column (82vh in split views, whose maps then stack), the page scrolls, and the queue lists in full. At 760px and below, the rail also becomes a grid (brand and actions on row one, the two clocks sharing row two, status on row three, single line with ellipsis).
 
 ### Named Rules
 **The Rule Not Gap Rule.** Sections and rows are separated by 1px rules (line), not by whitespace or by cards. Dense lists stay dense.
