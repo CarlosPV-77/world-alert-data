@@ -73,7 +73,13 @@ header.top { display: flex; align-items: center; gap: 10px 22px; flex-wrap: wrap
 .clock time { font-family: var(--font-data); font-size: 16px; letter-spacing: .04em; font-variant-numeric: tabular-nums; color: var(--rail-fg); }
 .status { color: var(--rail-muted); font-family: var(--font-data); font-size: 12px; flex: 1 1 160px; min-width: 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 @media (min-width: 761px) { header.top { flex-wrap: nowrap; } header.top .btn { white-space: nowrap; } }
-@media (max-width: 1100px) { .actions .lbl-long { display: none; } }
+@media (max-width: 1100px) {
+  .actions .lbl-long { display: none; }
+  .brand { letter-spacing: .08em; }
+  .clock { min-width: 0; }
+  .status { font-size: 11px; }
+  .legend { bottom: calc(48px + env(safe-area-inset-bottom, 0px)); }
+}
 .actions { display: flex; gap: 6px; }
 .btn { background: var(--panel-2); border: 1px solid var(--line-2); border-radius: var(--r); padding: 6px 12px; font-family: var(--font-sign); font-weight: 600; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; line-height: 1.2; }
 .btn:hover { border-color: var(--accent); background: var(--panel-3); }
@@ -132,7 +138,7 @@ main { display: grid; grid-template-columns: 1fr minmax(320px, 380px); min-heigh
 .asheet .body { padding: 14px 16px; display: grid; gap: 10px; max-height: calc(100vh - 160px); overflow-y: auto; }
 .asheet .head { display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; }
 .asheet .lvl { font-family: var(--font-sign); font-size: 13px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--sev); }
-.asheet h2 { margin: 2px 0 0; font-family: var(--font-sign); font-weight: 600; font-size: 22px; line-height: 1.12; text-wrap: balance; }
+.asheet h2 { margin: 0 0 3px; font-family: var(--font-sign); font-weight: 600; font-size: 22px; line-height: 1.12; text-wrap: balance; }
 .asheet p { margin: 0; color: var(--muted); line-height: 1.5; font-size: 13px; max-height: 7.5em; overflow-y: auto; }
 .asheet dl, .detail dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: 12px; }
 .asheet dt, .detail dt { color: var(--muted); font-family: var(--font-sign); text-transform: uppercase; letter-spacing: .08em; font-size: 11px; padding-top: 1px; }
@@ -177,7 +183,7 @@ aside.side { background: var(--panel); border-left: 1px solid var(--line-2); dis
 .lghead { display: flex; align-items: center; gap: 8px; padding: 5px 10px; }
 .gname { flex: 1; display: flex; align-items: center; gap: 8px; background: none; border: 0; padding: 2px 0; text-align: left; font-family: var(--font-sign); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; font-size: 13px; min-width: 0; }
 .gname .n, .litem .n { margin-left: auto; font-family: var(--font-data); color: var(--muted); font-weight: 400; font-size: 12px; letter-spacing: 0; }
-.gname .chev { color: var(--muted); display: inline-block; transition: transform .15s; width: 10px; }
+.gname .chev { color: var(--muted); display: inline-grid; place-items: center; transition: transform .15s; width: 12px; }
 .gname[aria-expanded="true"] .chev { transform: rotate(90deg); }
 .tg { width: 30px; height: 16px; background: var(--room); border: 1px solid var(--line-2); position: relative; flex: 0 0 auto; display: inline-block; }
 .tg::after { content: ""; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; background: var(--muted); transition: transform .15s; }
@@ -223,7 +229,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 .ev .title { display: block; font-weight: 500; margin: 3px 0 0; line-height: 1.35; overflow-wrap: anywhere; }
 .ev .sv { color: var(--accent); }
 .ev .elapsed { font-family: var(--font-data); font-size: 12px; color: var(--fg); font-variant-numeric: tabular-nums; white-space: nowrap; padding-top: 4px; }
-.ev .elapsed.future { color: var(--s2); }
+.ev .elapsed.future { color: var(--muted); font-size: 11px; }
 .ev.old .elapsed, .ev.old .title { color: var(--muted); }
 .badge { font-family: var(--font-sign); font-size: 10px; padding: 0 5px; border-radius: var(--r); text-transform: uppercase; letter-spacing: .1em; font-weight: 700; line-height: 16px; }
 .badge.ok { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
@@ -285,6 +291,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
   .status { grid-column: 1 / -1; grid-row: 3; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; font-size: 11px; }
   .actions .btn { padding-inline: 10px; }
   .actions .lbl-long { display: none; }
+  .asheet .body { max-height: 46vh; }
   .app { height: auto; min-height: 100%; }
   main { grid-template-columns: 1fr; }
   .mapwrap { height: 58vh; }
@@ -316,7 +323,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
       <div id="map" role="region" aria-label="Mapa del mundo con alertas"></div>
       <div class="banner" id="banner" hidden></div>
       <div class="dock" id="dock" hidden>
-        <button type="button" class="atab" id="atab" aria-expanded="false" aria-controls="asheet"></button>
+        <button type="button" class="atab" id="atab" aria-expanded="false" aria-controls="asheet" aria-label="Incidencias entrantes"></button>
         <div class="asheet" id="asheet"><div><div class="body" id="abody"></div></div></div>
       </div>
       <div class="tip" id="tip" hidden></div>
@@ -463,9 +470,13 @@ const prioOf = (s) => `P${5 - Math.min(4, Math.max(1, s || 1))}`;
 function elapsed(t) {
   const ms = Date.now() - Date.parse(t);
   if (!Number.isFinite(ms)) return "—";
-  const fut = ms < 0, m = Math.floor(Math.abs(ms) / 60000), h = Math.floor(m / 60), d = Math.floor(h / 24);
   const pad = (n) => String(n).padStart(2, "0");
-  return `T${fut ? "−" : "+"}${d >= 2 ? `${d}d ${pad(h % 24)}h` : `${pad(h)}:${pad(m % 60)}`}`;
+  if (ms < -60000) {   // not started yet: say when it starts
+    const at = new Date(Date.parse(t)), soon = -ms < 20 * HOUR;
+    return `Inicio ${soon ? `${pad(at.getHours())}:${pad(at.getMinutes())}` : at.toLocaleDateString("es-ES", { day: "numeric", month: "short" })}`;
+  }
+  const m = Math.floor(Math.max(0, ms) / 60000), h = Math.floor(m / 60), d = Math.floor(h / 24);
+  return `T+${d >= 2 ? `${d}d ${pad(h % 24)}h` : `${pad(h)}:${pad(m % 60)}`}`;
 }
 
 // ---------- state ----------
@@ -752,8 +763,10 @@ function passes(e, anyCat) {
 }
 function visible() {
   // Parse each time once, not on every comparison.
+  // Current incidents newest first; warnings that have not started yet go after them, soonest first.
+  const now = Date.now();
   return [...state.events.values()].filter((e) => passes(e)).map((e) => [Date.parse(e.time) || 0, e])
-    .sort((a, b) => b[0] - a[0]).map((x) => x[1]);
+    .sort((a, b) => (a[0] > now) - (b[0] > now) || (a[0] > now ? a[0] - b[0] : b[0] - a[0])).map((x) => x[1]);
 }
 const isLive = (e) => Object.values(state.live).some((s) => s.has(e.id));
 
@@ -814,7 +827,7 @@ function renderLayers() {
       gname += `<span class="n">${total}</span>`;
     }
     return `<div class="lgroup">
-      <div class="lghead">${head}<button type="button" class="gname" data-open="${g}" aria-expanded="${open}"><span class="chev" aria-hidden="true">›</span>${gname}</button></div>
+      <div class="lghead">${head}<button type="button" class="gname" data-open="${g}" aria-expanded="${open}"><span class="chev" aria-hidden="true"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M4.5 2.5 8 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></span>${gname}</button></div>
       <div class="lgitems"${open ? "" : " hidden"}>${items}</div></div>`;
   }).join(""));
   box.scrollTop = top;
@@ -977,7 +990,7 @@ function renderAlerts() {
   tab.setAttribute("aria-expanded", String(aOpen));
   const where = (x) => [...countriesOf(x)].map((c) => BY_ISO.get(c)?.name).filter(Boolean).join(", ");
   tab.innerHTML = `${sevIcon(top.sev, top.sev >= 4 && !aOpen ? "pulse" : "")}
-    <span class="txt"><span class="kind">${aOpen ? "Pulsa para recoger" : `${shown.find((x) => x.id === top.id)?.up ? `Sube a ${prioOf(top.sev)}` : `Incidencia entrante · ${prioOf(top.sev)}`} · ${esc(CATS[top.cat]?.name || top.cat)}${where(top) ? ` · ${esc(where(top))}` : ""}`}</span>
+    <span class="txt">${aOpen ? "" : `<span class="kind">${shown.find((x) => x.id === top.id)?.up ? `Sube a ${prioOf(top.sev)}` : `Incidencia entrante · ${prioOf(top.sev)}`} · ${esc(CATS[top.cat]?.name || top.cat)}${where(top) ? ` · ${esc(where(top))}` : ""}</span>`}
     <span class="ttl">${aOpen ? `${list.length} ${list.length === 1 ? "incidencia" : "incidencias"} sin revisar` : esc(top.title)}</span></span>
     ${list.length > 1 ? `<span class="count">${list.length}</span>` : ""}
     <svg class="chev" width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>`;
@@ -995,15 +1008,15 @@ function renderAlerts() {
   const abody = document.getElementById("abody");
   keepFocus(abody, () => abody.innerHTML = `
     <div class="head">${sevIcon(e.sev, e.sev >= 4 ? "pulse" : "")}<div>
-      <div class="lvl">${prioOf(e.sev)} · ${cur.up && aOpen ? "Sube a gravedad" : "Gravedad"} ${SEV[e.sev || 1].toLowerCase()} · ${esc(CATS[e.cat]?.name || e.cat)}</div>
-      <h2>${esc(e.title)}</h2>${vmark(e)}</div></div>
+      <h2>${esc(e.title)}</h2>
+      <div class="lvl">${prioOf(e.sev)} · ${cur.up && aOpen ? "Sube a gravedad" : "Gravedad"} ${SEV[e.sev || 1].toLowerCase()} · ${esc(CATS[e.cat]?.name || e.cat)}</div>${vmark(e)}</div></div>
     ${e.desc ? `<p>${esc(e.desc)}</p>` : ""}
     <dl>${rows.map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("")}<dt>Fuente</dt><dd>${esc(e.src)} ${oldBadge(e)}</dd></dl>
     <div class="aacts">
       <button type="button" class="btn primary" data-act="see">Ver en el mapa</button>
       ${newsBtn(e)}${saveBtn(e.id)}
       <button type="button" class="btn" data-act="dismiss">Descartar</button>
-      ${list.length > 1 ? `<span class="pager"><button type="button" class="btn" data-act="prev" aria-label="Incidencia anterior">‹</button>${aIdx + 1} / ${list.length}<button type="button" class="btn" data-act="next" aria-label="Incidencia siguiente">›</button></span>` : ""}
+      ${list.length > 1 ? `<span class="pager"><button type="button" class="btn" data-act="prev" aria-label="Incidencia anterior"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M7.5 2.5 4 6l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></button>${aIdx + 1} / ${list.length}<button type="button" class="btn" data-act="next" aria-label="Incidencia siguiente"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M4.5 2.5 8 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></button></span>` : ""}
     </div>`);
 }
 document.getElementById("atab").addEventListener("click", () => {
