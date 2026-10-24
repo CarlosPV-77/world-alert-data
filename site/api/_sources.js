@@ -71,10 +71,11 @@ const isConflicto = (e) => e.root === "19" || e.root === "20";
 async function gdeltNews(cat, keep, files = 4) {
   const latest = await get(`${GDELT_BASE}lastupdate.txt`, "text");
   const stamps = gdeltStamps(latest, files);
-  const rows = [];
+  const rows = [], errs = [];
   for (const s of stamps) {
-    try { rows.push(...(await gdeltRows(s))); } catch { /* a 15-min file can be missing */ }
+    try { rows.push(...(await gdeltRows(s))); } catch (e) { errs.push(`${s}: ${e.message}`); }
   }
+  if (!rows.length && errs.length) throw new Error(errs.join(" / "));
   const groups = new Map();
   for (const e of rows.filter(keep)) {
     const key = `${e.place}|${e.lat.toFixed(1)}|${e.lon.toFixed(1)}`;
