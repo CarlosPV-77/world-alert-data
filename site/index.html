@@ -371,6 +371,10 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 .tgrow { display: grid; gap: 6px; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .tickset { display: grid; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .tickset .sub { font-size: 13px; color: var(--muted); }
+.tkcats { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 2px 14px; margin: 0; padding: 0; border: 0; }
+.tkcats legend { padding: 0; margin-bottom: 4px; font-size: 13px; color: var(--muted); }
+.tkcats label { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; cursor: pointer; }
+@media (pointer: coarse) { .tkcats label { min-height: 44px; } }
 .tgrow label { font-weight: 500; }
 .tgrow .sub { font-size: 12px; color: var(--muted); }
 .posts { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
@@ -615,6 +619,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
         <select id="tkShow"><option value="all">Todo lo relevante</option><option value="p12">Solo P1 y P2</option><option value="ok">Solo contrastadas</option></select></div>
       <div class="frow" style="align-items:center"><label for="tkSpain" class="sub" style="flex:0 0 110px">España</label>
         <select id="tkSpain"><option value="1">Incluir alertas nacionales</option><option value="0">Solo el resto del mundo</option></select></div>
+      <fieldset class="tkcats" id="tkCats"><legend>Tipos de alerta que aparecen</legend></fieldset>
     </div>
     <div id="falseZone"></div>
     <div class="frow" style="align-items:center">
@@ -766,8 +771,12 @@ const SOURCE_CATS = {
   mastodon: ["redes"], bluesky: ["redes"], telegram: ["redes"], teletexto: ["teletexto"],
 };
 // The ticker also needs these, whatever layers are on: world disasters and news, plus Spain's top official alerts.
-const TICKER_SOURCES = ["usgs", "gdacs", "tsunami", "nhc", "conflictos", "atentados", "aereos", "maritimos", "aemet", "ign", "catalunya", "canarias", "teletexto"];
-const wanted = (k) => state.settings.enabled[k] && (SOURCE_CATS[k].some((c) => state.cats[c]) || (state.ov.ticker && TICKER_SOURCES.includes(k)));
+// The ticker picks its own kinds of alert in Ajustes; road traffic feeds never go in, they would crowd out the rest.
+const TICK_KINDS = Object.keys(CATS).filter((c) => c !== "redes");
+const TICK_KINDS_OFF = ["meteo", "es_loc", "maritimo"];
+const TICK_NO_SOURCES = ["dgt", "euskadi"];
+const tickerWants = (k) => state.ov.ticker && !TICK_NO_SOURCES.includes(k) && SOURCE_CATS[k].some((c) => state.settings.ticker.cats[c]);
+const wanted = (k) => state.settings.enabled[k] && (SOURCE_CATS[k].some((c) => state.cats[c]) || tickerWants(k));
 const SEV = ["", "Baja", "Media", "Alta", "Crítica"];
 const sevColor = (s) => `var(--s${Math.min(4, Math.max(1, s || 1))})`;
 // Dispatch priority: Crítica is P1, Baja is P4.
@@ -796,7 +805,7 @@ const state = {
   ov: { ...Object.fromEntries(Object.keys(OVERLAYS).map((k) => [k, false])), ships: false },
   countries: new Set(),        // ISO3 codes the viewer is following; empty = whole world
   open: { naturales: true, meteo: true, mar: false, seguridad: true, mapa: true },
-  settings: { intervals: Object.fromEntries(Object.entries(SOURCES).map(([k, v]) => [k, v.def])), enabled: Object.fromEntries(Object.keys(SOURCES).map((k) => [k, !SOURCES[k].off])), retention: 90, tg: TG_DEFAULT, ticker: { pos: "bottom", speed: 70, show: "all", spain: true } },
+  settings: { intervals: Object.fromEntries(Object.entries(SOURCES).map(([k, v]) => [k, v.def])), enabled: Object.fromEntries(Object.keys(SOURCES).map((k) => [k, !SOURCES[k].off])), retention: 90, tg: TG_DEFAULT, ticker: { pos: "bottom", speed: 70, show: "all", spain: true, cats: Object.fromEntries(TICK_KINDS.map((c) => [c, !TICK_KINDS_OFF.includes(c)])) } },
   lastUpdate: null,
 };
 const store = {
@@ -817,7 +826,7 @@ function mergeSettings(s) {
   Object.assign(state.settings.enabled, s.enabled || {});
   if (s.retention != null) state.settings.retention = s.retention;
   if (typeof s.tg === "string") state.settings.tg = s.tg;
-  if (s.ticker) Object.assign(state.settings.ticker, s.ticker);
+  if (s.ticker) { const { cats, ...rest } = s.ticker; Object.assign(state.settings.ticker, rest); Object.assign(state.settings.ticker.cats, cats || {}); }
 }
 
 // ---------- map ----------
@@ -2120,6 +2129,9 @@ function openSettings() {
   const tks = state.settings.ticker;
   document.getElementById("tkPos").value = tks.pos; document.getElementById("tkSpeed").value = String(tks.speed);
   document.getElementById("tkShow").value = tks.show; document.getElementById("tkSpain").value = tks.spain ? "1" : "0";
+  document.getElementById("tkCats").innerHTML = '<legend>Tipos de alerta que aparecen</legend>' + TICK_KINDS.map((c) =>
+    `<label><input type="checkbox" id="tkc_${c}" ${tks.cats[c] ? "checked" : ""}>${esc(CATS[c].name)}</label>`).join("")
+    + '<span class="sub" style="grid-column:1/-1">Las incidencias de tráfico (DGT y Euskadi) no salen en el rótulo. Los avisos amarillos tampoco: solo naranja y rojo.</span>';
   renderFalseZone();
   document.getElementById("clearZone").innerHTML = `<button class="btn" type="button" id="clearBtn">Borrar histórico</button>`;
   document.getElementById("clearBtn").onclick = askClear;
@@ -2178,7 +2190,8 @@ document.getElementById("setSave").onclick = async () => {
   }
   state.settings.retention = +document.getElementById("retention").value;
   state.settings.ticker = { pos: document.getElementById("tkPos").value, speed: +document.getElementById("tkSpeed").value,
-    show: document.getElementById("tkShow").value, spain: document.getElementById("tkSpain").value === "1" };
+    show: document.getElementById("tkShow").value, spain: document.getElementById("tkSpain").value === "1",
+    cats: Object.fromEntries(TICK_KINDS.map((c) => [c, document.getElementById("tkc_" + c).checked])) };
   const tg = document.getElementById("tgChans").value.split(/[\s,]+/).map((c) => c.replace(/^@|^https?:\/\/t\.me\/(s\/)?/, "")).filter((c) => /^\w{4,64}$/.test(c));
   if (tg.join(", ") !== state.settings.tg) { state.settings.tg = tg.length ? tg.join(", ") : TG_DEFAULT; delete lastRun.telegram; delete state.live.telegram; }
   store.set("settings", state.settings);
@@ -2290,12 +2303,13 @@ function tickerItems() {
   for (const e of state.events.values()) {
     if (e.social || e.cat === "redes" || isFalse(e) || !isLive(e)) continue;
     if (Math.max(Date.parse(e.time) || 0, Date.parse(e.updated) || 0) < from) continue;
+    if (!opt.cats[e.cat]) continue;
     const sev = e.sev || 1;
     if ((opt.show === "p12" && sev < 3) || (opt.show === "ok" && e.verified === false)) continue;
     // RTVE teletext already picks its headlines, so all of them go in, national or international.
-    // Spain: orange and red weather warnings, and from the other official sources anything above low.
+    // Spain: orange and red weather warnings (AEMET, MeteoGalicia), and from the other official sources anything above low.
     if (e.cat === "teletexto") { if (opt.spain || !inSpainTick(e)) world.push(e); }
-    else if (inSpainTick(e)) { if (opt.spain && sev >= (e.cat === "aviso_es" ? 3 : 2)) spain.push(e); }
+    else if (inSpainTick(e)) { if (opt.spain && sev >= (e.cat === "aviso_es" || String(e.id).startsWith("meteogalicia:") ? 3 : 2)) spain.push(e); }
     else if (sev >= 3) world.push(e);
   }
   return [...world.sort(paperRank).slice(0, TICK_WORLD), ...spain.sort(paperRank).slice(0, TICK_SPAIN)].sort(paperRank);
