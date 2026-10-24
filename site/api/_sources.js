@@ -114,7 +114,8 @@ async function gdeltNews(cat, keep, files = 4) {
   for (const s of stamps) {
     try { rows.push(...(await gdeltRows(s))); loaded++; } catch (e) { errs.push(`${s}: ${e.message}`); }
   }
-  if (!loaded) throw new Error(errs.join(" / "));
+  // GDELT sometimes stops publishing for an hour or more and answers 404 for every file: say so plainly.
+  if (!loaded) throw new Error(errs.every((x) => /^\d{14}: 404/.test(x)) ? `GDELT no ha publicado sus últimos archivos (responde 404 a los de las ${stamps.map((x) => `${x.slice(8, 10)}:${x.slice(10, 12)}`).reverse().join(", ")} UTC). Suele ser un corte temporal suyo.` : `GDELT no responde: ${errs.join(" / ")}`);
   const window = loaded * 15 >= 60 ? "la última hora" : `los últimos ${loaded * 15} min`;
   const groups = new Map();
   // Article links whose slug reads like a study, an explainer or clickbait are not incidents.
@@ -222,8 +223,11 @@ async function news(src, cat, keep) {
   if (!process.env.VERCEL) return gdeltNews(cat, keep);
   const d = await get(`${MIRROR}${src}.json`);
   const st = d.status?.[src];
-  if (st && !st.ok && !d.events?.length) throw new Error(`copia de GitHub: ${st.error}`);
-  return d.events || [];
+  if (st && !st.ok && !d.events?.length) throw new Error(st.error);
+  // The GitHub job keeps the last good news when GDELT fails; pass on why they are not fresh, and since when.
+  const events = d.events || [];
+  if (st && !st.ok) events.stale = { error: st.error, since: st.lastGood || d.generated };
+  return events;
 }
 
 function quakeSev(m) { return m >= 7 ? 4 : m >= 6 ? 3 : m >= 4.5 ? 2 : 1; }
@@ -329,7 +333,7 @@ export async function collect(q = {}) {
   const results = await Promise.allSettled(wanted.map((s) => SOURCES[s](q)));
   const status = {}, events = [];
   results.forEach((r, i) => {
-    if (r.status === "fulfilled") { status[wanted[i]] = { ok: true, n: r.value.length }; events.push(...r.value.map((e) => ({ verified: true, ...e }))); }
+    if (r.status === "fulfilled") { status[wanted[i]] = { ok: true, n: r.value.length, ...(r.value.stale ? { stale: r.value.stale } : {}) }; events.push(...r.value.map((e) => ({ verified: true, ...e }))); }
     else status[wanted[i]] = { ok: false, error: [r.reason?.message || r.reason, r.reason?.cause?.code || r.reason?.cause?.message].filter(Boolean).join(": ").slice(0, 200) };
   });
   return { generated: new Date().toISOString(), status, events };

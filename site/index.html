@@ -368,6 +368,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 .srcrow .nm { font-weight: 500; }
 .srcrow .sub { grid-column: 2 / 4; font-size: 12px; color: var(--muted); font-family: var(--font-data); }
 .srcrow .sub.err { color: var(--s3); }
+.srcrow .sub.warn { color: var(--s2); }
 .tgrow { display: grid; gap: 6px; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .tickset { display: grid; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .tickset .sub { font-size: 13px; color: var(--muted); }
@@ -1969,7 +1970,7 @@ function ingest(src, feed, at) {
   state.live[src] = ids;
   if (state.countries.size) for (const [e, old] of fresh) if (passes(e)) notify(e, old);
   const st = feed.status?.[src];
-  state.srcStatus[src] = st?.ok === false ? { ok: false, at, error: st.error } : { ok: true, at, n: ids.size };
+  state.srcStatus[src] = st?.ok === false ? { ok: false, at, error: st.error } : { ok: true, at, n: ids.size, stale: st?.stale };
   state.lastUpdate = new Date(at).toISOString();
   renderSoon();
   scheduleFlush();
@@ -2108,12 +2109,14 @@ function fmtMin(m) { return m < 60 ? `cada ${m} min` : m < 1440 ? `cada ${m / 60
 function openSettings() {
   document.getElementById("srcRows").innerHTML = Object.entries(SOURCES).map(([k, s]) => {
     const st = state.srcStatus[k];
-    const sub = !state.settings.enabled[k] ? "Desactivada" : !st ? "Sin datos todavía" : st.ok ? `OK · ${st.n} alertas · ${rel(new Date(st.at).toISOString())}` : `Error: ${st.error}`;
+    const sub = !state.settings.enabled[k] ? "Desactivada" : !st ? "Sin datos todavía"
+      : st.stale ? `Sin novedades desde ${fmt(st.stale.since)}. ${st.stale.error} Mientras tanto se muestran las ${st.n} últimas noticias que llegaron.`
+      : st.ok ? `OK · ${st.n} alertas · ${rel(new Date(st.at).toISOString())}` : `Error: ${st.error}`;
     return `<div class="srcrow">
       <input type="checkbox" id="en_${k}" ${state.settings.enabled[k] ? "checked" : ""} aria-label="Activar ${esc(s.name)}">
       <label class="nm" for="en_${k}">${esc(s.name)}</label>
       <select id="iv_${k}" aria-label="Frecuencia de ${esc(s.name)}">${s.opts.map((o) => `<option value="${o}" ${o === +state.settings.intervals[k] ? "selected" : ""}>${fmtMin(o)}</option>`).join("")}</select>
-      <span class="sub${st && !st.ok ? " err" : ""}">${esc(sub)}</span></div>`;
+      <span class="sub${st && !st.ok ? " err" : st?.stale ? " warn" : ""}">${esc(sub)}</span></div>`;
   }).join("");
   document.getElementById("retention").value = String(state.settings.retention);
   document.getElementById("tgChans").value = state.settings.tg;
