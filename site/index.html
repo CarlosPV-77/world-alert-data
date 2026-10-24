@@ -2292,9 +2292,9 @@ function tickerItems() {
     if (Math.max(Date.parse(e.time) || 0, Date.parse(e.updated) || 0) < from) continue;
     const sev = e.sev || 1;
     if ((opt.show === "p12" && sev < 3) || (opt.show === "ok" && e.verified === false)) continue;
-    // RTVE teletext already picks its headlines: everything above low goes in, national or international.
+    // RTVE teletext already picks its headlines, so all of them go in, national or international.
     // Spain: orange and red weather warnings, and from the other official sources anything above low.
-    if (e.cat === "teletexto") { if (sev >= 2 && (opt.spain || !inSpainTick(e))) world.push(e); }
+    if (e.cat === "teletexto") { if (opt.spain || !inSpainTick(e)) world.push(e); }
     else if (inSpainTick(e)) { if (opt.spain && sev >= (e.cat === "aviso_es" ? 3 : 2)) spain.push(e); }
     else if (sev >= 3) world.push(e);
   }
