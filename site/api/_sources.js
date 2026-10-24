@@ -76,6 +76,18 @@ async function loadGdelt(stamp) {
 }
 
 const domainOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return ""; } };
+// GDELT gives no headline, only the article link; most links end in a slug that is the headline in lower case:
+// ".../2026/10/24/gunmen-open-fire-in-karak-church-12928681" -> "Gunmen open fire in karak church". Empty when no slug reads like one.
+function headlineOf(u) {
+  let segs;
+  try { segs = decodeURIComponent(new URL(u).pathname).split("/"); } catch { return ""; }
+  const words = (seg) => seg.replace(/\.(s?html?|php|aspx?|cms)$/i, "").split(/[-_+]+/)
+    .filter((w) => w && !/^\d{4,}$/.test(w) && !(/\d/.test(w) && /[a-z]/i.test(w) && w.length >= 6));
+  const best = segs.map(words).sort((a, b) => b.length - a.length)[0] || [];
+  if (best.length < 4) return "";
+  const t = best.join(" ");
+  return clip(t.charAt(0).toUpperCase() + t.slice(1), 160);
+}
 const gdeltTime = (s) => iso(`${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}T${s.slice(8, 10)}:${s.slice(10, 12)}:00Z`);
 
 // CAMEO codes: 18 assault (attacks, bombings), 19 fight (armed clashes), 20 mass violence.
@@ -125,7 +137,7 @@ async function gdeltNews(cat, keep, files = 4) {
       desc: `${g.n} ${g.n === 1 ? "suceso" : "sucesos"} codificados por GDELT en ${window}, con ${g.articles} ${g.articles === 1 ? "artículo" : "artículos"} de prensa${outlets.length ? ` (${outlets.slice(0, 4).join(", ")})` : ""}.`,
       lat: g.lat, lon: g.lon, approx: g.approx || undefined, time: g.time || new Date().toISOString(),
       sev: g.articles >= 40 ? 4 : g.articles >= 15 ? 3 : g.articles >= 5 ? 2 : 1,
-      articles: g.articles, outlets: outlets.slice(0, 6), url: g.url, src: "GDELT (prensa)",
+      articles: g.articles, outlets: outlets.slice(0, 6), url: g.url, headline: (g.url && headlineOf(g.url)) || undefined, src: "GDELT (prensa)",
       verified: outlets.length >= 2, vlabel: outlets.length >= 2 ? `${outlets.length} medios` : "1 medio",
     };
   });

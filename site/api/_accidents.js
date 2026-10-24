@@ -84,7 +84,7 @@ export async function accidents(kind) {
       time: new Date(list[list.length - 1].time).toISOString(), updated: new Date(list[0].time).toISOString(),
       sev: deaths >= 20 ? 4 : deaths >= 1 ? 3 : minor ? 1 : 2,
       url: list[0].url, src: "Prensa (Google Noticias)", outlets: [...outlets].slice(0, 6), articles: list.length,
-      headlines: list.slice(0, 5).map((x) => ({ title: x.title, outlet: x.outlet, url: x.url, time: new Date(x.time).toISOString() })),
+      headlines: list.slice(0, 5).map((x) => ({ title: x.title, outlet: x.outlet, url: x.url, time: new Date(x.time).toISOString(), lang: x.lang })),
       verified: n >= 2, vlabel: n >= 2 ? `${n} medios` : "1 medio",
     };
   });
