@@ -153,15 +153,43 @@ main { display: grid; grid-template-columns: 1fr minmax(320px, 380px); min-heigh
 .viewsw svg { width: 14px; height: 14px; }
 .maplibregl-ctrl-attrib { background: color-mix(in srgb, var(--panel) 88%, transparent) !important; color: var(--muted); font-size: 10px; }
 .maplibregl-ctrl-attrib a { color: var(--accent); }
-.maplibregl-ctrl-bottom-right { bottom: 0; right: 56px; }
+.maplibregl-ctrl-bottom-right { bottom: var(--tick-h, 0px); right: 56px; }
+.maplibregl-ctrl-bottom-left { bottom: var(--tick-h, 0px); }
+/* Breaking-news ticker along the foot of the wall: the most relevant alerts of the world and of Spain, whatever the filters. */
+.mapwrap.ticking { --tick-h: 44px; }
+.ticker { position: absolute; left: 0; right: 0; bottom: env(safe-area-inset-bottom, 0px); height: 44px; z-index: 4; display: flex; align-items: stretch; background: color-mix(in srgb, var(--panel) 96%, transparent); border-top: 1px solid var(--line-2); box-shadow: 0 -8px 24px rgba(0,0,0,.45); }
+.tlabel { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; padding: 0 14px; background: var(--s4); color: var(--ink); font-family: var(--font-sign); font-weight: 700; font-size: 14px; letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; }
+.tlabel i { width: 8px; height: 8px; border-radius: 50%; background: var(--ink); animation: blink 1.2s steps(2) infinite; }
+@keyframes blink { 50% { opacity: .15; } }
+.tview { position: relative; flex: 1 1 auto; min-width: 0; overflow: hidden; mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent); }
+.ttrack { position: absolute; top: 0; bottom: 0; left: 0; display: flex; align-items: center; white-space: nowrap; will-change: transform; }
+.titem { display: inline-flex; align-items: center; gap: 9px; height: 100%; padding: 0 22px 0 0; background: none; border: 0; color: var(--fg); }
+.titem::after { content: ""; width: 5px; height: 5px; background: var(--line-2); margin-left: 13px; }
+.titem .pp.unv { background: transparent; color: var(--sev); border: 1px dashed var(--sev); }
+.titem .tcat { font-family: var(--font-sign); font-weight: 600; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--sev); }
+.titem .twhere { font-family: var(--font-sign); font-weight: 600; font-size: 15px; letter-spacing: .04em; }
+.titem .thead { font-size: 14px; }
+.titem .tt { font-family: var(--font-data); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.titem .tmark { font-family: var(--font-sign); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding: 0 5px; line-height: 16px; border-radius: var(--r); }
+.titem .tmark.ok { background: color-mix(in srgb, var(--ok) 20%, transparent); color: var(--ok); }
+.titem .tmark.unv { border: 1px dashed var(--muted); color: var(--muted); }
+.titem .tmark.es { background: var(--rail); color: var(--rail-fg); }
+.titem:hover .thead, .titem:focus-visible .thead { text-decoration: underline; text-underline-offset: 3px; }
+.tempty { display: flex; align-items: center; height: 100%; padding: 0 16px; color: var(--muted); font-size: 13px; }
+.tbtns { flex: 0 0 auto; display: flex; border-left: 1px solid var(--line-2); }
+.tbtns button { width: 40px; background: transparent; border: 0; color: var(--muted); display: grid; place-items: center; }
+.tbtns button + button { border-left: 1px solid var(--line-2); }
+.tbtns button:hover { color: var(--fg); background: var(--panel-3); }
+.tbtns svg { width: 14px; height: 14px; }
+@media (max-width: 520px) { .tlabel span { display: none; } }
 /* Country maps keep their credits folded behind the (i) button; hovering or focusing it shows them. */
 .pane .maplibregl-ctrl-attrib:not(:hover):not(:focus-within) .maplibregl-ctrl-attrib-inner { display: none; }
 
-.zoom { z-index: 2; position: absolute; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 2px; }
+.zoom { z-index: 2; position: absolute; right: 12px; bottom: calc(12px + var(--tick-h, 0px) + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 2px; }
 .zoom button { width: 36px; height: 36px; display: grid; place-items: center; background: var(--panel); border: 1px solid var(--line-2); border-radius: var(--r); color: var(--fg); }
 .zoom button:hover { border-color: var(--accent); }
 .zoom svg { width: 16px; height: 16px; }
-.legend { z-index: 2; position: absolute; left: 12px; bottom: calc(var(--attrib-h, 24px) + 10px + env(safe-area-inset-bottom, 0px)); background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--line-2); border-radius: var(--r); padding: 8px 10px; font-size: 12px; display: grid; gap: 6px; max-width: calc(100% - 80px); }
+.legend { z-index: 2; position: absolute; left: 12px; bottom: calc(var(--attrib-h, 24px) + 10px + var(--tick-h, 0px) + env(safe-area-inset-bottom, 0px)); background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--line-2); border-radius: var(--r); padding: 8px 10px; font-size: 12px; display: grid; gap: 6px; max-width: calc(100% - 80px); }
 .legend .row { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
 .legend .sw { display: inline-flex; align-items: center; gap: 5px; color: var(--muted); }
 .legend .sev { font-style: normal; padding: 0 4px; height: 16px; display: inline-grid; place-items: center; font-family: var(--font-sign); font-size: 11px; font-weight: 700; color: var(--ink); }
@@ -409,7 +437,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 @media (pointer: coarse) { .modesw button, .pbtn { min-height: 44px; } .pbtn.lang { min-height: 36px; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .brand .dot.live, .ebadge.pulse, .dock.new .atab { animation: none; }
+  .brand .dot.live, .ebadge.pulse, .dock.new .atab, .tlabel i { animation: none; }
   .asheet, .atab .chev, .gname .chev, .tg::after { transition: none; }
 }
 
@@ -516,6 +544,11 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
           <span class="sw"><i class="hatch"></i>Territorio disputado</span>
           <span class="sw" id="legendNight"><i class="sev" style="background:var(--night);opacity:.75;border:1px solid var(--line-2)"></i>Noche y crepúsculos</span>
         </div>
+      </div>
+      <div class="ticker" id="ticker" role="region" aria-label="Última hora" hidden>
+        <div class="tlabel"><i></i><span>Última hora</span></div>
+        <div class="tview" id="tview"><div class="ttrack" id="ttrack"></div></div>
+        <div class="tbtns"><button type="button" id="tpause" aria-label="Pausar el rótulo"></button><button type="button" id="thide" aria-label="Quitar el rótulo"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3.5l9 9M12.5 3.5l-9 9" stroke="currentColor" stroke-width="1.6"/></svg></button></div>
       </div>
       <div class="zoom"><button type="button" id="zin" aria-label="Acercar"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3v10M3 8h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square"/></svg></button><button type="button" id="zout" aria-label="Alejar"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square"/></svg></button><button type="button" id="zreset" aria-label="Ver el mundo entero"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></button></div>
     </div>
@@ -675,6 +708,7 @@ const OVERLAYS = {
   zones:    { name: "Zonas de aviso de AEMET", hint: "Coloreadas por nivel: amarillo, naranja o rojo" },
   disputed: { name: "Territorios disputados" },
   solar:    { name: "Día y noche" },
+  ticker:   { name: "Rótulo de última hora", hint: "Lo más relevante del mundo y de España, aunque las capas estén apagadas o haya países elegidos" },
 };
 const SOURCES = {
   usgs:     { name: "USGS · terremotos M2,5+", def: 2, opts: [1, 2, 5, 10, 15, 30] },
@@ -711,7 +745,9 @@ const SOURCE_CATS = {
   aereos: ["aereo"], maritimos: ["naval"],
   mastodon: ["redes"], bluesky: ["redes"], telegram: ["redes"],
 };
-const wanted = (k) => state.settings.enabled[k] && SOURCE_CATS[k].some((c) => state.cats[c]);
+// The ticker also needs these, whatever layers are on: world disasters and news, plus Spain's top official alerts.
+const TICKER_SOURCES = ["usgs", "gdacs", "tsunami", "nhc", "conflictos", "atentados", "aereos", "maritimos", "aemet", "ign", "catalunya", "canarias"];
+const wanted = (k) => state.settings.enabled[k] && (SOURCE_CATS[k].some((c) => state.cats[c]) || (state.ov.ticker && TICKER_SOURCES.includes(k)));
 const SEV = ["", "Baja", "Media", "Alta", "Crítica"];
 const sevColor = (s) => `var(--s${Math.min(4, Math.max(1, s || 1))})`;
 // Dispatch priority: Crítica is P1, Baja is P4.
@@ -1318,6 +1354,7 @@ document.getElementById("layers").addEventListener("click", (ev) => {
     cats.forEach((c) => (state.cats[c] = !all)); saveUi(); render(); tick(); return;
   }
   if (t.dataset.cat) { state.cats[t.dataset.cat] = !state.cats[t.dataset.cat]; saveUi(); render(); tick(); return; }
+  if (t.dataset.ov === "ticker") { state.ov.ticker = !state.ov.ticker; render(); tick(); return; }
   if (t.dataset.ov) { state.ov[t.dataset.ov] = !state.ov[t.dataset.ov]; saveUi(); if (map.getLayer("land")) applyOverlays(); renderLayers(); return; }
   if (t.id === "globeBtn") { state.globe = !state.globe; t.setAttribute("aria-pressed", String(state.globe)); saveUi(); map.setProjection({ type: state.globe ? "globe" : "mercator" }); }
 });
@@ -1838,7 +1875,7 @@ function openShipCard(m, x) {
     <div class="aacts"><a class="btn" href="https://www.marinetraffic.com/es/ais/details/ships/mmsi:${x.mmsi}" target="_blank" rel="noopener">Ver en MarineTraffic</a></div>`, { id: `ship:${x.mmsi}`, ship: true }, 12);
 }
 
-function render() { const v = visible(); renderLayers(); renderMarkers(v); renderList(v); renderDetail(); renderStatus(); renderPanes(v); if (state.mode === "paper") renderPaper(); }
+function render() { const v = visible(); renderLayers(); renderMarkers(v); renderList(v); renderDetail(); renderStatus(); renderPanes(v); renderTicker(); if (state.mode === "paper") renderPaper(); }
 // Several sources can answer in one go; draw once after all of them are in.
 let renderQueued = false;
 function renderSoon() { if (renderQueued) return; renderQueued = true; queueMicrotask(() => { renderQueued = false; render(); }); }
@@ -2207,6 +2244,86 @@ async function translateMissing(items) {
   if (state.mode === "paper") renderPaper();
 }
 const canTranslate = (lang) => "Translator" in self && translators.get(lang) !== null;
+
+// ---------- ticker ----------
+// "Última hora" runs along the foot of the map with the most relevant live alerts of the whole world and of Spain.
+// It ignores the layer switches, the chosen countries and the side filters; only alerts marked false stay out.
+const TICK_WORLD = 24, TICK_SPAIN = 10, TICK_SPEED = 70;   // items kept from each pool; pixels per second
+const ICO_PAUSE = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 3v10M11 3v10" stroke="currentColor" stroke-width="2.2"/></svg>';
+const ICO_PLAY = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.5v11l9-5.5z" fill="currentColor"/></svg>';
+const tk = { sig: "", offset: 0, paused: false, hover: false, raf: 0, last: 0 };
+const TICK_CAT = { sismo: "Terremoto", volcan: "Volcán", tsunami: "Tsunami", ciclon: "Ciclón", inundacion: "Inundación", incendio: "Incendio", sequia: "Sequía",
+  meteo: "Aviso meteo", aviso_es: "Aviso AEMET", es_nac: "Alerta oficial", es_aut: "Alerta oficial", es_loc: "Alerta oficial", maritimo: "Aviso a navegantes",
+  conflicto: "Conflicto", atentado: "Atentado", aereo: "Accidente aéreo", naval: "Accidente marítimo" };
+const inSpainTick = (e) => e.cat === "aviso_es" || String(e.cat).startsWith("es_") || countriesOf(e).has("ESP");
+function tickerItems() {
+  const now = Date.now(), from = now - 24 * HOUR, world = [], spain = [];
+  for (const e of state.events.values()) {
+    if (e.social || e.cat === "redes" || isFalse(e) || !isLive(e)) continue;
+    if (Math.max(Date.parse(e.time) || 0, Date.parse(e.updated) || 0) < from) continue;
+    const sev = e.sev || 1;
+    // Spain: orange and red weather warnings, and from the other official sources anything above low.
+    if (inSpainTick(e)) { if (sev >= (e.cat === "aviso_es" ? 3 : 2)) spain.push(e); }
+    else if (sev >= 3) world.push(e);
+  }
+  return [...world.sort(paperRank).slice(0, TICK_WORLD), ...spain.sort(paperRank).slice(0, TICK_SPAIN)].sort(paperRank);
+}
+function tickerItem(e) {
+  const h = paperHead(e), sev = Math.min(4, Math.max(1, e.sev || 1)), unv = e.verified === false;
+  const where = paperWhere(e) || e.country || "";
+  const text = h.es || h.orig || e.title;
+  return `<button type="button" class="titem" data-tick="${esc(e.id)}" style="--sev:${sevColor(sev)}">`
+    + `<span class="pp${unv ? " unv" : ""}">${prioOf(sev)}</span><span class="tcat">${esc(TICK_CAT[e.cat] || CATS[e.cat]?.name || e.cat)}</span>`
+    + (inSpainTick(e) ? '<span class="tmark es">España</span>' : "")
+    + `<span class="tmark ${unv ? "unv" : "ok"}">${unv ? "Sin contrastar" : "Contrastada"}</span>`
+    + (where && where !== "España" && !text.includes(where) ? `<span class="twhere">${esc(where)}</span>` : "")
+    + `<span class="thead">${esc(text)}</span><span class="tt">${elapsed(e.time)}</span></button>`;
+}
+function renderTicker() {
+  const box = document.getElementById("ticker"), wrap = document.getElementById("mapwrap");
+  const on = !!state.ov.ticker;
+  box.hidden = !on; wrap.classList.toggle("ticking", on);
+  if (!on) return;   // the frame loop sees the switch is off and stops; this also runs before the ticker code is set up
+  const items = tickerItems(), track = document.getElementById("ttrack");
+  const sig = items.map((e) => `${e.id}|${e.sev}|${e.verified}|${paperHead(e).es || ""}`).join(",");
+  if (sig !== tk.sig) {
+    tk.sig = sig;
+    if (!items.length) track.innerHTML = `<span class="tempty">${Object.keys(state.live).length ? "Sin alertas destacadas en las últimas 24 horas." : "Cargando las alertas más relevantes…"}</span>`;
+    else { const one = items.map(tickerItem).join(""); track.innerHTML = one + one; }   // two copies so the loop has no seam
+    translateMissing(items);
+  } else for (const t of track.querySelectorAll(".tt")) { const e = eventOf(t.parentElement.dataset.tick); if (e) t.textContent = elapsed(e.time); }
+  document.getElementById("tpause").innerHTML = tk.paused ? ICO_PLAY : ICO_PAUSE;
+  document.getElementById("tpause").setAttribute("aria-label", tk.paused ? "Reanudar el rótulo" : "Pausar el rótulo");
+  if (!tk.raf) { tk.last = performance.now(); tk.raf = requestAnimationFrame(tickerFrame); }
+}
+function tickerFrame(now) {
+  if (!state.ov.ticker) { tk.raf = 0; tk.sig = ""; return; }
+  const dt = Math.min(0.05, (now - tk.last) / 1000), track = document.getElementById("ttrack");
+  tk.last = now;
+  const still = tk.paused || tk.hover || matchMedia("(prefers-reduced-motion: reduce)").matches || state.mode === "paper";
+  if (!still && track.children.length > 1) {
+    const half = track.scrollWidth / 2 || 1;
+    tk.offset = (tk.offset + TICK_SPEED * dt) % half;
+  }
+  track.style.transform = `translateX(${-tk.offset}px)`;
+  tk.raf = requestAnimationFrame(tickerFrame);
+}
+{
+  const view = document.getElementById("tview");
+  const hold = (on) => () => { tk.hover = on; };
+  view.addEventListener("mouseenter", hold(true)); view.addEventListener("mouseleave", hold(false));
+  view.addEventListener("focusin", hold(true)); view.addEventListener("focusout", hold(false));
+  view.addEventListener("click", (ev) => {
+    const b = ev.target.closest("[data-tick]"); if (!b) return;
+    const e = eventOf(b.dataset.tick); if (!e) return;
+    if (state.mode === "paper") setMode("map", false);
+    select(e.id, true);
+    if (state.view !== "split") openCard(map, e);
+  });
+  document.getElementById("tpause").onclick = () => { tk.paused = !tk.paused; renderTicker(); };
+  document.getElementById("thide").onclick = () => { state.ov.ticker = false; render(); };
+  setInterval(() => { if (state.ov.ticker) renderTicker(); }, 30000);   // keeps the T+ timers moving
+}
 
 const trusted = (e) => e.verified !== false;
 function paperRank(a, b) {
