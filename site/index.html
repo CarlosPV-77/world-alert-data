@@ -99,6 +99,27 @@ main { display: grid; grid-template-columns: 1fr minmax(320px, 380px); min-heigh
 /* ---- videowall ---- */
 .mapwrap { position: relative; min-width: 0; min-height: 0; background: var(--wall); }
 #map { position: absolute; inset: 0; }
+/* Split views: two followed countries side by side, or the world on top and both countries below (a capital T). */
+.pane { position: absolute; background: var(--wall); }
+.pane .pmap { position: absolute; inset: 0; }
+.mapwrap[data-view="split"] #map { visibility: hidden; }
+.mapwrap[data-view="split"] #paneA { inset: 0 50% 0 0; }
+.mapwrap[data-view="split"] #paneB { inset: 0 0 0 50%; border-left: 2px solid var(--rail-line); }
+.mapwrap[data-view="t"] #map { inset: 0 0 50% 0; }
+.mapwrap[data-view="t"] #paneA { inset: 50% 50% 0 0; border-top: 2px solid var(--rail-line); }
+.mapwrap[data-view="t"] #paneB { inset: 50% 0 0 50%; border-top: 2px solid var(--rail-line); border-left: 2px solid var(--rail-line); }
+.mapwrap:not([data-view="world"]) .zoom { display: none; }
+.mapwrap:not([data-view="world"]) .legend .cats { display: none; }   /* the pictograms are on the map and in the layer list */
+.plabel { position: absolute; z-index: 3; left: 10px; top: 10px; display: flex; align-items: center; gap: 8px; background: color-mix(in srgb, var(--panel) 94%, transparent); border: 1px solid var(--line-2); border-left: 3px solid var(--accent); border-radius: var(--r); padding: 4px 8px; font-family: var(--font-sign); font-weight: 600; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; max-width: calc(100% - 70px); }
+.plabel select { font: inherit; letter-spacing: inherit; text-transform: inherit; background: transparent; border: 0; padding: 0 2px; max-width: 100%; }
+.plabel .n { font-family: var(--font-data); font-weight: 400; letter-spacing: 0; text-transform: none; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.mapwrap[data-view="split"] .plabel { top: 54px; }
+.viewsw { position: absolute; z-index: 4; left: 10px; top: 10px; display: flex; background: var(--panel); border: 1px solid var(--line-2); border-radius: var(--r); }
+.viewsw button { display: flex; align-items: center; gap: 6px; padding: 6px 10px; font-family: var(--font-sign); font-weight: 600; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; background: transparent; border: 0; color: var(--muted); }
+.viewsw button + button { border-left: 1px solid var(--line-2); }
+.viewsw button:hover { color: var(--fg); }
+.viewsw button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.viewsw svg { width: 14px; height: 14px; }
 .maplibregl-ctrl-attrib { background: color-mix(in srgb, var(--panel) 88%, transparent) !important; color: var(--muted); font-size: 10px; }
 .maplibregl-ctrl-attrib a { color: var(--accent); }
 .maplibregl-ctrl-bottom-right { bottom: 0; right: 56px; }
@@ -314,6 +335,14 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
   .app { height: auto; min-height: 100%; }
   main { grid-template-columns: 1fr; }
   .mapwrap { height: 58vh; }
+  .mapwrap:not([data-view="world"]) { height: 82vh; }
+  .mapwrap[data-view="split"] #paneA { inset: 0 0 50% 0; }
+  .mapwrap[data-view="split"] #paneB { inset: 50% 0 0 0; border-left: 0; border-top: 2px solid var(--rail-line); }
+  .mapwrap[data-view="t"] #map { inset: 0 0 66.6% 0; }
+  .mapwrap[data-view="t"] #paneA { inset: 33.4% 0 33.3% 0; }
+  .mapwrap[data-view="t"] #paneB { inset: 66.7% 0 0 0; border-left: 0; }
+  .viewsw button { min-height: 44px; }
+  .mapwrap:not([data-view="world"]) .legend { display: none; }
   aside.side { border-left: 0; border-top: 1px solid var(--line-2); grid-template-rows: auto auto auto; }
   .list { overflow: visible; }
   .legend { font-size: 11px; padding: 8px 10px; }
@@ -340,6 +369,13 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
   <main>
     <div class="mapwrap" id="mapwrap">
       <div id="map" role="region" aria-label="Mapa del mundo con alertas"></div>
+      <div class="pane" id="paneA" hidden><div class="pmap" role="region" aria-label="Mapa del primer país"></div><div class="plabel"></div></div>
+      <div class="pane" id="paneB" hidden><div class="pmap" role="region" aria-label="Mapa del segundo país"></div><div class="plabel"></div></div>
+      <div class="viewsw" id="viewsw" role="group" aria-label="Vista del mapa" hidden>
+        <button type="button" data-view="world" aria-pressed="true"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Mundo</button>
+        <button type="button" data-view="split" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 2.5v11" stroke="currentColor" stroke-width="1.5"/></svg>Dividida</button>
+        <button type="button" data-view="t" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.5 8h13M8 8v5.5" stroke="currentColor" stroke-width="1.5"/></svg>En T</button>
+      </div>
       <div class="banner" id="banner" hidden></div>
       <div class="dock" id="dock" hidden>
         <button type="button" class="atab" id="atab" aria-expanded="false" aria-controls="asheet" aria-label="Incidencias entrantes"></button>
@@ -551,7 +587,7 @@ const state = {
   srcStatus: {},              // source -> {ok, at, n, error}
   // Every layer starts off on each visit; the viewer turns on what they want to see.
   cats: Object.fromEntries(Object.keys(CATS).map((c) => [c, false])),
-  period: 24, minSev: 1, selected: null, base: "s2", globe: false,
+  period: 24, minSev: 1, selected: null, base: "s2", globe: false, view: "world",
   ov: Object.fromEntries(Object.keys(OVERLAYS).map((k) => [k, false])),
   countries: new Set(),        // ISO3 codes the viewer is following; empty = whole world
   open: { naturales: true, meteo: true, mar: false, seguridad: true, mapa: true },
@@ -566,7 +602,7 @@ const savedUi = store.get("ui");
 if (savedUi) {
   Object.assign(state.open, savedUi.open || {});
   (savedUi.countries || []).forEach((c) => state.countries.add(c));
-  state.period = savedUi.period ?? 24; state.minSev = savedUi.minSev ?? 1; state.base = savedUi.base || "s2"; state.globe = !!savedUi.globe;
+  state.period = savedUi.period ?? 24; state.minSev = savedUi.minSev ?? 1; state.base = savedUi.base || "s2"; state.globe = !!savedUi.globe; state.view = ["split", "t"].includes(savedUi.view) ? savedUi.view : "world";
 }
 const localSettings = store.get("settings");
 if (localSettings) mergeSettings(localSettings);
@@ -676,12 +712,12 @@ const empty = { type: "FeatureCollection", features: [] };
 
 // One marker per pictogram and severity: a square badge in the severity colour with the pictogram in ink.
 // Unverified items ("-u") are hollow: dark badge, dashed coloured edge, coloured pictogram.
-function addIcons() {
+function iconImage(key, sev, unv) {
   const px = 2, size = 28, root = getComputedStyle(document.documentElement);
   const ink = root.getPropertyValue("--ink").trim() || "#05080c";
-  for (const key of Object.keys(PICS)) {
-    const path = new Path2D(PICS[key]);
-    for (const sev of [1, 2, 3, 4]) for (const unv of [false, true]) {
+  const path = new Path2D(PICS[key]);
+  {
+    {
       const col = root.getPropertyValue(`--s${sev}`).trim();
       const cv = document.createElement("canvas"); cv.width = cv.height = size * px;
       const ctx = cv.getContext("2d"); ctx.scale(px, px);
@@ -693,9 +729,20 @@ function addIcons() {
       ctx.save(); ctx.translate(5, 5); ctx.scale(18 / 24, 18 / 24);
       ctx.lineWidth = 2.4; ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = unv ? col : ink;
       ctx.stroke(path); ctx.restore();
-      map.addImage(`${key}-${sev}${unv ? "-u" : ""}`, ctx.getImageData(0, 0, cv.width, cv.height), { pixelRatio: px });
+      return ctx.getImageData(0, 0, cv.width, cv.height);
     }
   }
+}
+function addIcons(m = map) {
+  for (const key of Object.keys(PICS)) for (const sev of [1, 2, 3, 4]) for (const unv of [false, true])
+    m.addImage(`${key}-${sev}${unv ? "-u" : ""}`, iconImage(key, sev, unv), { pixelRatio: 2 });
+}
+// Maps that copy the main style draw each marker image the first time it is needed.
+function iconsOnDemand(m) {
+  m.on("styleimagemissing", ({ id }) => {
+    const [, key, sev, u] = String(id).match(/^(\w+)-([1-4])(-u)?$/) || [];
+    if (PICS[key] && !m.hasImage(id)) m.addImage(id, iconImage(key, +sev, !!u), { pixelRatio: 2 });
+  });
 }
 map.on("load", () => {
   for (const [k, b] of Object.entries(BASES)) if (b.tiles) {
@@ -739,13 +786,18 @@ function applyOverlays() {
   for (const id of LIMIT_LAYERS) map.setLayoutProperty(id, "visibility", vis(state.ov.limits));
   for (const id of ["disputed-fill", "disputed-line"]) map.setLayoutProperty(id, "visibility", vis(state.ov.disputed));
   for (const id of ["zones-fill", "zones-line"]) map.setLayoutProperty(id, "visibility", vis(state.ov.zones));
-  renderNight();
+  renderNight(); syncPanesSoon();
 }
 function applyBase() {
   for (const k of Object.keys(BASES)) if (BASES[k].tiles) map.setLayoutProperty("base-" + k, "visibility", state.base === k ? "visible" : "none");
   map.setLayoutProperty("land", "visibility", state.base === "dark" ? "visible" : "none");
+  syncPanesSoon();
 }
-function layout() { map.resize(); }
+function layout() {
+  map.resize();
+  // The country maps reframe their country when the window changes size.
+  if (state.view !== "world") for (const p of PANES) if (p.map) { p.map.resize(); fitCountry(p.map, p.iso, false); }
+}
 // The legend sits just above the map attribution, whose height changes with the width and when it folds.
 const attribBox = document.querySelector("#map .maplibregl-ctrl-bottom-right");
 if (attribBox && window.ResizeObserver) new ResizeObserver(() => {
@@ -793,6 +845,7 @@ function renderNight() {
   if (!map.getSource("night")) return;
   map.getSource("night").setData(state.ov.solar ? { type: "FeatureCollection", features: [0, -6, -12, -18].map((a) => belowAltitude(sun, a)) } : empty);
   map.getSource("sun").setData(state.ov.solar ? { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [((sun[0] + 540) % 360) - 180, sun[1]] } } : empty);
+  syncPanesSoon();
 }
 setInterval(renderNight, 60000);
 
@@ -810,6 +863,7 @@ function showTip(ev, html) {
 function hideTip() { tip.hidden = true; }
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+function bindMapUi(map) {
 map.on("mousemove", (ev) => {
   if (!map.getLayer("events")) return;
   const layers = ["events", "zones-fill", "disputed-fill", "country-hit"].filter((l) => map.getLayer(l));
@@ -827,6 +881,8 @@ map.on("click", (ev) => {
   if (e) return select(e.properties.id, false);
   if (state.selected) { state.selected = null; render(); }
 });
+}
+bindMapUi(map);
 
 function markerSize(e) {
   if (e.cat === "sismo" && e.mag) return Math.max(18, Math.pow(e.mag, 2.2) * 4);
@@ -864,8 +920,98 @@ function renderMarkers(v = visible()) {
   map.getSource("zones")?.setData({ type: "FeatureCollection", features: v.filter((e) => e.poly).reverse()
     .map((e) => ({ type: "Feature", geometry: e.poly, properties: { id: e.id, sev: Math.min(4, Math.max(1, e.sev || 1)) } })) });
   map.setFilter("sel", ["==", ["get", "id"], state.selected || ""]);
+  syncPanesSoon();
 }
 function placeMarkers() {}
+
+const announce = (msg) => { document.getElementById("announcer").textContent = msg; };
+// ---------- split views ----------
+// Each followed country can get its own map. They copy the main map's style (layers, markers, outlines,
+// night) and stay in step with it; only the camera is their own. They are always flat (Mercator).
+const PANES = ["paneA", "paneB"].map((id) => ({ el: document.getElementById(id), map: null, iso: null, loaded: false }));
+let navMain = null, shownView = "world";
+function paneStyle() { const st = map.getStyle(); st.projection = { type: "mercator" }; return st; }
+let syncTimer = null;
+function syncPanesSoon() { if (state.view === "world" || !PANES.some((p) => p.loaded)) return; clearTimeout(syncTimer); syncTimer = setTimeout(syncPanes, 120); }
+function syncPanes() {
+  if (!map.getLayer("events")) return;
+  const st = paneStyle();
+  for (const p of PANES) if (p.loaded) { try { p.map.setStyle(st, { diff: true }); } catch (err) { console.warn(err); } }
+}
+// Frame the country's main landmass, so France is not zoomed out to show French Guiana too.
+function mainland(f) {
+  if (f.geometry?.type !== "MultiPolygon") return f;
+  const parts = f.geometry.coordinates.map((c) => ({ type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: c } }));
+  return parts.reduce((a, b) => (d3.geoArea(b) > d3.geoArea(a) ? b : a));
+}
+function fitCountry(m, iso, animate) {
+  const f = BY_ISO.get(iso)?.f && mainland(BY_ISO.get(iso).f);
+  if (!f) return;
+  const [[w, s], [e, n]] = d3.geoBounds(f);
+  if (w <= e) m.fitBounds([[w, Math.max(s, -80)], [e, Math.min(n, 82)]], { padding: 30, maxZoom: 6.5, duration: animate ? 700 : 0 });
+  else m.jumpTo({ center: d3.geoCentroid(f), zoom: 2.2 });   // crosses the 180° meridian (Russia, Fiji…)
+}
+function makePane(p) {
+  p.map = new maplibregl.Map({
+    container: p.el.querySelector(".pmap"), style: paneStyle(), center: HOME.center, zoom: HOME.zoom, minZoom: 0.6, maxZoom: 17,
+    attributionControl: { compact: true }, dragRotate: false,
+    cooperativeGestures: matchMedia("(max-width: 760px) and (pointer: coarse)").matches,
+  });
+  p.map.touchZoomRotate.disableRotation();
+  p.map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
+  iconsOnDemand(p.map);
+  bindMapUi(p.map);
+  p.map.on("load", () => { p.loaded = true; syncPanesSoon(); });
+  // Attribution starts folded behind its (i) button so it does not cover the small maps.
+  p.map.once("idle", () => { const a = p.el.querySelector(".maplibregl-ctrl-attrib"); a?.classList.remove("maplibregl-compact-show"); a?.removeAttribute("open"); });
+}
+function selectedIsos() {
+  return [...state.countries].filter((c) => BY_ISO.has(c)).sort((a, b) => BY_ISO.get(a).name.localeCompare(BY_ISO.get(b).name, "es"));
+}
+function renderPanes(v = visible()) {
+  const sel = selectedIsos();
+  if (sel.length < 2 && state.view !== "world") { state.view = "world"; saveUi(); }
+  const wrap = document.getElementById("mapwrap"), sw = document.getElementById("viewsw");
+  sw.hidden = sel.length < 2;
+  for (const b of sw.querySelectorAll("button")) b.setAttribute("aria-pressed", String(b.dataset.view === state.view));
+  wrap.dataset.view = state.view;
+  const changed = shownView !== state.view;
+  shownView = state.view;
+  if (state.view === "world") {
+    for (const p of PANES) p.el.hidden = true;
+    if (navMain) { map.removeControl(navMain); navMain = null; }
+    if (changed) requestAnimationFrame(() => map.resize());
+    return;
+  }
+  if (state.view === "t" && !navMain) { navMain = new maplibregl.NavigationControl({ showCompass: false }); map.addControl(navMain, "bottom-right"); }
+  if (state.view === "split" && navMain) { map.removeControl(navMain); navMain = null; }
+  PANES.forEach((p, i) => {
+    let fresh = false;
+    const taken = i === 1 ? PANES[0].iso : null;
+    if (!sel.includes(p.iso) || p.iso === taken) { p.iso = sel.find((c) => c !== taken && (i === 1 || c !== PANES[1].iso || !sel.includes(PANES[1].iso))) || sel[i]; fresh = true; }
+    const other = PANES[1 - i].iso;
+    p.el.hidden = false;
+    if (!p.map) { makePane(p); fresh = true; }
+    const n = v.filter((e) => countriesOf(e).has(p.iso)).length;
+    const name = esc(BY_ISO.get(p.iso).name);
+    const label = p.el.querySelector(".plabel");
+    const html = (sel.length > 2
+      ? `<select data-pane="${i}" aria-label="País de este mapa">${sel.map((c) => `<option value="${c}"${c === p.iso ? " selected" : ""}${c === other ? " disabled" : ""}>${esc(BY_ISO.get(c).name)}</option>`).join("")}</select>`
+      : `<span>${name}</span>`) + `<span class="n">${n} ${n === 1 ? "incidencia" : "incidencias"}</span>`;
+    if (label.dataset.html !== html) { keepFocus(label, () => (label.innerHTML = html)); label.dataset.html = html; }
+    if (fresh || changed) requestAnimationFrame(() => { p.map.resize(); if (fresh || changed) fitCountry(p.map, p.iso, !fresh); });
+  });
+  if (changed) { requestAnimationFrame(() => map.resize()); syncPanesSoon(); }
+}
+document.getElementById("viewsw").addEventListener("click", (ev) => {
+  const b = ev.target.closest("[data-view]"); if (!b || b.dataset.view === state.view) return;
+  state.view = b.dataset.view; saveUi(); renderPanes();
+  announce(state.view === "world" ? "Vista del mapa mundial" : state.view === "split" ? "Vista dividida: un mapa por país" : "Vista en T: el mundo arriba y un mapa por país debajo");
+});
+for (const p of PANES) p.el.addEventListener("change", (ev) => {
+  const s = ev.target.closest("select[data-pane]"); if (!s) return;
+  p.iso = s.value; p.el.querySelector(".plabel").dataset.html = ""; fitCountry(p.map, p.iso, true); renderPanes();
+});
 
 // ---------- side panel ----------
 function legendShape(cat, color = "currentColor") {
@@ -879,7 +1025,7 @@ function counts() {
 }
 const sw = '<span class="tg" aria-hidden="true"></span>';
 // Redraws replace the buttons; keep keyboard focus on the same control afterwards.
-const FOCUS_KEYS = ["data-cat", "data-group", "data-open", "data-ov", "data-id", "data-save", "data-act", "data-del", "id"];
+const FOCUS_KEYS = ["data-pane", "data-cat", "data-group", "data-open", "data-ov", "data-id", "data-save", "data-act", "data-del", "id"];
 function keepFocus(box, redraw) {
   const f = document.activeElement;
   const key = f && box.contains(f) ? FOCUS_KEYS.map((a) => f.getAttribute(a) && `[${a}="${CSS.escape(f.getAttribute(a))}"]`).find(Boolean) : null;
@@ -932,7 +1078,7 @@ document.getElementById("fPeriod").value = String(state.period);
 document.getElementById("fSev").value = String(state.minSev);
 document.getElementById("fPeriod").onchange = (e) => { state.period = +e.target.value; saveUi(); render(); };
 document.getElementById("fSev").onchange = (e) => { state.minSev = +e.target.value; saveUi(); render(); };
-function saveUi() { store.set("ui", { open: state.open, countries: [...state.countries], period: state.period, minSev: state.minSev, base: state.base, globe: state.globe }); }
+function saveUi() { store.set("ui", { open: state.open, countries: [...state.countries], period: state.period, minSev: state.minSev, base: state.base, globe: state.globe, view: state.view }); }
 
 // ---------- countries ----------
 const cq = document.getElementById("cq"), copts = document.getElementById("copts");
@@ -965,6 +1111,7 @@ async function drawOutlines() {
   await Promise.all(want.filter((c) => !outlines.has(c)).map((c) =>
     fetch(`countries/${c}.json`).then((r) => (r.ok ? r.json() : BY_ISO.get(c)?.f)).catch(() => BY_ISO.get(c)?.f).then((f) => f && outlines.set(c, f))));
   map.getSource("country-sel")?.setData({ type: "FeatureCollection", features: [...state.countries].map((c) => outlines.get(c)).filter(Boolean) });
+  syncPanesSoon();
 }
 function applyCountries(fly) {
   if (!map.getLayer("country-sel-fill")) return;
@@ -1187,7 +1334,10 @@ function select(id, fly) {
   state.selected = id;
   const e = eventOf(id);
   render();
-  if (fly && e) map.flyTo({ center: [+e.lon, +e.lat], zoom: Math.max(map.getZoom(), e.poly ? 7 : 4.5), duration: 900 });
+  if (!fly || !e) return;
+  const to = (m) => m.flyTo({ center: [+e.lon, +e.lat], zoom: Math.max(m.getZoom(), e.poly ? 7 : 4.5), duration: 900 });
+  if (state.view !== "world") { const inside = countriesOf(e); for (const p of PANES) if (p.map && inside.has(p.iso)) to(p.map); }
+  if (state.view !== "split") to(map);
 }
 function renderDetail() {
   const el = document.getElementById("detail");
@@ -1227,7 +1377,7 @@ function renderDetail() {
   el.querySelector("[data-save]").onclick = (ev) => toggleSave(ev.currentTarget.dataset.save);
 }
 
-function render() { const v = visible(); renderLayers(); renderMarkers(v); renderList(v); renderDetail(); renderStatus(); }
+function render() { const v = visible(); renderLayers(); renderMarkers(v); renderList(v); renderDetail(); renderStatus(); renderPanes(v); }
 // Several sources can answer in one go; draw once after all of them are in.
 let renderQueued = false;
 function renderSoon() { if (renderQueued) return; renderQueued = true; queueMicrotask(() => { renderQueued = false; render(); }); }
