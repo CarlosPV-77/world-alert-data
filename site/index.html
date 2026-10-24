@@ -6,7 +6,7 @@
 <title>World Alert</title>
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=Azeret+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=Azeret+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500;6..72,700;6..72,800&display=swap">
 <style>
 *, *::before, *::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -50,6 +50,16 @@ body { margin: 0; }
   --font-sign: "Saira Semi Condensed", "Arial Narrow", sans-serif;
   --font-body: "Public Sans", system-ui, sans-serif;
   --font-data: "Azeret Mono", ui-monospace, monospace;
+  --font-paper: "Newsreader", Georgia, serif;
+  /* Newspaper view: a sheet of newsprint over the operations room. */
+  --paper: #f3efe6;
+  --paper-ink: #15171a;
+  --paper-text: #2a2d31;
+  --paper-muted: #55595f;
+  --paper-rule: #cfc7b6;
+  --paper-hover: #e6e0d2;
+  --paper-ok: #0f6b3c;
+  --paper-unv: #8a4a00;
 }
 html, body { height: 100%; }
 body { background: var(--room); color: var(--fg); font-family: var(--font-body); font-size: 14px; overflow: hidden; }
@@ -338,6 +348,66 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 .sheet .foot { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 .confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--s3); }
 
+/* ---- vista Periódico ---- */
+.modesw { display: flex; gap: 2px; }
+.modesw button { font-family: var(--font-sign); font-weight: 600; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; padding: 6px 14px; color: var(--rail-muted); background: transparent; border: 1px solid var(--rail-line); border-radius: var(--r); }
+.modesw button:hover { color: var(--rail-fg); border-color: var(--rail-fg); }
+.modesw button[aria-pressed="true"] { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+.app[data-mode="paper"] main { display: none; }
+.paper { min-height: 0; overflow: auto; padding: 28px 16px 48px; }
+.paper:focus { outline: none; }
+.sheetp { max-width: 1240px; margin: 0 auto; background: var(--paper); color: var(--paper-ink); padding: 28px clamp(16px, 4vw, 48px) 40px; display: flex; flex-direction: column; gap: 28px; box-shadow: 0 20px 50px rgba(0,0,0,.5); }
+.sheetp ::selection { background: #f0c41966; color: var(--paper-ink); }
+.sheetp :focus-visible { outline-color: var(--rail); }
+.sheetp a { color: var(--rail); }
+.pkick { font-family: var(--font-sign); font-size: 12px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #3d4248; }
+.pdate { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--paper-ink); padding-bottom: 8px; }
+.pmast { margin: 0; text-align: center; font-family: var(--font-paper); font-weight: 800; font-size: clamp(40px, 7vw, 88px); line-height: .95; letter-spacing: -.01em; }
+.pstrip { border-top: 3px double var(--paper-ink); border-bottom: 1px solid var(--paper-ink); padding: 8px 0; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ptext { font-family: var(--font-body); font-size: 14px; line-height: 1.5; color: var(--paper-text); margin: 0; }
+.psmall { font-size: 13px; }
+.pbtn { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; font-family: var(--font-sign); font-size: 13px; font-weight: 600; letter-spacing: .06em; text-decoration: none; border: 1px solid var(--paper-ink); border-radius: 0; color: var(--paper-ink) !important; background: transparent; }
+.pbtn svg { width: 14px; height: 14px; }
+.pbtn:hover { background: var(--paper-hover); }
+.pbtn.pri { background: var(--rail); border-color: var(--rail); color: var(--rail-fg) !important; }
+.pbtn.pri:hover { background: var(--rail-line); }
+.pbtn[aria-pressed="true"] { background: var(--paper-ink); color: var(--paper) !important; }
+.pbtn:disabled { opacity: .5; cursor: default; }
+.pbtn.lang { min-height: 26px; padding: 0 8px; font-size: 12px; border-style: dotted; }
+.pacts { display: flex; gap: 8px; flex-wrap: wrap; }
+.prow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pp { display: inline-grid; place-items: center; min-width: 30px; height: 20px; padding: 0 4px; font-family: var(--font-sign); font-weight: 700; font-size: 13px; color: var(--ink); background: var(--sev); border: 1px solid rgba(5,8,12,.5); }
+.pp.unv { background: transparent; color: var(--paper-ink); border: 1px dashed var(--paper-ink); }
+.pok { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-sign); font-size: 12px; font-weight: 600; letter-spacing: .06em; color: var(--paper-ok); }
+.pok svg { width: 14px; height: 14px; }
+.punv { display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-sign); font-size: 12px; font-weight: 600; letter-spacing: .06em; color: var(--paper-unv); border: 1px dashed var(--paper-unv); padding: 0 6px; }
+.pmeta { font-family: var(--font-data); font-size: 12px; color: var(--paper-muted); }
+.phl { font-family: var(--font-paper); font-weight: 700; color: #121417; margin: 0; overflow-wrap: anywhere; }
+.phl.orig { font-style: italic; }
+.pfront { display: flex; flex-wrap: wrap; gap: 32px; }
+.plead { flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.plead .phl { font-size: clamp(30px, 4vw, 48px); line-height: 1.04; }
+.plead .ptext { font-size: 17px; line-height: 1.55; }
+.pside { flex: 1 1 300px; min-width: 0; border-left: 1px solid var(--paper-ink); padding-left: 24px; display: flex; flex-direction: column; gap: 16px; }
+.pside .phl { font-size: 21px; line-height: 1.15; }
+.pside > .pkick { color: #121417; border-bottom: 1px solid var(--paper-ink); padding-bottom: 6px; }
+.pgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 32px; }
+.psec { border-top: 3px double var(--paper-ink); padding-top: 10px; display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.psech { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.psect { font-family: var(--font-paper); font-size: 26px; font-weight: 800; margin: 0; }
+.pitem { display: flex; flex-direction: column; gap: 7px; padding-bottom: 16px; border-bottom: 1px solid var(--paper-rule); }
+.pitem:last-child, .pitem.lead { border-bottom: 0; }
+.pgrid .phl { font-size: 20px; line-height: 1.18; }
+.pempty { color: var(--paper-muted); }
+.pfoot { border-top: 1px solid var(--paper-ink); padding-top: 12px; display: flex; flex-wrap: wrap; gap: 18px; align-items: center; }
+@media (max-width: 760px) {
+  .modesw { grid-column: 1 / -1; grid-row: 4; }
+  .modesw button { flex: 1; }
+  .paper { padding: 0 0 32px; }
+  .pside { border-left: 0; padding-left: 0; border-top: 1px solid var(--paper-ink); padding-top: 12px; }
+}
+@media (pointer: coarse) { .modesw button, .pbtn { min-height: 44px; } .pbtn.lang { min-height: 36px; } }
+
 @media (prefers-reduced-motion: reduce) {
   .brand .dot.live, .ebadge.pulse, .dock.new .atab { animation: none; }
   .asheet, .atab .chev, .gname .chev, .tg::after { transition: none; }
@@ -405,6 +475,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 <div class="app">
   <header class="top">
     <h1 class="brand"><span class="dot" id="liveDot" aria-hidden="true"></span>World Alert</h1>
+    <nav class="modesw" id="modesw" aria-label="Vista"><button type="button" data-mode="map" aria-pressed="true">Mapa</button><button type="button" data-mode="paper" aria-pressed="false">Periódico</button></nav>
     <div class="clocks" aria-label="Hora actual">
       <div class="clock"><span>Madrid</span><time id="clkLocal">--:--:--</time></div>
       <div class="clock"><span>UTC</span><time id="clkUtc">--:--:--</time></div>
@@ -483,6 +554,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
       <div class="list" id="list"></div>
     </aside>
   </main>
+  <section class="paper" id="paper" tabindex="-1" aria-label="Periódico" hidden></section>
 </div>
 
 <div class="overlay" id="settings" hidden>
@@ -1186,7 +1258,7 @@ function counts() {
 }
 const sw = '<span class="tg" aria-hidden="true"></span>';
 // Redraws replace the buttons; keep keyboard focus on the same control afterwards.
-const FOCUS_KEYS = ["data-pane", "data-cat", "data-group", "data-open", "data-ov", "data-id", "data-save", "data-act", "data-del", "data-false", "data-falsewhy", "data-unfalse", "data-unmute", "id"];
+const FOCUS_KEYS = ["data-pane", "data-plang", "data-pmore", "data-pverified", "data-psave", "data-prefresh", "data-cat", "data-group", "data-open", "data-ov", "data-id", "data-save", "data-act", "data-del", "data-false", "data-falsewhy", "data-unfalse", "data-unmute", "id"];
 function keepFocus(box, redraw) {
   const f = document.activeElement;
   const key = f && box.contains(f) ? FOCUS_KEYS.map((a) => f.getAttribute(a) && `[${a}="${CSS.escape(f.getAttribute(a))}"]`).find(Boolean) : null;
@@ -1750,7 +1822,7 @@ function openShipCard(m, x) {
     <div class="aacts"><a class="btn" href="https://www.marinetraffic.com/es/ais/details/ships/mmsi:${x.mmsi}" target="_blank" rel="noopener">Ver en MarineTraffic</a></div>`, { id: `ship:${x.mmsi}`, ship: true }, 12);
 }
 
-function render() { const v = visible(); renderLayers(); renderMarkers(v); renderList(v); renderDetail(); renderStatus(); renderPanes(v); }
+function render() { const v = visible(); renderLayers(); renderMarkers(v); renderList(v); renderDetail(); renderStatus(); renderPanes(v); if (state.mode === "paper") renderPaper(); }
 // Several sources can answer in one go; draw once after all of them are in.
 let renderQueued = false;
 function renderSoon() { if (renderQueued) return; renderQueued = true; queueMicrotask(() => { renderQueued = false; render(); }); }
@@ -1834,7 +1906,7 @@ const dayOf = (e) => (e.time || e.updated || new Date().toISOString()).slice(0, 
 const keyOf = (id) => id.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 120);
 function compact(e) {
   const o = {};
-  for (const k of ["id", "cat", "title", "lat", "lon", "time", "updated", "until", "sev", "mag", "depth", "tsunami", "level", "country", "url", "src", "approx", "verified", "vlabel", "articles", "outlets", "prob", "poly", "pic", "topic", "social", "npost", "nauthor", "posts", "headlines"]) if (e[k] != null && e[k] !== "") o[k] = e[k];
+  for (const k of ["id", "cat", "title", "lat", "lon", "time", "updated", "until", "sev", "mag", "depth", "tsunami", "level", "country", "url", "src", "approx", "verified", "vlabel", "articles", "outlets", "prob", "poly", "pic", "topic", "social", "npost", "nauthor", "posts", "headlines", "headline", "hlang", "headlineEs"]) if (e[k] != null && e[k] !== "") o[k] = e[k];
   if (e.desc) o.desc = String(e.desc).slice(0, 300);
   return o;
 }
@@ -2033,6 +2105,190 @@ document.getElementById("setSave").onclick = async () => {
   if (db) { try { await db.doc("config/ajustes").set(state.settings); } catch (e) { console.warn(e); } }
   watchAll(); pruneHistory();
 };
+
+// ---------- newspaper view ----------
+// The same events as the map, filters included, laid out as a front page and sections. Within a section the
+// order is severity, then verified before unverified, then how many outlets carry it, then the newest.
+// Headlines not written in Spanish come translated when possible, and each one can be switched back to its original.
+const PAPER_SECTIONS = [
+  { key: "seguridad", name: "Seguridad", kick: "Conflictos y atentados", cats: ["conflicto", "atentado"] },
+  { key: "naturales", name: "Catástrofes", kick: "Naturales", cats: ["sismo", "volcan", "tsunami", "ciclon", "inundacion", "incendio", "sequia"] },
+  { key: "meteo", name: "El tiempo", kick: "Avisos en el mundo", cats: ["meteo"] },
+  { key: "espana", name: "España", kick: "Todo lo que pasa aquí", cats: ["aviso_es"] },
+  { key: "mar", name: "Mar", kick: "Navegantes y naufragios", cats: ["maritimo", "naval"] },
+  { key: "accidentes", name: "Accidentes", kick: "Aéreos", cats: ["aereo"] },
+];
+const PAPER_GROUP = { naturales: "naturales", meteo: "meteo", espana: "meteo", mar: "mar", seguridad: "seguridad", accidentes: "accidentes" };
+const PAPER_MAX = 8;
+const LANG_NAME = { en: "inglés", fr: "francés", pt: "portugués", de: "alemán", it: "italiano", es: "castellano" };
+state.mode = "map";
+state.paperOrig = new Set();   // ids shown in their original language
+state.paperMore = new Set();   // sections unfolded past PAPER_MAX
+state.paperVerified = false;
+
+// Official feeds write in English with a fixed vocabulary, so their titles are put into Spanish by rule.
+const DIR_ES = (d) => d.replace(/W/g, "O");
+const GDACS_LEVEL = { green: "verde", orange: "naranja", red: "roja" };
+const GDACS_WHAT = { sismo: "terremoto", ciclon: "ciclón tropical", inundacion: "inundaciones", incendio: "incendio forestal", sequia: "sequía", volcan: "erupción volcánica", tsunami: "tsunami" };
+const NWS_ES = {
+  "Tornado Warning": "Aviso de tornado", "Tornado Watch": "Vigilancia de tornados", "Severe Thunderstorm Warning": "Aviso de tormenta severa",
+  "Severe Thunderstorm Watch": "Vigilancia de tormentas severas", "Flash Flood Warning": "Aviso de inundación repentina", "Flood Warning": "Aviso de inundación",
+  "Winter Storm Warning": "Aviso de tormenta invernal", "Blizzard Warning": "Aviso de ventisca", "Ice Storm Warning": "Aviso de tormenta de hielo",
+  "Hurricane Warning": "Aviso de huracán", "Tropical Storm Warning": "Aviso de tormenta tropical", "Storm Surge Warning": "Aviso de marea ciclónica",
+  "High Wind Warning": "Aviso de viento fuerte", "Extreme Wind Warning": "Aviso de viento extremo", "Excessive Heat Warning": "Aviso de calor extremo",
+  "Extreme Heat Warning": "Aviso de calor extremo", "Red Flag Warning": "Aviso de riesgo de incendio", "Dust Storm Warning": "Aviso de tormenta de polvo",
+  "Tsunami Warning": "Aviso de tsunami", "Special Marine Warning": "Aviso marítimo especial", "Extreme Cold Warning": "Aviso de frío extremo",
+};
+function ruleEs(e) {
+  const t = String(e.title || "");
+  if (e.src === "USGS") {
+    const m = t.match(/^M([\d.]+) · (?:(\d+) km ([NSEW]{1,3}) of )?(.+)$/);
+    if (m) return `Terremoto de magnitud ${m[1].replace(".", ",")} ${m[2] ? `a ${m[2]} km al ${DIR_ES(m[3])} de ${m[4]}` : `en ${m[4].replace(/^near the coast of /i, "la costa de ").replace(/ region$/i, "")}`}`;
+  }
+  if (e.src === "GDACS") {
+    const lvl = GDACS_LEVEL[String(e.level || "").toLowerCase()], mag = t.match(/Magnitude ([\d.]+)M/i)?.[1], name = t.match(/cyclone ([A-Z][A-Z0-9-]+)/)?.[1];
+    if (lvl && GDACS_WHAT[e.cat]) return `Alerta ${lvl} por ${GDACS_WHAT[e.cat]}${mag ? ` de magnitud ${mag.replace(".", ",")}` : ""}${name ? ` ${name.charAt(0)}${name.slice(1).toLowerCase()}` : ""}${e.country ? ` en ${e.country}` : ""}`;
+  }
+  if (e.src?.includes("NWS")) {
+    const [kind, where] = t.split(" · ");
+    if (NWS_ES[kind]) return `${NWS_ES[kind]}${where ? ` en ${where}` : ""}`;
+  }
+  return null;
+}
+// Headline of an event as {text in its own language, language, Spanish text or null}.
+const SPANISH_SRC = new Set(["AEMET"]);
+function paperHead(e) {
+  if (e.headline) return { orig: e.headline, lang: e.hlang || "en", es: e.headlineEs || browserEs.get(e.headline) || null };
+  const h = e.headlines?.[0];
+  if (h?.title) { const lang = h.lang || "en"; return { orig: h.title, lang, es: lang === "es" ? h.title : browserEs.get(h.title) || null }; }
+  if (SPANISH_SRC.has(e.src) || e.cat === "ciclon" && e.src?.includes("NHC") || e.src === "GDELT (prensa)" || e.social) return { orig: e.title, lang: "es", es: e.title };
+  const es = ruleEs(e);
+  return { orig: e.title, lang: "en", es: es || browserEs.get(e.title) || null };
+}
+// The rest goes through the browser's own translator where it has one (Chrome on a computer): free,
+// on the device, no limit. Elsewhere those few headlines stay in their original language.
+const browserEs = new Map(), translators = new Map();
+let translating = false;
+async function translateMissing(items) {
+  if (translating || !("Translator" in self)) return;
+  const todo = items.map((e) => [e, paperHead(e)]).filter(([, h]) => !h.es && h.lang !== "es" && !browserEs.has(h.orig));
+  if (!todo.length) return;
+  translating = true;
+  try {
+    for (const [, h] of todo) {
+      let tr = translators.get(h.lang);
+      if (tr === undefined) {
+        try {
+          const av = await Translator.availability({ sourceLanguage: h.lang, targetLanguage: "es" });
+          tr = av === "unavailable" ? null : await Translator.create({ sourceLanguage: h.lang, targetLanguage: "es" });
+        } catch { tr = null; }
+        translators.set(h.lang, tr);
+      }
+      if (!tr) continue;
+      try { browserEs.set(h.orig, await tr.translate(h.orig)); } catch { translators.set(h.lang, null); }
+    }
+  } finally { translating = false; }
+  if (state.mode === "paper") renderPaper();
+}
+const canTranslate = (lang) => "Translator" in self && translators.get(lang) !== null;
+
+const trusted = (e) => e.verified !== false;
+function paperRank(a, b) {
+  return (b.sev || 1) - (a.sev || 1) || trusted(b) - trusted(a) || (b.outlets?.length || 0) - (a.outlets?.length || 0)
+    || (Date.parse(b.updated || b.time) || 0) - (Date.parse(a.updated || a.time) || 0);
+}
+const inSpainEv = (e) => e.cat === "aviso_es" || countriesOf(e).has("ESP");
+function paperWhere(e) {
+  if (e.cat === "aviso_es") return e.country?.replace(" (España)", "") || "España";
+  // GDELT places repeat the country: "Hebron, Israel (general), Israel" -> "Hebron, Israel".
+  if (e.src === "GDELT (prensa)") return [...new Set(String(e.title).split(": ").slice(1).join(": ").replace(/ \(general\)/g, "").split(", "))].join(", ");
+  if (e.cat === "aereo" || e.cat === "naval") return String(e.title).split(" · ")[1] || e.country || "";
+  return e.country || "";
+}
+const MAD_DAY = new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit" });
+const MAD_HM = new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+function paperWhen(t) {
+  const d = new Date(t);
+  if (isNaN(d)) return "";
+  const day = MAD_DAY.format(d), now = new Date();
+  const label = day === MAD_DAY.format(now) ? "Hoy" : day === MAD_DAY.format(new Date(now - 864e5)) ? "Ayer" : day === MAD_DAY.format(new Date(+now + 864e5)) ? "Mañana"
+    : d.toLocaleDateString("es-ES", { timeZone: "Europe/Madrid", day: "numeric", month: "short" });
+  return `${Date.parse(t) > Date.now() + 60000 ? "Inicio " + label.toLowerCase() : label} ${MAD_HM.format(d)}`;
+}
+const SEAL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 2l2.6 2.2 3.4-.4.9 3.3 3 1.7-1.2 3.2 1.2 3.2-3 1.7-.9 3.3-3.4-.4L12 22l-2.6-2.2-3.4.4-.9-3.3-3-1.7L3.3 12 2.1 8.8l3-1.7.9-3.3 3.4.4z"/><path d="M8 12l3 3 5-6"/></svg>`;
+function paperTrust(e) {
+  if (!trusted(e)) return `<span class="punv">? Sin contrastar · ${e.social ? "redes" : "1 medio"}</span>`;
+  return `<span class="pok">${SEAL}${e.vlabel ? `Contrastada · ${esc(e.vlabel)}` : `Fuente oficial · ${esc(e.src)}`}</span>`;
+}
+function paperItem(e, size) {
+  const h = paperHead(e), foreign = h.lang !== "es";
+  const orig = foreign && (state.paperOrig.has(e.id) || !h.es);
+  const text = foreign ? (orig ? h.orig : h.es) : h.es || h.orig;
+  const lname = LANG_NAME[h.lang] || "otro idioma";
+  const toggle = !foreign ? ""
+    : h.es ? `<button type="button" class="pbtn lang" data-plang="${esc(e.id)}" aria-pressed="${orig}">${orig ? "Ver traducción" : `Ver original (${lname})`}</button>`
+    : `<button type="button" class="pbtn lang" disabled title="${canTranslate(h.lang) ? "Traduciendo…" : "Este navegador no puede traducir este titular"}">Original en ${lname} · sin traducir</button>`;
+  const where = paperWhere(e);
+  const tag = size === "lead" ? "h2" : "h3";
+  return `<article class="pitem${size === "lead" ? " lead" : ""}" style="--sev:${sevColor(e.sev)}">
+    <div class="prow"><span class="pp${trusted(e) ? "" : " unv"}" title="Prioridad ${prioOf(e.sev)}: gravedad ${SEV[e.sev || 1].toLowerCase()}">${prioOf(e.sev)}</span><span class="pkick">${esc(CATS[e.cat]?.name || e.cat)}${where ? ` · ${esc(where)}` : ""}</span></div>
+    <${tag} class="phl${orig && foreign ? " orig" : ""}"${orig && foreign ? ` lang="${esc(h.lang)}"` : ""}>${esc(text)}</${tag}>
+    ${size === "lead" && e.desc ? `<p class="ptext">${esc(e.desc)}</p>` : ""}
+    <div class="prow">${paperTrust(e)}<span class="pmeta">${esc(paperWhen(e.time))}${size === "lead" ? ` · ${esc(e.src)}` : ""}</span>${toggle}</div>
+    ${size === "side" ? "" : `<div class="pacts"><button type="button" class="pbtn${size === "lead" ? " pri" : ""}" data-pmap="${esc(e.id)}">${size === "lead" ? "Ver en el mapa" : "Mapa"}</button>${e.url ? `<a class="pbtn" href="${esc(e.url)}" target="_blank" rel="noopener">${isNews(e) ? (size === "lead" ? "Ir a la noticia" : "Noticia") : "Fuente"}</a>` : ""}${size === "lead" ? `<button type="button" class="pbtn" data-psave="${esc(e.id)}" aria-pressed="${state.saved.has(e.id)}">${state.saved.has(e.id) ? "Guardada" : "Guardar"}</button>` : ""}</div>`}
+  </article>`;
+}
+function renderPaper() {
+  const box = document.getElementById("paper");
+  const all = visible().filter((e) => e.cat !== "redes" && (!state.paperVerified || trusted(e))).sort(paperRank);
+  const lead = all[0], side = all.slice(1).filter((e) => (e.sev || 1) >= 3).slice(0, 3);
+  const front = new Set([lead, ...side].filter(Boolean).map((e) => e.id));
+  const rest = all.filter((e) => !front.has(e.id));
+  const onCats = Object.keys(state.cats).filter((c) => state.cats[c] && c !== "redes");
+  const now = new Date();
+  const secs = PAPER_SECTIONS.map((s) => {
+    const items = rest.filter((e) => s.key === "espana" ? inSpainEv(e) : s.cats.includes(e.cat) && !inSpainEv(e));
+    const on = s.key === "espana" ? onCats.length : s.cats.some((c) => state.cats[c]);
+    const more = state.paperMore.has(s.key), shown = more ? items : items.slice(0, PAPER_MAX);
+    const body = !on ? `<p class="ptext pempty">Esta sección está vacía porque sus capas están apagadas. Actívalas en el mapa y sus noticias aparecerán aquí.</p><div class="pacts"><button type="button" class="pbtn" data-players="${PAPER_GROUP[s.key]}">Ir a las capas</button></div>`
+      : !items.length ? `<p class="ptext pempty">Sin noticias con los filtros de ahora.</p>`
+      : shown.map((e) => paperItem(e)).join("") + (items.length > PAPER_MAX ? `<div class="pacts"><button type="button" class="pbtn" data-pmore="${s.key}" aria-expanded="${more}">${more ? "Ver menos" : `Ver las ${items.length}`}</button></div>` : "");
+    return `<section class="psec" aria-labelledby="ps_${s.key}"><div class="psech"><h2 class="psect" id="ps_${s.key}">${s.name}</h2><span class="pkick">${s.kick}</span></div>${body}</section>`;
+  }).join("");
+  const layers = onCats.map((c) => CATS[c].name);
+  const html = `<div class="sheetp">
+    <div class="pdate"><span class="pkick">${esc(now.toLocaleDateString("es-ES", { timeZone: "Europe/Madrid", weekday: "long", day: "numeric", month: "long", year: "numeric" }))}</span><span class="pkick">Edición de las ${MAD_HM.format(now)} · Madrid</span></div>
+    <h2 class="pmast">El Diario de World Alert</h2>
+    <div class="pstrip"><span class="ptext psmall">${layers.length ? `Hecho con tus capas activas: ${esc(layers.join(", "))} · ${all.length} ${all.length === 1 ? "noticia" : "noticias"}` : "Todas las capas están apagadas. Enciende en el mapa las que quieras leer aquí."}</span>
+      <div class="pacts"><button type="button" class="pbtn" data-prefresh="1">Actualizar</button><button type="button" class="pbtn" data-pverified="1" aria-pressed="${state.paperVerified}">Solo contrastadas</button></div></div>
+    ${lead ? `<section class="pfront" aria-label="Portada"><div class="plead">${paperItem(lead, "lead")}</div>${side.length ? `<aside class="pside" aria-label="Lo más grave ahora"><div class="pkick">Lo más grave ahora</div>${side.map((e) => paperItem(e, "side")).join("")}</aside>` : ""}</section>` : ""}
+    <div class="pgrid">${secs}</div>
+    <footer class="pfoot"><span class="pkick">Cómo se ordena</span><span class="ptext psmall">Primero la gravedad (P1 a P4), luego lo contrastado, luego cuántos medios lo cuentan y por último lo más reciente. Usa el periodo, la gravedad y los países que tengas elegidos en el mapa.</span>
+      <span class="prow"><span class="pok">${SEAL}Contrastada</span><span class="ptext psmall">fuente oficial o 2 medios o más</span></span><span class="prow"><span class="punv">? Sin contrastar</span><span class="ptext psmall">un solo medio</span></span></footer>
+  </div>`;
+  keepFocus(box, () => box.innerHTML = html);
+  translateMissing(all);
+}
+function setMode(mode, focus = true) {
+  state.mode = mode;
+  document.querySelector(".app").dataset.mode = mode;
+  document.getElementById("paper").hidden = mode !== "paper";
+  for (const b of document.querySelectorAll("#modesw button")) b.setAttribute("aria-pressed", String(b.dataset.mode === mode));
+  if (mode === "paper") { renderPaper(); if (focus) document.getElementById("paper").focus({ preventScroll: true }); }
+  else { layout(); render(); }
+}
+document.getElementById("modesw").addEventListener("click", (ev) => { const b = ev.target.closest("button[data-mode]"); if (b && b.dataset.mode !== state.mode) setMode(b.dataset.mode); });
+document.getElementById("paper").addEventListener("click", (ev) => {
+  const b = ev.target.closest("button"); if (!b) return;
+  const d = b.dataset;
+  if (d.plang) { state.paperOrig.has(d.plang) ? state.paperOrig.delete(d.plang) : state.paperOrig.add(d.plang); renderPaper(); }
+  else if (d.pmore) { state.paperMore.has(d.pmore) ? state.paperMore.delete(d.pmore) : state.paperMore.add(d.pmore); renderPaper(); }
+  else if (d.pverified) { state.paperVerified = !state.paperVerified; renderPaper(); }
+  else if (d.prefresh) tick(true);
+  else if (d.psave) { toggleSave(d.psave); renderPaper(); }
+  else if (d.pmap) { setMode("map", false); select(d.pmap, true); }
+  else if (d.players) { setMode("map", false); state.open[d.players] = true; saveUi(); renderLayers(); document.getElementById("layers").scrollIntoView({ block: "start" }); document.querySelector(`#layers [data-open="${d.players}"]`)?.focus(); }
+});
 
 // ---------- boot ----------
 window.addEventListener("resize", () => { clearTimeout(window.__rz); window.__rz = setTimeout(layout, 120); });
