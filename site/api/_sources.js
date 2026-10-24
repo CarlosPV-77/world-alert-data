@@ -1,14 +1,14 @@
 // World Alert sources: official hazard feeds and geolocated news, normalized to one event shape.
 import { XMLParser } from "fast-xml-parser";
-import { inflateRawSync } from "node:zlib";
+import { inflateRawSync, gunzipSync } from "node:zlib";
 
 const UA = "WorldAlert/1.0 (personal hazard map)";
 const xml = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "@", removeNSPrefix: false });
 
 const BROWSER_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36";
 
-async function get(url, type = "json") {
-  const r = await fetch(url, { headers: { "User-Agent": url.includes("volcano.si.edu") ? BROWSER_UA : UA, Accept: type === "json" ? "application/json, application/geo+json" : "application/xml, text/xml, */*" }, signal: AbortSignal.timeout(12000) });
+async function get(url, type = "json", ua) {
+  const r = await fetch(url, { headers: { "User-Agent": ua || (url.includes("volcano.si.edu") ? BROWSER_UA : UA), Accept: type === "json" ? "application/json, application/geo+json" : "application/xml, text/xml, */*" }, signal: AbortSignal.timeout(12000) });
   if (!r.ok) throw new Error(`${r.status} ${url}`);
   if (type === "text") return r.text();
   if (type === "buffer") return Buffer.from(await r.arrayBuffer());
@@ -127,6 +127,75 @@ async function gdeltNews(cat, keep, files = 4) {
   });
 }
 
+// AEMET Meteoalerta: the public warnings page links a tar.gz of GeoJSON files, one per hour of the
+// next two days (Península y Baleares, Canarias), with each warned zone as a polygon. No API key.
+const AEMET_PAGE = "https://www.aemet.es/es/eltiempo/prediccion/avisos";
+
+function untar(buf) {
+  const files = [];
+  for (let o = 0; o + 512 <= buf.length;) {
+    const name = buf.toString("utf8", o, o + 100).replace(/\0.*$/s, "");
+    if (!name) break;
+    const size = parseInt(buf.toString("utf8", o + 124, o + 136).replace(/\0.*$/s, "").trim() || "0", 8);
+    files.push({ name, body: buf.subarray(o + 512, o + 512 + size) });
+    o += 512 + Math.ceil(size / 512) * 512;
+  }
+  return files;
+}
+
+// Zone outlines are surveyed in detail; a ~100 m grid is plenty on the map and keeps the feed small.
+function thinRing(ring) {
+  const out = [];
+  for (const [x, y] of ring) {
+    const pt = [Math.round(x * 1000) / 1000, Math.round(y * 1000) / 1000], last = out[out.length - 1];
+    if (!last || Math.abs(last[0] - pt[0]) + Math.abs(last[1] - pt[1]) >= 0.004) out.push(pt);
+  }
+  if (out.length > 2) out.push(out[0]);
+  return out.length >= 4 ? out : null;
+}
+function thinGeom(g) {
+  if (g?.type === "Polygon") { const r = g.coordinates.map(thinRing).filter(Boolean); return r.length ? { type: "Polygon", coordinates: r } : null; }
+  if (g?.type === "MultiPolygon") { const p = g.coordinates.map((poly) => poly.map(thinRing).filter(Boolean)).filter((poly) => poly.length); return p.length ? { type: "MultiPolygon", coordinates: p } : null; }
+  return null;
+}
+function centerOf(g) {
+  const pts = (g.type === "Polygon" ? [g.coordinates[0]] : g.coordinates.map((p) => p[0])).flat();
+  const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]);
+  return [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2];
+}
+const AEMET_SEV = { amarillo: 2, naranja: 3, rojo: 4 };
+
+async function aemet() {
+  const page = await get(AEMET_PAGE, "text", BROWSER_UA);
+  const link = page.match(/\/es\/geojson\/download\/avisos\/[^"']+\.tar\.gz/)?.[0];
+  if (!link) throw new Error("la página de avisos no enlaza la descarga GeoJSON");
+  const files = untar(gunzipSync(await get("https://www.aemet.es" + link, "buffer", BROWSER_UA)));
+  const out = new Map();
+  for (const f of files) {
+    if (!f.name.endsWith(".geojson")) continue;
+    let fc; try { fc = JSON.parse(f.body.toString("utf8")); } catch { continue; }
+    for (const ft of fc.features || []) {
+      const p = ft.properties || {};
+      const geom = thinGeom(ft.geometry);
+      if (!geom) continue;
+      for (const code of (p.Fen_avisos || []).map((c) => String(c).trim()).filter(Boolean)) {
+        const id = p[`Identf_${code}`] || `${p.COD_Z}:${code}:${p[`Onset_${code}`]}`;
+        if (out.has(`aemet:${id}`)) continue;
+        const color = txt(p[`Sev_${code}`]).trim(), what = txt(p[code]).trim() || code;
+        const [lon, lat] = centerOf(geom);
+        out.set(`aemet:${id}`, {
+          id: `aemet:${id}`, cat: "aviso_es", title: `Aviso ${color.toLowerCase()} por ${what.toLowerCase()} · ${p.Nombre_zona}`,
+          desc: clip(p[`Des_${code}`] || p[`Resum_${code}`], 400), lat, lon, poly: geom,
+          time: iso(p[`Onset_${code}`]), until: iso(p[`Expire_${code}`]), sev: AEMET_SEV[color.toLowerCase()] || 1,
+          level: `${color} · ${what}`, country: p.Provincia ? `${p.Provincia} (España)` : "España",
+          prob: p[`Prb_${code}`], url: AEMET_PAGE, src: "AEMET",
+        });
+      }
+    }
+  }
+  return [...out.values()];
+}
+
 // GDELT answers 404 to Vercel's servers but not to GitHub's, so on Vercel the news layers come
 // from the copy the "gdelt" workflow publishes every 15 minutes on the repo's live branch.
 const MIRROR = "https://raw.githubusercontent.com/CarlosPV-77/world-alert-data/live/";
@@ -220,6 +289,8 @@ const SOURCES = {
       return { id: `nws:${p.id}`, cat: "meteo", title: `${p.event} · ${clip(p.areaDesc, 80)}`, desc: clip(p.headline || p.description, 500), lat, lon, time: iso(p.sent), until: iso(p.expires), sev: p.severity === "Extreme" ? 4 : 3, url: "https://alerts.weather.gov", src: "NOAA NWS" };
     }).filter(Boolean);
   },
+
+  async aemet() { return aemet(); },
 
   async conflictos() { return news("conflictos", "conflicto", isConflicto); },
   async atentados() { return news("atentados", "atentado", isAtentado); },
