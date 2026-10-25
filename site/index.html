@@ -496,17 +496,15 @@ button.plink:hover span:first-child { text-decoration: underline; text-underline
 /* Phones and portrait tablets: the map wall spans the width above the dispatch column, and the page scrolls.
    Split views stack their maps, since side by side each country would get under 450 px. */
 @media (max-width: 900px) {
-  body { overflow: auto; }
-  .app { height: auto; min-height: 100%; }
-  main { grid-template-columns: 1fr; }
-  .mapwrap { height: 58vh; }
-  .mapwrap:not([data-view="world"]) { height: 82vh; }
+  /* The map keeps its own block at the top and takes every touch; the panel below scrolls on its own with one finger. */
+  main { grid-template-columns: 1fr; grid-template-rows: 50vh minmax(0, 1fr); grid-template-rows: 50dvh minmax(0, 1fr); }
+  main:has(.mapwrap:not([data-view="world"])) { grid-template-rows: 64vh minmax(0, 1fr); grid-template-rows: 64dvh minmax(0, 1fr); }
   .mapwrap[data-view="split"] #paneA { inset: 0 0 50% 0; }
   .mapwrap[data-view="split"] #paneB { inset: 50% 0 0 0; border-left: 0; border-top: 2px solid var(--rail-line); }
   .mapwrap[data-view="t"] #map { inset: 0 0 66.6% 0; }
   .mapwrap[data-view="t"] #paneA { inset: 33.4% 0 33.3% 0; }
   .mapwrap[data-view="t"] #paneB { inset: 66.7% 0 0 0; border-left: 0; }
-  aside.side { border-left: 0; border-top: 1px solid var(--line-2); grid-template-rows: auto auto auto; }
+  aside.side { border-left: 0; border-top: 1px solid var(--line-2); grid-template-rows: auto auto auto; overflow-y: auto; overscroll-behavior: contain; }
   .list { overflow: visible; }
   .layers { max-height: none; }
 }
@@ -948,9 +946,7 @@ const map = new maplibregl.Map({
   container: "map",
   style: { version: 8, glyphs: "https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf", projection: { type: state.globe ? "globe" : "mercator" }, sources: {}, layers: [{ id: "bg", type: "background", paint: { "background-color": "#070c12" } }] },
   center: HOME.center, zoom: HOME.zoom, minZoom: 0.6, maxZoom: 17, attributionControl: { compact: true }, dragRotate: false,
-  // On a phone the page scrolls past the map; one finger scrolls the page, two move the map.
-  cooperativeGestures: matchMedia("(max-width: 900px) and (pointer: coarse)").matches,
-  locale: { "CooperativeGesturesHandler.MobileHelpText": "Usa dos dedos para mover el mapa", "CooperativeGesturesHandler.WindowsHelpText": "Usa Ctrl + rueda para hacer zoom en el mapa", "CooperativeGesturesHandler.MacHelpText": "Usa ⌘ + rueda para hacer zoom en el mapa" },
+  // On a phone the map has its own block and the panel scrolls apart, so one finger always moves the map.
 });
 map.touchZoomRotate.disableRotation();
 const mapReady = new Promise((r) => map.on("load", r));
@@ -1268,7 +1264,6 @@ function makePane(p) {
   p.map = new maplibregl.Map({
     container: p.el.querySelector(".pmap"), style: paneStyle(), center: HOME.center, zoom: HOME.zoom, minZoom: 0.6, maxZoom: 17,
     attributionControl: { compact: true }, dragRotate: false,
-    cooperativeGestures: matchMedia("(max-width: 900px) and (pointer: coarse)").matches,
   });
   p.map.touchZoomRotate.disableRotation();
   p.map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
