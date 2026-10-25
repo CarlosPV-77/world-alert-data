@@ -295,6 +295,11 @@ aside.side { background: var(--panel); border-left: 1px solid var(--line-2); dis
 .litem svg { width: 13px; height: 13px; flex: 0 0 auto; }
 .litem[aria-checked="false"] .nm { color: var(--muted); }
 .litem .hint { display: block; font-size: 12px; color: var(--muted); }
+.lsubs { display: grid; margin-left: 22px; border-left: 1px solid var(--line); padding-left: 10px; }
+.litem.sub { padding: 4px 2px; font-size: 12px; }
+.litem.sub .tg { width: 24px; height: 13px; }
+.litem.sub .tg::after { width: 7px; height: 7px; }
+.litem.sub[aria-checked="true"] > .tg::after { transform: translateX(11px); }
 .shipkey { display: flex; flex-wrap: wrap; gap: 2px 10px; margin-top: 4px; font-size: 12px; color: var(--muted); }
 .shipkey span { display: inline-flex; align-items: center; gap: 5px; }
 .shipkey i { width: 8px; height: 8px; display: inline-block; }
@@ -368,6 +373,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 .srcrow .nm { font-weight: 500; }
 .srcrow .sub { grid-column: 2 / 4; font-size: 12px; color: var(--muted); font-family: var(--font-data); }
 .srcrow .sub.err { color: var(--s3); }
+.srcrow .sub.warn { color: var(--s2); }
 .tgrow { display: grid; gap: 6px; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .tickset { display: grid; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .tickset .sub { font-size: 13px; color: var(--muted); }
@@ -436,12 +442,29 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 .pitem:last-child, .pitem.lead { border-bottom: 0; }
 .pgrid .phl { font-size: 20px; line-height: 1.18; }
 .pempty { color: var(--paper-muted); }
+.pgrid.two { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+.pmast.small { font-size: clamp(24px, 3vw, 34px); border-bottom: 3px double var(--paper-ink); padding-bottom: 10px; }
+.ppager { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.ppos { display: inline-flex; align-items: center; gap: 8px; }
+.ppos select { font: inherit; letter-spacing: .06em; min-height: 32px; padding: 0 6px; color: var(--paper-ink); background: transparent; border: 1px solid var(--paper-ink); border-radius: 0; }
+.ppage .psect { font-size: clamp(28px, 3.4vw, 40px); }
+.parea { color: var(--rail); }
+.pindex { border-top: 3px double var(--paper-ink); padding-top: 10px; display: flex; flex-direction: column; gap: 14px; }
+.pidxcols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px 32px; }
+.pidxcols ol { list-style: none; margin: 6px 0 0; padding: 0; }
+.plink { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; width: 100%; padding: 8px 0; border: 0; border-bottom: 1px dotted var(--paper-rule); background: none; text-align: left; font-family: var(--font-paper); font-size: 18px; font-weight: 700; color: #121417; }
+button.plink:hover span:first-child { text-decoration: underline; text-underline-offset: 3px; }
+.plink.off { color: var(--paper-muted); font-weight: 400; }
 .pfoot { border-top: 1px solid var(--paper-ink); padding-top: 12px; display: flex; flex-wrap: wrap; gap: 18px; align-items: center; }
 @media (max-width: 760px) {
   .modesw { grid-column: 1 / -1; grid-row: 4; }
   .modesw button { flex: 1; }
   .paper { padding: 0 0 32px; }
   .pside { border-left: 0; padding-left: 0; border-top: 1px solid var(--paper-ink); padding-top: 12px; }
+  .ppager { display: grid; grid-template-columns: 1fr 1fr; }
+  .ppager .pbtn { justify-content: center; }
+  .ppos { grid-column: 1 / -1; order: -1; justify-content: center; }
+  .psech { flex-direction: column; gap: 4px; }
 }
 @media (pointer: coarse) { .modesw button, .pbtn { min-height: 44px; } .pbtn.lang { min-height: 36px; } }
 
@@ -770,13 +793,18 @@ const SOURCE_CATS = {
   aereos: ["aereo"], maritimos: ["naval"],
   mastodon: ["redes"], bluesky: ["redes"], telegram: ["redes"], teletexto: ["teletexto"],
 };
-// The ticker also needs these, whatever layers are on: world disasters and news, plus Spain's top official alerts.
 // The ticker picks its own kinds of alert in Ajustes; road traffic feeds never go in, they would crowd out the rest.
 const TICK_KINDS = Object.keys(CATS).filter((c) => c !== "redes");
 const TICK_KINDS_OFF = ["meteo", "es_loc", "maritimo"];
 const TICK_NO_SOURCES = ["dgt", "euskadi"];
 const tickerWants = (k) => state.ov.ticker && !TICK_NO_SOURCES.includes(k) && SOURCE_CATS[k].some((c) => state.settings.ticker.cats[c]);
-const wanted = (k) => state.settings.enabled[k] && (SOURCE_CATS[k].some((c) => state.cats[c]) || tickerWants(k));
+// Sources behind each layer, in panel order, so a layer fed by several can be split by source.
+const CAT_SOURCES = {};
+for (const [k, cs] of Object.entries(SOURCE_CATS)) if (!SOURCES[k].off) for (const c of cs) (CAT_SOURCES[c] ||= []).push(k);
+const srcOn = (c, k) => !state.srcOff.has(`${c}|${k}`);
+// The newspaper reads every source but the social ones, whatever layers are on.
+const PAPER_SKIP = new Set(["mastodon", "bluesky", "telegram"]);
+const wanted = (k) => state.settings.enabled[k] && (SOURCE_CATS[k].some((c) => state.cats[c] && srcOn(c, k)) || tickerWants(k) || (state.mode === "paper" && !PAPER_SKIP.has(k)));
 const SEV = ["", "Baja", "Media", "Alta", "Crítica"];
 const sevColor = (s) => `var(--s${Math.min(4, Math.max(1, s || 1))})`;
 // Dispatch priority: Crítica is P1, Baja is P4.
@@ -801,6 +829,7 @@ const state = {
   srcStatus: {},              // source -> {ok, at, n, error}
   // Every layer starts off on each visit; the viewer turns on what they want to see.
   cats: Object.fromEntries(Object.keys(CATS).map((c) => [c, false])),
+  srcOff: new Set(),           // "layer|source" pairs switched off inside a layer that is on
   period: 24, minSev: 1, selected: null, base: "s2", globe: false, view: "world",
   ov: { ...Object.fromEntries(Object.keys(OVERLAYS).map((k) => [k, false])), ships: false },
   countries: new Set(),        // ISO3 codes the viewer is following; empty = whole world
@@ -816,7 +845,7 @@ const savedUi = store.get("ui");
 if (savedUi) {
   Object.assign(state.open, savedUi.open || {});
   (savedUi.countries || []).forEach((c) => state.countries.add(c));
-  state.period = savedUi.period ?? 24; state.minSev = savedUi.minSev ?? 1; state.base = savedUi.base || "s2"; state.globe = !!savedUi.globe; state.view = ["split", "t"].includes(savedUi.view) ? savedUi.view : "world";
+  state.period = savedUi.period ?? 24; state.minSev = savedUi.minSev ?? 1; state.base = savedUi.base || "s2"; state.globe = !!savedUi.globe; (savedUi.srcOff || []).forEach((k) => state.srcOff.add(k)); state.view = ["split", "t"].includes(savedUi.view) ? savedUi.view : "world";
 }
 const localSettings = store.get("settings");
 if (localSettings) mergeSettings(localSettings);
@@ -1154,7 +1183,7 @@ function markerSize(e) {
   return 40 + (e.sev || 1) * 22;
 }
 function passes(e, anyCat) {
-  if (!anyCat && !state.cats[e.cat]) return false;
+  if (!anyCat && (!state.cats[e.cat] || state.srcOff.has(`${e.cat}|${sourceOf(e)}`))) return false;
   if (isFalse(e)) return false;
   if ((e.sev || 1) < state.minSev) return false;
   const from = state.period ? Date.now() - state.period * HOUR : 0;
@@ -1332,15 +1361,27 @@ for (const p of PANES) p.el.addEventListener("change", (ev) => {
 function legendShape(cat, color = "currentColor") {
   return picSvg(CATS[cat].pic).replace('stroke="currentColor"', `stroke="${color}"`);
 }
-// Per-layer counts with the other filters applied, whether or not the layer is on.
+// Per-layer and per-source counts with the other filters applied, whether or not the layer is on.
 function counts() {
   const n = {};
-  for (const e of state.events.values()) if (passes(e, true)) n[e.cat] = (n[e.cat] || 0) + 1;
+  for (const e of state.events.values()) if (passes(e, true)) { n[e.cat] = (n[e.cat] || 0) + 1; const k = `${e.cat}|${sourceOf(e)}`; n[k] = (n[k] || 0) + 1; }
   return n;
+}
+// "IGN · terremotos en España" -> name "IGN", hint "terremotos en España".
+const srcLabel = (k) => { const [nm, ...rest] = SOURCES[k].name.split(" · "); return { nm, hint: rest.join(" · ") }; };
+// One layer row, followed by one switch per source when several feed it; a single source is named under the layer.
+function layerRows(c, n) {
+  const ks = CAT_SOURCES[c] || [], one = ks.length === 1 ? srcLabel(ks[0]) : null;
+  const row = `<button type="button" class="litem" role="switch" data-cat="${c}" aria-checked="${!!state.cats[c]}">${sw}${legendShape(c)}<span class="nm">${CATS[c].name}${one ? `<span class="hint">${esc(one.nm)}</span>` : ""}</span><span class="n">${n[c] || 0}</span></button>`;
+  if (ks.length < 2) return row;
+  return row + `<div class="lsubs" role="group" aria-label="Fuentes de ${esc(CATS[c].name)}">` + ks.map((k) => {
+    const l = srcLabel(k), on = !!state.cats[c] && srcOn(c, k);
+    return `<button type="button" class="litem sub" role="switch" data-csrc="${c}|${k}" aria-checked="${on}">${sw}<span class="nm">${esc(l.nm)}${l.hint ? `<span class="hint">${esc(l.hint)}</span>` : ""}</span><span class="n">${n[`${c}|${k}`] || 0}</span></button>`;
+  }).join("") + "</div>";
 }
 const sw = '<span class="tg" aria-hidden="true"></span>';
 // Redraws replace the buttons; keep keyboard focus on the same control afterwards.
-const FOCUS_KEYS = ["data-pane", "data-plang", "data-pmore", "data-pverified", "data-psave", "data-prefresh", "data-cat", "data-group", "data-open", "data-ov", "data-id", "data-save", "data-act", "data-del", "data-false", "data-falsewhy", "data-unfalse", "data-unmute", "id"];
+const FOCUS_KEYS = ["data-pane", "data-plang", "data-ppage", "data-pverified", "data-psave", "data-prefresh", "data-cat", "data-csrc", "data-group", "data-open", "data-ov", "data-id", "data-save", "data-act", "data-del", "data-false", "data-falsewhy", "data-unfalse", "data-unmute", "id"];
 function keepFocus(box, redraw) {
   const f = document.activeElement;
   const key = f && box.contains(f) ? FOCUS_KEYS.map((a) => f.getAttribute(a) && `[${a}="${CSS.escape(f.getAttribute(a))}"]`).find(Boolean) : null;
@@ -1364,7 +1405,7 @@ function renderLayers() {
       const on = cats.filter((c) => state.cats[c]).length;
       const total = cats.reduce((a, c) => a + (n[c] || 0), 0);
       head = `<button type="button" class="gtoggle" role="switch" data-group="${g}" aria-checked="${on === cats.length ? "true" : on ? "mixed" : "false"}" aria-label="Mostrar u ocultar ${gname}">${sw}</button>`;
-      items = cats.map((c) => `<button type="button" class="litem" role="switch" data-cat="${c}" aria-checked="${!!state.cats[c]}">${sw}${legendShape(c)}<span class="nm">${CATS[c].name}</span><span class="n">${n[c] || 0}</span></button>`).join("");
+      items = cats.map((c) => layerRows(c, n)).join("");
       if (g === "mar") items += shipRow();
       gname += `<span class="n">${total}</span>`;
     }
@@ -1384,6 +1425,14 @@ document.getElementById("layers").addEventListener("click", (ev) => {
     cats.forEach((c) => (state.cats[c] = !all)); saveUi(); render(); tick(); return;
   }
   if (t.dataset.cat) { state.cats[t.dataset.cat] = !state.cats[t.dataset.cat]; saveUi(); render(); tick(); return; }
+  if (t.dataset.csrc) {
+    // A source switch on a layer that is off turns the layer on with just that source.
+    const [c, k] = t.dataset.csrc.split("|");
+    if (!state.cats[c]) { state.cats[c] = true; for (const o of CAT_SOURCES[c]) state.srcOff[o === k ? "delete" : "add"](`${c}|${o}`); }
+    else if (srcOn(c, k)) { state.srcOff.add(t.dataset.csrc); if (CAT_SOURCES[c].every((o) => !srcOn(c, o))) { state.cats[c] = false; CAT_SOURCES[c].forEach((o) => state.srcOff.delete(`${c}|${o}`)); } }
+    else state.srcOff.delete(t.dataset.csrc);
+    saveUi(); render(); tick(); return;
+  }
   if (t.dataset.ov === "ticker") { state.ov.ticker = !state.ov.ticker; render(); tick(); return; }
   if (t.dataset.ov) { state.ov[t.dataset.ov] = !state.ov[t.dataset.ov]; saveUi(); if (map.getLayer("land")) applyOverlays(); renderLayers(); return; }
   if (t.id === "globeBtn") { state.globe = !state.globe; t.setAttribute("aria-pressed", String(state.globe)); saveUi(); map.setProjection({ type: state.globe ? "globe" : "mercator" }); }
@@ -1395,7 +1444,7 @@ document.getElementById("fPeriod").value = String(state.period);
 document.getElementById("fSev").value = String(state.minSev);
 document.getElementById("fPeriod").onchange = (e) => { state.period = +e.target.value; saveUi(); render(); };
 document.getElementById("fSev").onchange = (e) => { state.minSev = +e.target.value; saveUi(); render(); };
-function saveUi() { store.set("ui", { open: state.open, countries: [...state.countries], period: state.period, minSev: state.minSev, base: state.base, globe: state.globe, view: state.view }); }
+function saveUi() { store.set("ui", { open: state.open, countries: [...state.countries], period: state.period, minSev: state.minSev, base: state.base, globe: state.globe, view: state.view, srcOff: [...state.srcOff] }); }
 
 // ---------- countries ----------
 const cq = document.getElementById("cq"), copts = document.getElementById("copts");
@@ -1918,7 +1967,7 @@ function renderStatus() {
   const live = ok > 0;
   document.getElementById("liveDot").classList.toggle("live", live);
   document.getElementById("status").textContent = state.lastUpdate
-    ? `${live ? "En directo" : "Ninguna fuente responde"} · ${ok}/${total} fuentes · actualizado ${rel(state.lastUpdate)} · ${state.events.size} en el histórico`
+    ? `${live ? "En directo" : total ? "Ninguna fuente responde" : "Sin capas encendidas"} · ${ok}/${total} fuentes · actualizado ${rel(state.lastUpdate)} · ${state.events.size} en el histórico`
     : !Object.keys(SOURCES).some(wanted) ? "Sin capas activas: no se consulta ninguna fuente"
     : state.mcpState || "Conectando con las fuentes…";
 }
@@ -1978,7 +2027,7 @@ function ingest(src, feed, at) {
   state.live[src] = ids;
   if (state.countries.size) for (const [e, old] of fresh) if (passes(e)) notify(e, old);
   const st = feed.status?.[src];
-  state.srcStatus[src] = st?.ok === false ? { ok: false, at, error: st.error } : { ok: true, at, n: ids.size };
+  state.srcStatus[src] = st?.ok === false ? { ok: false, at, error: st.error } : { ok: true, at, n: ids.size, stale: st?.stale };
   state.lastUpdate = new Date(at).toISOString();
   renderSoon();
   scheduleFlush();
@@ -2117,12 +2166,14 @@ function fmtMin(m) { return m < 60 ? `cada ${m} min` : m < 1440 ? `cada ${m / 60
 function openSettings() {
   document.getElementById("srcRows").innerHTML = Object.entries(SOURCES).map(([k, s]) => {
     const st = state.srcStatus[k];
-    const sub = !state.settings.enabled[k] ? "Desactivada" : !st ? "Sin datos todavía" : st.ok ? `OK · ${st.n} alertas · ${rel(new Date(st.at).toISOString())}` : `Error: ${st.error}`;
+    const sub = !state.settings.enabled[k] ? "Desactivada" : !st ? "Sin datos todavía"
+      : st.stale ? `Sin novedades desde ${fmt(st.stale.since)}. ${st.stale.error} Mientras tanto se muestran las ${st.n} últimas noticias que llegaron.`
+      : st.ok ? `OK · ${st.n} alertas · ${rel(new Date(st.at).toISOString())}` : `Error: ${st.error}`;
     return `<div class="srcrow">
       <input type="checkbox" id="en_${k}" ${state.settings.enabled[k] ? "checked" : ""} aria-label="Activar ${esc(s.name)}">
       <label class="nm" for="en_${k}">${esc(s.name)}</label>
       <select id="iv_${k}" aria-label="Frecuencia de ${esc(s.name)}">${s.opts.map((o) => `<option value="${o}" ${o === +state.settings.intervals[k] ? "selected" : ""}>${fmtMin(o)}</option>`).join("")}</select>
-      <span class="sub${st && !st.ok ? " err" : ""}">${esc(sub)}</span></div>`;
+      <span class="sub${st && !st.ok ? " err" : st?.stale ? " warn" : ""}">${esc(sub)}</span></div>`;
   }).join("");
   document.getElementById("retention").value = String(state.settings.retention);
   document.getElementById("tgChans").value = state.settings.tg;
@@ -2201,25 +2252,35 @@ document.getElementById("setSave").onclick = async () => {
 };
 
 // ---------- newspaper view ----------
-// The same events as the map, filters included, laid out as a front page and sections. Within a section the
-// order is severity, then verified before unverified, then how many outlets carry it, then the newest.
+// A newspaper of the last day, split into Nacional (Spain) and Internacional, that ignores the map's layers and filters:
+// opening it fetches every source but the social ones. It has a front page, then pages per section that turn like a paper.
+// Within a section the order is severity, then verified before unverified, then how many outlets carry it, then the newest.
 // Headlines not written in Spanish come translated when possible, and each one can be switched back to its original.
-const PAPER_SECTIONS = [
-  { key: "seguridad", name: "Seguridad", kick: "Conflictos y atentados", cats: ["conflicto", "atentado"] },
-  { key: "naturales", name: "Catástrofes", kick: "Naturales", cats: ["sismo", "volcan", "tsunami", "ciclon", "inundacion", "incendio", "sequia"] },
-  { key: "meteo", name: "El tiempo", kick: "Avisos en el mundo", cats: ["meteo"] },
-  { key: "espana", name: "España", kick: "Todo lo que pasa aquí", cats: ["aviso_es", "es_nac", "es_aut", "es_loc"] },
-  { key: "mar", name: "Mar", kick: "Navegantes y naufragios", cats: ["maritimo", "naval"] },
-  { key: "accidentes", name: "Accidentes", kick: "Aéreos", cats: ["aereo"] },
-  { key: "teletexto", name: "Teletexto", kick: "RTVE · nacional e internacional", cats: ["teletexto"] },
+const NAT = (["sismo", "volcan", "tsunami", "ciclon", "inundacion", "incendio", "sequia"]);
+const PAPER_AREAS = [
+  { key: "nac", name: "Nacional", kick: "España", secs: [
+    { key: "oficial", name: "Alertas oficiales", kick: "AEMET, IGN, DGT, Protección Civil y ayuntamientos", cats: ["aviso_es", "es_nac", "es_aut", "es_loc"] },
+    { key: "seguridad", name: "Seguridad", kick: "Conflictos y atentados", cats: ["conflicto", "atentado"] },
+    { key: "naturales", name: "Catástrofes y tiempo", kick: "Naturales y meteorológicas", cats: [...NAT, "meteo"] },
+    { key: "transporte", name: "Mar y aire", kick: "Navegantes y accidentes", cats: ["maritimo", "naval", "aereo"] },
+    { key: "teletexto", name: "Teletexto", kick: "RTVE · nacional", cats: ["teletexto"] },
+  ] },
+  { key: "int", name: "Internacional", kick: "El mundo", secs: [
+    { key: "seguridad", name: "Seguridad", kick: "Conflictos y atentados", cats: ["conflicto", "atentado"] },
+    { key: "naturales", name: "Catástrofes", kick: "Naturales", cats: NAT },
+    { key: "meteo", name: "El tiempo", kick: "Avisos en el mundo", cats: ["meteo"] },
+    { key: "mar", name: "Mar", kick: "Navegantes y naufragios", cats: ["maritimo", "naval"] },
+    { key: "accidentes", name: "Accidentes", kick: "Aéreos", cats: ["aereo"] },
+    { key: "teletexto", name: "Teletexto", kick: "RTVE · internacional", cats: ["teletexto"] },
+  ] },
 ];
-const PAPER_GROUP = { naturales: "naturales", meteo: "meteo", espana: "meteo", mar: "mar", seguridad: "seguridad", accidentes: "accidentes", teletexto: "redes" };
-const PAPER_MAX = 8;
+const PAPER_HOURS = 24, PAPER_PAGE = 12, PAPER_TEASE = 4, PAPER_PARTS = 3;   // a section fills at most PAPER_PARTS pages
 const LANG_NAME = { en: "inglés", fr: "francés", pt: "portugués", de: "alemán", it: "italiano", es: "castellano" };
 state.mode = "map";
 state.paperOrig = new Set();   // ids shown in their original language
-state.paperMore = new Set();   // sections unfolded past PAPER_MAX
 state.paperVerified = false;
+state.paperPage = 0;           // 0 is the front page
+state.paperTotal = 0;          // pages after the front one
 
 // Official feeds write in English with a fixed vocabulary, so their titles are put into Spanish by rule.
 const DIR_ES = (d) => d.replace(/W/g, "O");
@@ -2256,7 +2317,7 @@ function paperHead(e) {
   if (e.headline) return { orig: e.headline, lang: e.hlang || "en", es: e.headlineEs || browserEs.get(e.headline) || null };
   const h = e.headlines?.[0];
   if (h?.title) { const lang = h.lang || "en"; return { orig: h.title, lang, es: lang === "es" ? h.title : browserEs.get(h.title) || null }; }
-  if (SPANISH_SRC.has(e.src) || e.cat === "ciclon" && e.src?.includes("NHC") || e.src === "GDELT (prensa)" || e.social) return { orig: e.title, lang: "es", es: e.title };
+  if (SPANISH_SRC.has(e.src) || e.cat === "aviso_es" || String(e.cat).startsWith("es_") || e.cat === "ciclon" && e.src?.includes("NHC") || e.src === "GDELT (prensa)" || e.social) return { orig: e.title, lang: "es", es: e.title };
   const es = ruleEs(e);
   return { orig: e.title, lang: "en", es: es || browserEs.get(e.title) || null };
 }
@@ -2418,43 +2479,94 @@ function paperItem(e, size) {
     ${size === "side" ? "" : `<div class="pacts"><button type="button" class="pbtn${size === "lead" ? " pri" : ""}" data-pmap="${esc(e.id)}">${size === "lead" ? "Ver en el mapa" : "Mapa"}</button>${e.url ? `<a class="pbtn" href="${esc(e.url)}" target="_blank" rel="noopener">${isNews(e) ? (size === "lead" ? "Ir a la noticia" : "Noticia") : "Fuente"}</a>` : ""}${size === "lead" ? `<button type="button" class="pbtn" data-psave="${esc(e.id)}" aria-pressed="${state.saved.has(e.id)}">${state.saved.has(e.id) ? "Guardada" : "Guardar"}</button>` : ""}</div>`}
   </article>`;
 }
+// Teletexto says itself whether a story is national; for the rest, Spain is where it happens.
+const paperNational = (e) => e.cat === "teletexto" ? /^nacional/i.test(e.section || "") : inSpainEv(e);
+function paperPool() {
+  const from = Date.now() - PAPER_HOURS * HOUR;
+  return [...state.events.values()].filter((e) => e.cat !== "redes" && !isFalse(e) && (!state.paperVerified || trusted(e))
+    && Math.max(Date.parse(e.time) || 0, Date.parse(e.updated) || 0, Date.parse(e.until) || 0) >= from).sort(paperRank);
+}
+// The pages after the front one: each section of each area, split into pages of PAPER_PAGE stories. A section
+// with more than fits keeps the most important ones and says how many more the map has.
+function paperPages(pool) {
+  const pages = [], index = [];
+  for (const a of PAPER_AREAS) {
+    const inArea = pool.filter((e) => paperNational(e) === (a.key === "nac"));
+    for (const sec of a.secs) {
+      const items = inArea.filter((e) => sec.cats.includes(e.cat));
+      const first = pages.length + 1, parts = Math.min(PAPER_PARTS, Math.ceil(items.length / PAPER_PAGE));
+      for (let i = 0; i < parts; i++) pages.push({ area: a, sec, part: i + 1, parts, items: items.slice(i * PAPER_PAGE, (i + 1) * PAPER_PAGE), more: i === parts - 1 ? items.length - parts * PAPER_PAGE : 0 });
+      index.push({ area: a, sec, n: items.length, page: parts ? first : null });
+    }
+  }
+  return { pages, index };
+}
+const pageBtn = (n, label, cls = "") => `<button type="button" class="pbtn${cls}" data-ppage="${n}">${label}</button>`;
+function paperPager(cur, total) {
+  const opts = Array.from({ length: total + 1 }, (_, i) => `<option value="${i}"${i === cur ? " selected" : ""}>${i ? `Página ${i + 1}` : "Portada"}</option>`).join("");
+  return `<nav class="ppager" aria-label="Páginas del periódico">
+    ${cur > 0 ? pageBtn(cur - 1, "← Anterior") : '<button type="button" class="pbtn" disabled>← Anterior</button>'}
+    <label class="pkick ppos">Página <select data-pjump="1" aria-label="Ir a la página">${opts}</select> de ${total + 1}</label>
+    ${cur < total ? pageBtn(cur + 1, "Siguiente →", " pri") : '<button type="button" class="pbtn" disabled>Siguiente →</button>'}
+  </nav>`;
+}
 function renderPaper() {
   const box = document.getElementById("paper");
-  const all = visible().filter((e) => e.cat !== "redes" && (!state.paperVerified || trusted(e))).sort(paperRank);
-  const lead = all[0], side = all.slice(1).filter((e) => (e.sev || 1) >= 3).slice(0, 3);
-  const front = new Set([lead, ...side].filter(Boolean).map((e) => e.id));
-  const rest = all.filter((e) => !front.has(e.id));
-  const onCats = Object.keys(state.cats).filter((c) => state.cats[c] && c !== "redes");
+  const pool = paperPool(), { pages, index } = paperPages(pool);
+  const cur = state.paperPage = Math.min(state.paperPage, pages.length);
+  state.paperTotal = pages.length;
   const now = new Date();
-  const secs = PAPER_SECTIONS.map((s) => {
-    const items = rest.filter((e) => s.key === "espana" ? inSpainEv(e) && e.cat !== "teletexto" : s.cats.includes(e.cat) && (e.cat === "teletexto" || !inSpainEv(e)));
-    const on = s.key === "espana" ? onCats.length : s.cats.some((c) => state.cats[c]);
-    const more = state.paperMore.has(s.key), shown = more ? items : items.slice(0, PAPER_MAX);
-    const body = !on ? `<p class="ptext pempty">Esta sección está vacía porque sus capas están apagadas. Actívalas en el mapa y sus noticias aparecerán aquí.</p><div class="pacts"><button type="button" class="pbtn" data-players="${PAPER_GROUP[s.key]}">Ir a las capas</button></div>`
-      : !items.length ? `<p class="ptext pempty">Sin noticias con los filtros de ahora.</p>`
-      : shown.map((e) => paperItem(e)).join("") + (items.length > PAPER_MAX ? `<div class="pacts"><button type="button" class="pbtn" data-pmore="${s.key}" aria-expanded="${more}">${more ? "Ver menos" : `Ver las ${items.length}`}</button></div>` : "");
-    return `<section class="psec" aria-labelledby="ps_${s.key}"><div class="psech"><h2 class="psect" id="ps_${s.key}">${s.name}</h2><span class="pkick">${s.kick}</span></div>${body}</section>`;
-  }).join("");
-  const layers = onCats.map((c) => CATS[c].name);
+  const strip = `<div class="pstrip"><span class="ptext psmall">${pool.length ? `${pool.length} ${pool.length === 1 ? "noticia" : "noticias"} de las últimas ${PAPER_HOURS} horas, de todas las fuentes salvo las redes, aunque las capas estén apagadas.` : state.lastUpdate ? `No hay noticias de las últimas ${PAPER_HOURS} horas.` : "Trayendo las noticias de todas las fuentes…"}</span>
+      <div class="pacts"><button type="button" class="pbtn" data-prefresh="1">Actualizar</button><button type="button" class="pbtn" data-pverified="1" aria-pressed="${state.paperVerified}">Solo contrastadas</button></div></div>`;
+  let body, shown;
+  if (cur === 0) {
+    const lead = pool[0], side = pool.slice(1).filter((e) => (e.sev || 1) >= 3).slice(0, 3);
+    const front = new Set([lead, ...side].filter(Boolean).map((e) => e.id));
+    const teaser = (a) => {
+      const its = pool.filter((e) => !front.has(e.id) && paperNational(e) === (a.key === "nac")).slice(0, PAPER_TEASE);
+      const go = index.find((x) => x.area === a && x.page);
+      return `<section class="psec" aria-labelledby="pa_${a.key}"><div class="psech"><h2 class="psect" id="pa_${a.key}">${a.name}</h2><span class="pkick">${a.kick}</span></div>
+        ${its.length ? its.map((e) => paperItem(e)).join("") : `<p class="ptext pempty">Sin noticias ${a.key === "nac" ? "de España" : "del resto del mundo"} en las últimas ${PAPER_HOURS} horas.</p>`}
+        ${go ? `<div class="pacts">${pageBtn(go.page, `Leer ${a.name} · página ${go.page + 1}`)}</div>` : ""}</section>`;
+    };
+    shown = [lead, ...side, ...pool.slice(0, 40)].filter(Boolean);
+    body = `${lead ? `<section class="pfront" aria-label="Portada"><div class="plead">${paperItem(lead, "lead")}</div>${side.length ? `<aside class="pside" aria-label="Lo más grave ahora"><div class="pkick">Lo más grave ahora</div>${side.map((e) => paperItem(e, "side")).join("")}</aside>` : ""}</section>` : ""}
+      <div class="pgrid two">${PAPER_AREAS.map(teaser).join("")}</div>
+      <section class="pindex" aria-labelledby="pidx"><h2 class="psect" id="pidx">En este número</h2>
+        <div class="pidxcols">${PAPER_AREAS.map((a) => `<div><div class="pkick">${a.name}</div><ol>${index.filter((x) => x.area === a).map((x) => `<li>${x.page ? `<button type="button" class="plink" data-ppage="${x.page}"><span>${x.sec.name}</span><span class="pmeta">${x.n} · p. ${x.page + 1}</span></button>` : `<span class="plink off"><span>${x.sec.name}</span><span class="pmeta">sin noticias</span></span>`}</li>`).join("")}</ol></div>`).join("")}</div></section>`;
+  } else {
+    const pg = pages[cur - 1];
+    shown = pg.items;
+    body = `<section class="psec ppage" aria-labelledby="pp_title"><div class="psech"><h2 class="psect" id="pp_title" tabindex="-1"><span class="parea">${pg.area.name}</span> · ${pg.sec.name}${pg.parts > 1 ? ` <span class="pmeta">(${pg.part} de ${pg.parts})</span>` : ""}</h2><span class="pkick">${pg.sec.kick}</span></div>
+      <div class="pgrid">${pg.items.map((e) => paperItem(e)).join("")}</div>
+      ${pg.more > 0 ? `<p class="ptext pempty">Y ${pg.more} ${pg.more === 1 ? "noticia menos grave" : "noticias menos graves"} más en esta sección. Míralas en el mapa encendiendo sus capas.</p>` : ""}</section>`;
+  }
   const html = `<div class="sheetp">
     <div class="pdate"><span class="pkick">${esc(now.toLocaleDateString("es-ES", { timeZone: "Europe/Madrid", weekday: "long", day: "numeric", month: "long", year: "numeric" }))}</span><span class="pkick">Edición de las ${MAD_HM.format(now)} · Madrid</span></div>
-    <h2 class="pmast">El Diario de World Alert</h2>
-    <div class="pstrip"><span class="ptext psmall">${layers.length ? `Hecho con tus capas activas: ${esc(layers.join(", "))} · ${all.length} ${all.length === 1 ? "noticia" : "noticias"}` : "Todas las capas están apagadas. Enciende en el mapa las que quieras leer aquí."}</span>
-      <div class="pacts"><button type="button" class="pbtn" data-prefresh="1">Actualizar</button><button type="button" class="pbtn" data-pverified="1" aria-pressed="${state.paperVerified}">Solo contrastadas</button></div></div>
-    ${lead ? `<section class="pfront" aria-label="Portada"><div class="plead">${paperItem(lead, "lead")}</div>${side.length ? `<aside class="pside" aria-label="Lo más grave ahora"><div class="pkick">Lo más grave ahora</div>${side.map((e) => paperItem(e, "side")).join("")}</aside>` : ""}</section>` : ""}
-    <div class="pgrid">${secs}</div>
-    <footer class="pfoot"><span class="pkick">Cómo se ordena</span><span class="ptext psmall">Primero la gravedad (P1 a P4), luego lo contrastado, luego cuántos medios lo cuentan y por último lo más reciente. Usa el periodo, la gravedad y los países que tengas elegidos en el mapa.</span>
+    ${cur === 0 ? '<h2 class="pmast">El Diario de World Alert</h2>' : `<div class="pmast small">El Diario de World Alert</div>`}
+    ${cur === 0 ? strip : ""}
+    ${paperPager(cur, pages.length)}
+    ${body}
+    ${paperPager(cur, pages.length)}
+    <footer class="pfoot"><span class="pkick">Cómo se ordena</span><span class="ptext psmall">Primero la gravedad (P1 a P4), luego lo contrastado, luego cuántos medios lo cuentan y por último lo más reciente. No depende de las capas, el periodo, la gravedad ni los países elegidos en el mapa. Pasa de página con los botones o con las flechas ← →.</span>
       <span class="prow"><span class="pok">${SEAL}Contrastada</span><span class="ptext psmall">fuente oficial o 2 medios o más</span></span><span class="prow"><span class="punv">? Sin contrastar</span><span class="ptext psmall">un solo medio</span></span></footer>
   </div>`;
   keepFocus(box, () => box.innerHTML = html);
-  translateMissing(all);
+  translateMissing(shown);
+}
+function turnPage(n) {
+  state.paperPage = Math.max(0, n);
+  renderPaper();
+  const box = document.getElementById("paper");
+  box.scrollTop = 0;
+  (box.querySelector("#pp_title") || box).focus({ preventScroll: true });
 }
 function setMode(mode, focus = true) {
   state.mode = mode;
   document.querySelector(".app").dataset.mode = mode;
   document.getElementById("paper").hidden = mode !== "paper";
   for (const b of document.querySelectorAll("#modesw button")) b.setAttribute("aria-pressed", String(b.dataset.mode === mode));
-  if (mode === "paper") { renderPaper(); if (focus) document.getElementById("paper").focus({ preventScroll: true }); }
+  if (mode === "paper") { renderPaper(); tick(); if (focus) document.getElementById("paper").focus({ preventScroll: true }); }
   else { layout(); render(); }
 }
 document.getElementById("modesw").addEventListener("click", (ev) => { const b = ev.target.closest("button[data-mode]"); if (b && b.dataset.mode !== state.mode) setMode(b.dataset.mode); });
@@ -2462,12 +2574,18 @@ document.getElementById("paper").addEventListener("click", (ev) => {
   const b = ev.target.closest("button"); if (!b) return;
   const d = b.dataset;
   if (d.plang) { state.paperOrig.has(d.plang) ? state.paperOrig.delete(d.plang) : state.paperOrig.add(d.plang); renderPaper(); }
-  else if (d.pmore) { state.paperMore.has(d.pmore) ? state.paperMore.delete(d.pmore) : state.paperMore.add(d.pmore); renderPaper(); }
+  else if (d.ppage) turnPage(+d.ppage);
   else if (d.pverified) { state.paperVerified = !state.paperVerified; renderPaper(); }
   else if (d.prefresh) tick(true);
   else if (d.psave) { toggleSave(d.psave); renderPaper(); }
   else if (d.pmap) { setMode("map", false); select(d.pmap, true); }
-  else if (d.players) { setMode("map", false); state.open[d.players] = true; saveUi(); renderLayers(); document.getElementById("layers").scrollIntoView({ block: "start" }); document.querySelector(`#layers [data-open="${d.players}"]`)?.focus(); }
+});
+document.getElementById("paper").addEventListener("change", (ev) => { if (ev.target.dataset.pjump) turnPage(+ev.target.value); });
+// Arrow keys turn the pages while the paper has focus, but not inside the page picker.
+document.getElementById("paper").addEventListener("keydown", (ev) => {
+  if (ev.altKey || ev.ctrlKey || ev.metaKey || ev.target.closest("select, input, textarea")) return;
+  if (ev.key === "ArrowRight" && state.paperPage < state.paperTotal) { ev.preventDefault(); turnPage(state.paperPage + 1); }
+  else if (ev.key === "ArrowLeft" && state.paperPage > 0) { ev.preventDefault(); turnPage(state.paperPage - 1); }
 });
 
 // ---------- boot ----------
