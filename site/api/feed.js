@@ -1,6 +1,6 @@
 // World Alert bridge: returns the requested sources as one normalized list.
 import { collect } from "./_sources.js";
-import { checkTelegram } from "./_social.js";
+import { checkTelegram, telegramPosts } from "./_social.js";
 
 export default async function handler(req, res) {
   const q = req.query || {};
@@ -9,6 +9,13 @@ export default async function handler(req, res) {
     let out;
     try { out = await checkTelegram(q.tgcheck); } catch (e) { out = { ok: false, error: `Telegram no respondió (${e.message}).` }; }
     res.setHeader("Cache-Control", "s-maxage=300");
+    return res.status(200).json(out);
+  }
+  // ?tgposts=1&tg=<channels> gives the newspaper every recent post of those channels.
+  if (q.tgposts) {
+    let out;
+    try { out = { ok: true, posts: await telegramPosts(q) }; } catch (e) { out = { ok: false, posts: [], error: e.message }; }
+    res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=120");
     return res.status(200).json(out);
   }
   const feed = await collect(q);

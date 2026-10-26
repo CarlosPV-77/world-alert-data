@@ -132,6 +132,18 @@ async function telegram(q) {
   }));
 }
 
+// Every post of the last day from the chosen channels, for the newspaper's Telegram section: no topic or place
+// filter here, unlike the map. The place, when the text names one, only says whether the post is about Spain.
+export async function telegramPosts(q) {
+  const now = Date.now();
+  return (await telegram(q)).filter((p) => now - Date.parse(p.time) <= DAY).map((p) => {
+    const place = placeOf(p.text, null);
+    const lang = /[\u0400-\u04ff]/.test(p.text) ? "ru" : SPANISH.test(p.text) ? "es" : "en";
+    return { id: `tgpost:${p.id}`, channel: p.author, time: p.time, url: p.url, text: p.text.slice(0, 700), lang,
+      place: place ? (place.name && place.name !== place.country ? `${place.name} (${place.country})` : place.country) : "", spain: place?.country === "España" };
+  }).sort((a, b) => Date.parse(b.time) - Date.parse(a.time));
+}
+
 // Tells whether a name is a public Telegram channel that can be read without an account, and its title.
 // t.me/s/ answers 200 only for public channels; groups, users, private and missing channels redirect.
 export async function checkTelegram(name) {
