@@ -589,6 +589,35 @@ button.plink:hover span:first-child { text-decoration: underline; text-underline
   .legend { font-size: 12px; padding: 8px 10px; }
   .legend .row.cats { display: none; }
 }
+
+/* ---- guided tour: a ring of light over one real control, the rest dimmed, and a card with the explanation ---- */
+.tourbtn { min-width: 34px; padding-inline: 10px; flex: 0 0 auto; }
+@media (min-width: 761px) { header.top .actions + .tourbtn { margin-left: -16px; } }
+@media (min-width: 1101px) and (max-width: 1180px) { header.top .tourbtn { min-width: 30px; padding-inline: 7px; } }
+/* Tablets: the first row is full, so the button closes the source-status row. */
+@media (min-width: 761px) and (max-width: 1100px) { header.top .actions + .tourbtn { order: 10; margin-left: 0; } header.top .status { flex-basis: calc(100% - 58px); } }
+/* Phones: the button sits at the end of the Mapa / Periódico row, since the first row has no room left. */
+@media (max-width: 760px) { header.top .tourbtn { grid-column: 1 / -1; grid-row: 4; justify-self: end; align-self: stretch; min-width: 44px; } header.top .modesw { margin-right: 52px; } }
+.tourbtn svg { width: 14px; height: 14px; vertical-align: -2px; }
+/* Narrow phones: a tighter title and buttons so the first row fits without the page sliding sideways. */
+@media (max-width: 420px) { .brand { letter-spacing: .04em; gap: 8px; } header.top .actions { gap: 4px; } header.top .actions .btn { padding-inline: 8px; letter-spacing: .02em; } }
+.tour { position: fixed; inset: 0; z-index: 1100; pointer-events: none; }
+.tour .tblock { position: fixed; pointer-events: auto; background: transparent; }
+.tour .tring { position: fixed; border: 2px solid var(--accent); border-radius: 4px; box-shadow: 0 0 0 9999px rgba(2, 5, 8, .72), 0 0 0 5px color-mix(in srgb, var(--accent) 30%, transparent); transition: top .25s ease, left .25s ease, width .25s ease, height .25s ease; pointer-events: none; }
+.tour .tring.none { width: 0; height: 0; border: 0; top: 50%; left: 50%; }
+.tour .tcard { position: fixed; pointer-events: auto; width: min(360px, calc(100vw - 24px)); background: var(--panel); border: 1px solid var(--line-2); border-top: 3px solid var(--accent); border-radius: var(--r); padding: 14px 16px 12px; display: grid; gap: 10px; box-shadow: 0 12px 36px rgba(0,0,0,.6); transition: top .25s ease, left .25s ease; }
+.tour .tcard h3 { margin: 0; font-family: var(--font-sign); font-weight: 600; font-size: 16px; letter-spacing: .06em; text-transform: uppercase; color: var(--fg); }
+.tour .tcard h3:focus { outline: none; }
+.tour .tcard p { margin: 0; font-size: 14px; line-height: 1.5; color: var(--fg); }
+.tour .tcard p + p { color: var(--muted); font-size: 13px; }
+.tour .tcard .try { border-left: 3px solid var(--accent); padding-left: 8px; color: var(--fg); }
+.tour .tstep { font-family: var(--font-data); font-size: 12px; color: var(--muted); }
+.tour .tbar { height: 3px; background: var(--line); }
+.tour .tbar i { display: block; height: 100%; background: var(--accent); transition: width .25s ease; }
+.tour .tnav { display: flex; align-items: center; gap: 6px; }
+.tour .tnav .skipt { margin-right: auto; }
+@media (pointer: coarse) { .tour .tnav .btn { min-height: 44px; } }
+@media (prefers-reduced-motion: reduce) { .tour .tring, .tour .tcard, .tour .tbar i { transition: none; } }
 </style>
 
 </head>
@@ -607,6 +636,7 @@ button.plink:hover span:first-child { text-decoration: underline; text-underline
       <button class="btn" id="refreshBtn" type="button">Actualizar<span class="lbl-long"> ahora</span></button>
       <button class="btn" id="settingsBtn" type="button">Ajustes</button>
     </div>
+    <button class="btn tourbtn" id="tourBtn" type="button" aria-label="Guía de configuración" title="Guía de configuración"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M6.2 6.2a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><circle cx="8" cy="11.6" r=".9" fill="currentColor"/></svg></button>
   </header>
   <main>
     <div class="mapwrap" id="mapwrap">
@@ -3202,6 +3232,165 @@ document.getElementById("paper").addEventListener("keydown", (ev) => {
   if (ev.key === "ArrowRight" && state.paperPage < state.paperTotal) { ev.preventDefault(); turnPage(state.paperPage + 1); }
   else if (ev.key === "ArrowLeft" && state.paperPage > 0) { ev.preventDefault(); turnPage(state.paperPage - 1); }
 });
+
+// ---------- guided tour ----------
+// The "?" button walks through the real controls: a ring of light over each one, the rest of the page dimmed,
+// and a card with what it does and how to set it up. It opens the settings, their tabs and the newspaper by itself
+// when a step needs them, and leaves everything as it was. The control inside the ring can be tried out;
+// clicks anywhere else are held back so the tour does not lose its place.
+const TOUR = [
+  { title: "Guía de World Alert", text: "Te enseño, paso a paso, dónde se configura cada cosa. Puedes probar el control que se ilumina en cada paso.",
+    more: "Usa Siguiente y Atrás, o las flechas del teclado. Esc o Saltar cierran la guía cuando quieras." },
+  { el: "#modesw", title: "Mapa o Periódico", text: "Cambia entre el mapa en directo y el Periódico, que ordena las noticias del último día por gravedad." },
+  { el: "#cpick", side: true, title: "Países que sigues",
+    text: () => state.countries.size ? `Ahora sigues ${state.countries.size === 1 ? "1 país" : state.countries.size + " países"}. Escribe otro y púlsalo para añadirlo; quítalo con su ×.` : "Escribe un país y púlsalo para añadirlo. Las alertas nuevas de tus países llegan como pestaña arriba del mapa.",
+    more: "Con dos países o más aparece la vista Dividida o En T sobre el mapa." },
+  { el: "#viewsw", when: () => !document.getElementById("viewsw").hidden, title: "Vista del mapa", text: "Mundo, Dividida (un mapa por país) o En T (el mundo arriba y dos países abajo)." },
+  { el: "#layers", side: true, title: "Capas", text: "Al abrir la página todas las capas están apagadas, y solo se consultan las que enciendes.",
+    more: "El interruptor de la izquierda enciende el grupo entero. El nombre lo despliega para elegir capa a capa.",
+    try: "Pruébalo: enciende Desastres naturales." },
+  { el: () => document.querySelector('#layers [data-open="mapa"]')?.closest(".lgroup"), side: true, open: "mapa", title: "Capas del mapa",
+    text: "Ciudades, provincias, zonas de aviso de AEMET, territorios disputados, día y noche, y el rótulo de última hora.",
+    more: "Si quitas el rótulo con su ×, se vuelve a poner desde aquí." },
+  { el: () => document.getElementById("fPeriod").parentElement, side: true, title: "Periodo y gravedad", text: "Elige cuánto histórico ves (de la última hora a todo) y la gravedad mínima, de P4 (baja) a P1 (crítica)." },
+  { el: "#savedbar", side: true, title: "Alertas guardadas", text: "Las alertas que guardas se quedan aquí aunque desaparezcan de las fuentes. Pulsa para verlas y Volver a todas para salir." },
+  { el: "#list", side: true, title: "Cola de incidencias", text: "Todas las alertas visibles, de P1 a P4. Pulsa una para ver el detalle, guardarla o marcarla como falsa." },
+  { el: "#mapwrap", title: "El mapa", text: "Pulsa un icono para ver su ficha. Si varias alertas caen en el mismo sitio, se despliega una lista de P1 a P4.",
+    more: "Abajo a la derecha tienes acercar, alejar y ver el mundo entero." },
+  { el: "#ticker", when: () => !document.getElementById("ticker").hidden, title: "Rótulo de última hora", text: "Pasa lo más grave del mundo y de España. Puedes pausarlo o quitarlo con sus botones; su aspecto se ajusta en Ajustes." },
+  { el: "#refreshBtn", title: "Actualizar ahora", text: "Consulta al momento las fuentes de las capas encendidas, sin esperar a su intervalo." },
+  { el: "#settingsBtn", title: "Ajustes", text: "Aquí se configura todo lo demás. Lo abro yo en el paso siguiente." },
+  { el: "#pan-mapa", tab: "mapa", title: "Ajustes · Mapa", text: "Tipo de mapa (satélite, relieve, oscuro…) y vista: globo 3D o mapa plano.", more: "La aplicación se abre con el globo salvo que elijas el plano." },
+  { el: "#srcRows", tab: "fuentes", title: "Fuentes e intervalos", text: "Activa o apaga cada fuente y elige cada cuánto se consulta, de minutos a un día.",
+    more: "Solo se consulta mientras tienes el mapa abierto y alguna de sus capas encendida. Debajo de cada una ves si va bien." },
+  { el: ".tgrow", tab: "fuentes", title: "Canales de Telegram", text: "Marca los canales que quieres leer (hasta 20). Añade uno por su nombre o enlace t.me, y crea grupos para ordenarlos.",
+    more: "Arrastra un canal por su asa para moverlo de grupo. «Volver a los canales de serie» deshace tus cambios." },
+  { el: ".tickset", tab: "rotulo", title: "Rótulo de última hora", text: "Posición arriba o abajo, velocidad, qué muestra (todo, solo P1 y P2, o solo contrastadas), si incluye España y qué tipos de alerta." },
+  { el: "#pan-falsas", tab: "falsas", title: "Alertas falsas", text: "Las alertas que marcas como falsas y las fuentes silenciadas. Desde aquí puedes devolverlas." },
+  { el: "#pan-historico", tab: "historico", title: "Histórico", text: "Cuánto tiempo se guarda el histórico en este navegador, y un botón para borrarlo. Tus alertas guardadas no se borran." },
+  { el: () => document.querySelector("#settings .foot"), tab: "historico", title: "Guardar los cambios", text: "Nada cambia hasta que pulsas Guardar. Cancelar descarta lo que hayas tocado." },
+  { el: "#paper", mode: "paper", title: "El Periódico", text: "Portada y secciones Nacional e Internacional, ordenadas por gravedad y por cuántos medios lo cuentan.",
+    more: "Cada titular traducido se puede ver en su idioma original. «Solo contrastadas» deja las que confirman dos medios o más." },
+  { el: "#tourBtn", title: "Listo", text: "Ya conoces dónde está todo. Vuelve a esta guía cuando quieras con este botón." },
+];
+const tour = { i: -1, el: null, target: null, raf: 0, before: null };
+function tourTarget(s) {
+  const t = typeof s.el === "function" ? s.el() : s.el ? document.querySelector(s.el) : null;
+  return t && t.getClientRects().length ? t : null;
+}
+function tourSteps() { return TOUR.filter((s) => !s.when || s.when()); }
+// Puts the page in the state a step needs: which view, whether the settings are open and on which tab.
+function tourStage(s) {
+  if ((s.mode || "map") !== state.mode) setMode(s.mode || "map", false);
+  if (s.tab) {
+    if (sheet.hidden) openSettings();
+    showTab(document.getElementById("tab-" + s.tab));
+  } else if (!sheet.hidden) closeSettings();
+  if (s.open && !state.open[s.open]) { state.open[s.open] = true; renderLayers(); }
+}
+function tourShow(i) {
+  const steps = tourSteps();
+  tour.i = Math.max(0, Math.min(i, steps.length - 1));
+  const s = steps[tour.i];
+  tourStage(s);
+  tour.target = tourTarget(s);
+  if (tour.target) {
+    // Phones: the card sits under the control, so bring the control near the top.
+    const phone = innerWidth <= 600;
+    tour.target.scrollIntoView({ block: phone || tour.target.offsetHeight > innerHeight * .6 ? "start" : "center", behavior: "instant" });
+  }
+  const text = typeof s.text === "function" ? s.text() : s.text;
+  const c = tour.el.querySelector(".tcard");
+  c.innerHTML = `<div class="tstep">Paso ${tour.i + 1} de ${steps.length}</div>
+    <div class="tbar" aria-hidden="true"><i style="width:${((tour.i + 1) / steps.length) * 100}%"></i></div>
+    <h3 id="tourTitle" tabindex="-1">${esc(s.title)}</h3>
+    <p>${esc(text)}</p>${s.more ? `<p>${esc(s.more)}</p>` : ""}${s.try ? `<p class="try">${esc(s.try)}</p>` : ""}
+    <div class="tnav">
+      ${tour.i < steps.length - 1 ? '<button type="button" class="btn linkish skipt" data-tour="end">Saltar</button>' : '<span class="skipt"></span>'}
+      ${tour.i ? '<button type="button" class="btn" data-tour="prev">Atrás</button>' : ""}
+      <button type="button" class="btn primary" data-tour="${tour.i < steps.length - 1 ? "next" : "end"}">${tour.i ? (tour.i < steps.length - 1 ? "Siguiente" : "Terminar") : "Empezar"}</button>
+    </div>`;
+  tourPlace(true);
+  c.querySelector("#tourTitle").focus({ preventScroll: true });
+}
+// Keeps the ring on the control and the card next to it while the page scrolls, resizes or redraws.
+function tourPlace(force) {
+  if (!tour.el) return;
+  const ring = tour.el.querySelector(".tring"), card = tour.el.querySelector(".tcard"), blocks = tour.el.querySelectorAll(".tblock");
+  const vw = innerWidth, vh = innerHeight, pad = 6, gap = 12;
+  if (tour.target && !document.contains(tour.target)) tour.target = tourTarget(tourSteps()[tour.i]);
+  let r = tour.target?.getBoundingClientRect();
+  if (r) {
+    r = { top: r.top - pad, left: r.left - pad, right: r.right + pad, bottom: r.bottom + pad };
+    // Only the part that shows: boxes that scroll (the layers, the settings tabs) cut the control off.
+    for (let a = tour.target.parentElement; a && a !== document.body; a = a.parentElement) {
+      if (!/(auto|scroll|hidden)/.test(getComputedStyle(a).overflowY)) continue;
+      const b = a.getBoundingClientRect();
+      r = { top: Math.max(r.top, b.top), left: Math.max(r.left, b.left), right: Math.min(r.right, b.right), bottom: Math.min(r.bottom, b.bottom) };
+    }
+    r = { top: Math.max(0, r.top), left: Math.max(0, r.left), right: Math.min(vw, r.right), bottom: Math.min(vh, r.bottom) };
+    if (r.bottom <= r.top || r.right <= r.left) r = null;
+  }
+  const key = r ? `${r.top}|${r.left}|${r.right}|${r.bottom}|${vw}|${vh}` : `none|${vw}|${vh}`;
+  if (!force && key === tour.key) return;
+  tour.key = key;
+  if (r) {
+    ring.classList.remove("none");
+    Object.assign(ring.style, { top: r.top + "px", left: r.left + "px", width: r.right - r.left + "px", height: r.bottom - r.top + "px" });
+    const rects = [[0, 0, vw, r.top], [0, r.bottom, vw, vh - r.bottom], [0, r.top, r.left, r.bottom - r.top], [r.right, r.top, vw - r.right, r.bottom - r.top]];
+    blocks.forEach((b, k) => Object.assign(b.style, { left: rects[k][0] + "px", top: rects[k][1] + "px", width: Math.max(0, rects[k][2]) + "px", height: Math.max(0, rects[k][3]) + "px" }));
+  } else {
+    ring.classList.add("none"); ring.removeAttribute("style");
+    blocks.forEach((b, k) => Object.assign(b.style, k ? { width: "0px", height: "0px" } : { left: "0px", top: "0px", width: vw + "px", height: vh + "px" }));
+  }
+  const w = card.offsetWidth, h = card.offsetHeight, m = 12;
+  let x, y;
+  if (!r) { x = (vw - w) / 2; y = (vh - h) / 2; }
+  else if (vh - r.bottom - gap >= h + m) { y = r.bottom + gap; x = r.left; }
+  else if (r.top - gap >= h + m) { y = r.top - gap - h; x = r.left; }
+  else if (vw - r.right - gap >= w + m) { x = r.right + gap; y = r.top; }
+  else if (r.left - gap >= w + m) { x = r.left - gap - w; y = r.top; }
+  else { x = (vw - w) / 2; y = vh - h - m; }   // a control bigger than the screen: the card goes over its lower edge
+  card.style.left = Math.round(Math.max(m, Math.min(x, vw - w - m))) + "px";
+  card.style.top = Math.round(Math.max(m, Math.min(y, vh - h - m))) + "px";
+}
+function tourLoop() { tourPlace(false); tour.raf = requestAnimationFrame(tourLoop); }
+function tourStart() {
+  if (tour.el) return;
+  tour.before = { mode: state.mode, open: { ...state.open }, settings: !sheet.hidden };
+  tour.el = document.createElement("div");
+  tour.el.className = "tour";
+  tour.el.setAttribute("role", "dialog"); tour.el.setAttribute("aria-modal", "false"); tour.el.setAttribute("aria-labelledby", "tourTitle");
+  tour.el.innerHTML = '<div class="tblock"></div><div class="tblock"></div><div class="tblock"></div><div class="tblock"></div><div class="tring"></div><div class="tcard"></div>';
+  document.body.append(tour.el);
+  tour.el.addEventListener("click", (ev) => {
+    const a = ev.target.closest("[data-tour]")?.dataset.tour;
+    if (a === "next") tourShow(tour.i + 1); else if (a === "prev") tourShow(tour.i - 1); else if (a === "end") tourEnd();
+  });
+  tourShow(0);
+  tourLoop();
+}
+function tourEnd() {
+  if (!tour.el) return;
+  cancelAnimationFrame(tour.raf);
+  tour.el.remove(); tour.el = null; tour.target = null; tour.key = null;
+  const b = tour.before;
+  if (!b.settings && !sheet.hidden) closeSettings();
+  if (b.mode !== state.mode) setMode(b.mode, false);
+  if (Object.keys(state.open).some((k) => !!state.open[k] !== !!b.open[k])) { state.open = b.open; renderLayers(); }
+  window.scrollTo({ top: 0, behavior: "instant" });
+  document.getElementById("tourBtn").focus();
+}
+// The tour takes the arrow keys and Esc before the map, the newspaper and the settings dialog do.
+window.addEventListener("keydown", (e) => {
+  if (!tour.el || e.altKey || e.ctrlKey || e.metaKey) return;
+  const typing = e.target.closest?.("input, select, textarea");
+  if (e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); tourEnd(); }
+  else if (typing) return;
+  else if (e.key === "ArrowRight") { e.preventDefault(); e.stopImmediatePropagation(); if (tour.i < tourSteps().length - 1) tourShow(tour.i + 1); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); e.stopImmediatePropagation(); if (tour.i > 0) tourShow(tour.i - 1); }
+}, true);
+document.getElementById("tourBtn").onclick = () => (tour.el ? tourEnd() : tourStart());
 
 // ---------- boot ----------
 window.addEventListener("resize", () => { clearTimeout(window.__rz); window.__rz = setTimeout(layout, 120); });
