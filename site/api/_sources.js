@@ -106,6 +106,33 @@ const CAMEO_LABEL = {
 };
 const isConflicto = (e) => e.root === "19" || e.root === "20";
 
+// The place each article is about: the town its headline names, else a town in the country it names, else the most coded one.
+// "Saudi airstrikes kill three in Yemen's capital" is coded at nine places from Mecca to Djibouti; it belongs in Yemen.
+const plain = (s) => ` ${String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()} `;
+function homePlaces(rows) {
+  const byUrl = new Map();
+  for (const e of rows) {
+    if (!e.url) continue;
+    const key = `${e.place}|${e.lat.toFixed(1)}|${e.lon.toFixed(1)}`;
+    const m = byUrl.get(e.url) || new Map();
+    const c = m.get(key) || { e, n: 0 };
+    c.n++; m.set(key, c); byUrl.set(e.url, m);
+  }
+  const home = new Map();
+  for (const [url, m] of byUrl) {
+    const slug = plain(slugText(url));
+    const named = (w) => w.length >= 3 && plain(w).length > 4 && slug.includes(plain(w));
+    let best = null, top = -1;
+    for (const [key, { e, n }] of m) {
+      const parts = e.place.split(", ");
+      const score = (parts.length > 1 && named(parts[0]) ? 100 : 0) + (named(parts[parts.length - 1]) ? 20 : 0) + (e.geoType === "1" ? 0 : 5) + n;
+      if (score > top) { top = score; best = key; }
+    }
+    home.set(url, best);
+  }
+  return home;
+}
+
 async function gdeltNews(cat, keep, files = 4) {
   const latest = await get(`${GDELT_BASE}lastupdate.txt`, "text");
   const stamps = gdeltStamps(latest, files);
@@ -119,15 +146,19 @@ async function gdeltNews(cat, keep, files = 4) {
   const window = loaded * 15 >= 60 ? "la última hora" : `los últimos ${loaded * 15} min`;
   const groups = new Map();
   // Article links whose slug reads like a study, an explainer or clickbait are not incidents.
-  for (const e of rows.filter((r) => keep(r) && !notAlert(slugText(r.url)))) {
+  const kept = rows.filter((r) => keep(r) && !notAlert(slugText(r.url)));
+  const home = homePlaces(kept);
+  for (const e of kept) {
     const key = `${e.place}|${e.lat.toFixed(1)}|${e.lon.toFixed(1)}`;
-    const g = groups.get(key) || { approx: e.geoType === "1" || e.geoType === "2" || e.geoType === "5", place: e.place, cc: e.cc, lat: e.lat, lon: e.lon, n: 0, articles: 0, time: null, domains: new Set(), url: null, codes: new Map() };
+    // GDELT codes one article at every place it names; the article only counts at the place it is about.
+    if (e.url && home.get(e.url) !== key) continue;
+    const g = groups.get(key) || { approx: e.geoType === "1" || e.geoType === "2" || e.geoType === "5", place: e.place, cc: e.cc, lat: e.lat, lon: e.lon, n: 0, articles: 0, time: null, domains: new Set(), url: null, codes: new Map(), links: new Map() };
     g.n++; g.articles += e.articles;
     g.codes.set(e.code, (g.codes.get(e.code) || 0) + e.articles);
     const t = gdeltTime(e.added);
     if (t && (!g.time || t > g.time)) g.time = t;
     const d = domainOf(e.url);
-    if (d) { g.domains.add(d); if (!g.url) g.url = e.url; }
+    if (d) { g.domains.add(d); if (!g.url) g.url = e.url; if (!g.links.has(e.url)) g.links.set(e.url, { outlet: d, url: e.url, title: headlineOf(e.url) || undefined }); }
     groups.set(key, g);
   }
   return [...groups.values()].map((g) => {
@@ -141,6 +172,7 @@ async function gdeltNews(cat, keep, files = 4) {
       lat: g.lat, lon: g.lon, approx: g.approx || undefined, time: g.time || new Date().toISOString(),
       sev: g.articles >= 40 ? 4 : g.articles >= 15 ? 3 : g.articles >= 5 ? 2 : 1,
       articles: g.articles, outlets: outlets.slice(0, 6), url: g.url, headline: (g.url && headlineOf(g.url)) || undefined, src: "GDELT (prensa)",
+      links: g.links.size > 1 ? [...g.links.values()].slice(0, 6) : undefined,
       verified: outlets.length >= 2, vlabel: outlets.length >= 2 ? `${outlets.length} medios` : "1 medio",
     };
   });
