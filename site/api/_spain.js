@@ -212,6 +212,8 @@ async function meteogalicia() {
 // Castilla-La Mancha: the 112 publishes the incidents it handles, each placed on a map, and a feed of its
 // emergency plans (METEOCAM, INFOCAM…) whose "Activa" field says whether the plan is still on.
 const CLM_PROV = { albacete: [38.99, -1.86], "ciudad real": [38.98, -3.93], cuenca: [40.07, -2.13], guadalajara: [40.63, -3.16], toledo: [39.86, -4.02] };
+// The title decides first, so "Incendio de industria" with burnt cars keeps the fire icon.
+const clmPic = (title, text) => (CLM_PIC.find(([re]) => re.test(title)) || CLM_PIC.find(([re]) => re.test(text)))?.[1] || "siren";
 const CLM_PIC = [[/tr[aá]fico|atropello|veh[ií]culo|colisi/i, "car"], [/incendio/i, "fire"], [/inundaci|riada|lluvia/i, "flood"], [/nieve|nevada/i, "snow"], [/viento/i, "wind"]];
 const unent = (s) => String(s || "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
 
@@ -229,7 +231,7 @@ async function clm112() {
     if (!title || !time || !(Date.parse(time) > Date.now() - 48 * HOUR)) continue;
     const text = `${title} ${type} ${body}`;
     out.push({
-      id: `clm112:${href || title + time}`, cat: "es_aut", pic: CLM_PIC.find(([re]) => re.test(text))?.[1] || "siren",
+      id: `clm112:${href || title + time}`, cat: "es_aut", pic: clmPic(title, text),
       title, desc: clip(body, 500), lat: +m[1], lon: +m[2], time: iso(time),
       sev: /fallec|muert|sin vida|cr[ií]tico|grave/i.test(body) ? 3 : 2, level: type || "Incidente",
       country: `${title.split(".")[0]} (España)`, url: href ? base + href : `${base}/112`, src: "112 Castilla-La Mancha",
@@ -267,7 +269,7 @@ async function clmPlanes() {
 // names its town and province; it is placed at the province, since the feed has no coordinates.
 const CYL_PROV = { "ávila": [40.66, -4.7], burgos: [42.34, -3.7], "león": [42.6, -5.57], palencia: [42.01, -4.53], salamanca: [40.97, -5.66], segovia: [40.95, -4.12], soria: [41.76, -2.46], valladolid: [41.65, -4.72], zamora: [41.5, -5.75] };
 const ACUTE = { a: "á", e: "é", i: "í", o: "ó", u: "ú", A: "Á", E: "É", I: "Í", O: "Ó", U: "Ú" };
-const deHtml = (s) => unent(unent(s)).replace(/&([aeiouAEIOU])acute;/g, (_, v) => ACUTE[v]).replace(/&ntilde;/g, "ñ").replace(/&Ntilde;/g, "Ñ")
+const deHtml = (s) => unent(unent(s)).replace(/&([aeiouAEIOU])acute;?/g, (_, v) => ACUTE[v]).replace(/&ntilde;?/g, "ñ").replace(/&Ntilde;?/g, "Ñ")
   .replace(/&uuml;/g, "ü").replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n)).replace(/&nbsp;/g, " ");
 
 async function cyl112() {
@@ -280,7 +282,7 @@ async function cyl112() {
     const pt = CYL_PROV[prov.toLowerCase()] || [41.75, -4.6];
     const text = `${title} ${desc}`;
     return {
-      id: `cyl112:${txt(it.link).match(/Incidente\/(\d+)/)?.[1] || title}`, cat: "es_aut", pic: CLM_PIC.find(([re]) => re.test(text))?.[1] || "siren",
+      id: `cyl112:${txt(it.link).match(/Incidente\/(\d+)/)?.[1] || title}`, cat: "es_aut", pic: clmPic(title, text),
       title, desc: clip(desc.replace(/^[^-]+-\s*/, ""), 500), lat: pt[0], lon: pt[1], approx: true, time: iso(txt(it.pubDate)),
       sev: /fallec|muert|sin vida|cr[ií]tico|grave/i.test(text) ? 3 : 2, level: "Incidente",
       country: town ? `${town.replace(/^(.+?) \((La|El|Los|Las)\)$/, "$2 $1")}, ${prov} (España)` : "Castilla y León (España)",
