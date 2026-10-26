@@ -1217,7 +1217,8 @@ function markerSize(e) {
 }
 function passes(e, anyCat) {
   if (!anyCat && (!state.cats[e.cat] || state.srcOff.has(`${e.cat}|${sourceOf(e)}`))) return false;
-  if (isFalse(e)) return false;
+  // News that only names an incident (a condemnation, a trial, talks) is for the newspaper, not the map.
+  if (e.news || isFalse(e)) return false;
   if ((e.sev || 1) < state.minSev) return false;
   const from = state.period ? Date.now() - state.period * HOUR : 0;
   const t = Math.max(Date.parse(e.time) || 0, Date.parse(e.updated) || 0);
@@ -2216,7 +2217,7 @@ const dayOf = (e) => (e.time || e.updated || new Date().toISOString()).slice(0, 
 const keyOf = (id) => id.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 120);
 function compact(e) {
   const o = {};
-  for (const k of ["id", "cat", "title", "lat", "lon", "time", "updated", "until", "sev", "mag", "depth", "tsunami", "level", "country", "url", "src", "approx", "verified", "vlabel", "articles", "outlets", "prob", "poly", "pic", "topic", "social", "npost", "nauthor", "posts", "headlines", "links", "headline", "hlang", "headlineEs", "section", "place", "caution"]) if (e[k] != null && e[k] !== "") o[k] = e[k];
+  for (const k of ["id", "cat", "title", "lat", "lon", "time", "updated", "until", "sev", "mag", "depth", "tsunami", "level", "country", "url", "src", "approx", "verified", "vlabel", "articles", "outlets", "prob", "poly", "pic", "topic", "social", "npost", "nauthor", "posts", "headlines", "links", "headline", "hlang", "headlineEs", "section", "place", "caution", "news"]) if (e[k] != null && e[k] !== "") o[k] = e[k];
   if (e.desc) o.desc = String(e.desc).slice(0, 300);
   return o;
 }
@@ -2566,12 +2567,12 @@ const inSpainTick = (e) => e.cat === "aviso_es" || String(e.cat).startsWith("es_
 function tickerItems() {
   const now = Date.now(), from = now - 24 * HOUR, world = [], spain = [], opt = state.settings.ticker;
   for (const e of state.events.values()) {
-    if (e.social || e.cat === "redes" || isFalse(e) || !isLive(e)) continue;
+    if (e.news || e.social || e.cat === "redes" || isFalse(e) || !isLive(e)) continue;
     if (Math.max(Date.parse(e.time) || 0, Date.parse(e.updated) || 0) < from) continue;
     if (!opt.cats[e.cat]) continue;
     const sev = e.sev || 1;
     if ((opt.show === "p12" && sev < 3) || (opt.show === "ok" && e.verified === false)) continue;
-    // RTVE teletext already picks its headlines, so all of them go in, national or international.
+    // RTVE teletext stories that report an event go in, national or international; the rest are news (`e.news`).
     // Spain: orange and red weather warnings (AEMET, MeteoGalicia), and from the other official sources anything above low.
     if (e.cat === "teletexto") { if (opt.spain || !inSpainTick(e)) world.push(e); }
     else if (inSpainTick(e)) { if (opt.spain && sev >= (e.cat === "aviso_es" || String(e.id).startsWith("meteogalicia:") ? 3 : 2)) spain.push(e); }
