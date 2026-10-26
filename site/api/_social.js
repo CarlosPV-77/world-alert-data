@@ -115,8 +115,8 @@ async function bluesky() {
   }));
 }
 
-// News and OSINT channels that post often; the list can be changed in Ajustes.
-export const TELEGRAM_DEFAULT = ["euronews", "france24_en", "elpais", "insiderpaper", "WorldNews", "wartranslated", "CIG_telegram", "warmonitors", "Middle_East_Spectator", "KyivIndependent_official"];
+// Neutral news channels in Spanish or English; the list can be changed in Ajustes.
+export const TELEGRAM_DEFAULT = ["france24_es", "elconfidencial", "france24_en", "insiderpaper", "WorldNews", "KyivIndependent_official"];
 async function telegram(q) {
   const chans = String(q.tg || "").split(",").map((s) => s.trim().replace(/^@|^https?:\/\/t\.me\/(s\/)?/g, "")).filter((s) => /^\w{4,64}$/.test(s));
   return settle((chans.length ? chans : TELEGRAM_DEFAULT).slice(0, 20).map(async (ch) => {

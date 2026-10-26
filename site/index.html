@@ -866,7 +866,11 @@ const SOURCES = {
   teletexto:  { name: "Teletexto RTVE · noticias nacionales e internacionales (Información de rtve.es)", def: 10, opts: [5, 10, 15, 30, 60] },
 };
 // Public Telegram channels read by default; Ajustes lets you switch each one off, add more and remove them.
-const TG_DEFAULT = "euronews, france24_en, elpais, insiderpaper, WorldNews, wartranslated, CIG_telegram, warmonitors, Middle_East_Spectator, KyivIndependent_official";
+// Neutral news channels in Spanish or English (Carlos's rule, 2026-10-26).
+const TG_DEFAULT = "france24_es, elconfidencial, france24_en, insiderpaper, WorldNews, KyivIndependent_official";
+// Channels dropped from the defaults in that review: in Russian (the "euronews" channel is not the official one),
+// partisan, or spam. Lists saved before it lose them once and gain the new defaults (settings.tgv 2).
+const TG_RETIRED = new Set(["euronews", "elpais", "wartranslated", "cig_telegram", "warmonitors", "middle_east_spectator"]);
 const TG_MAX = 20;
 const tgName = (c) => String(c).trim().replace(/^@|^https?:\/\/(www\.)?t\.me\/(s\/)?/i, "").replace(/[/?#].*$/, "");
 const splitTg = (s) => String(s || "").split(/[\s,]+/).map(tgName).filter((c) => /^\w{4,64}$/.test(c));
@@ -921,7 +925,7 @@ const state = {
   ov: { ...Object.fromEntries(Object.keys(OVERLAYS).map((k) => [k, k === "ticker"])), ships: false },
   countries: new Set(),        // ISO3 codes the viewer is following; empty = whole world
   open: { naturales: true, meteo: true, mar: false, seguridad: true, mapa: true },
-  settings: { intervals: Object.fromEntries(Object.entries(SOURCES).map(([k, v]) => [k, v.def])), enabled: Object.fromEntries(Object.keys(SOURCES).map((k) => [k, !SOURCES[k].off])), retention: 90, tg: TG_DEFAULT, tgList: splitTg(TG_DEFAULT).map((c) => ({ c, on: true, g: "" })), tgGroups: [], ticker: { v: 2, pos: "top", speed: 70, show: "all", spain: true, cats: Object.fromEntries(TICK_KINDS.map((c) => [c, !TICK_KINDS_OFF.includes(c)])) } },
+  settings: { intervals: Object.fromEntries(Object.entries(SOURCES).map(([k, v]) => [k, v.def])), enabled: Object.fromEntries(Object.keys(SOURCES).map((k) => [k, !SOURCES[k].off])), retention: 90, tg: TG_DEFAULT, tgv: 2, tgList: splitTg(TG_DEFAULT).map((c) => ({ c, on: true, g: "" })), tgGroups: [], ticker: { v: 2, pos: "top", speed: 70, show: "all", spain: true, cats: Object.fromEntries(TICK_KINDS.map((c) => [c, !TICK_KINDS_OFF.includes(c)])) } },
   lastUpdate: null,
 };
 const store = {
@@ -945,6 +949,11 @@ function mergeSettings(s) {
   // Lists saved before channels had checkboxes come in with every channel switched on.
   state.settings.tgList = Array.isArray(s.tgList) ? s.tgList.filter((x) => x && /^\w{4,64}$/.test(x.c)).map((x) => ({ c: x.c, on: !!x.on, t: x.t || "", g: x.g || "" }))
     : splitTg(state.settings.tg).map((c) => ({ c, on: true }));
+  if ((s.tgv || 1) < 2) {
+    state.settings.tgList = state.settings.tgList.filter((x) => !TG_RETIRED.has(x.c.toLowerCase()));
+    for (const c of splitTg(TG_DEFAULT)) if (!state.settings.tgList.some((x) => x.c.toLowerCase() === c.toLowerCase())) state.settings.tgList.push({ c, on: true, t: "", g: "" });
+  }
+  state.settings.tgv = 2;
   state.settings.tgGroups = Array.isArray(s.tgGroups) ? s.tgGroups.filter((g) => g && typeof g.n === "string" && g.n).map((g) => ({ n: g.n, open: g.open !== false })) : [];
   for (const x of state.settings.tgList) if (!state.settings.tgGroups.some((g) => g.n === x.g)) x.g = "";
   state.settings.tg = tgActive(state.settings.tgList);
