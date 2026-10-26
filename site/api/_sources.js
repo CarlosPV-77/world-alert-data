@@ -4,7 +4,7 @@ import { inflateRawSync, gunzipSync } from "node:zlib";
 import { social } from "./_social.js";
 import { teletexto } from "./_teletexto.js";
 import { accidents } from "./_accidents.js";
-import { notAlert, slugText } from "./_notalert.js";
+import { isIncident, notAlert, slugText } from "./_notalert.js";
 import { SPAIN_SOURCES } from "./_spain.js";
 
 const UA = "WorldAlert/1.0 (personal hazard map)";
@@ -152,22 +152,26 @@ async function gdeltNews(cat, keep, files = 4) {
     const key = `${e.place}|${e.lat.toFixed(1)}|${e.lon.toFixed(1)}`;
     // GDELT codes one article at every place it names; the article only counts at the place it is about.
     if (e.url && home.get(e.url) !== key) continue;
-    const g = groups.get(key) || { approx: e.geoType === "1" || e.geoType === "2" || e.geoType === "5", place: e.place, cc: e.cc, lat: e.lat, lon: e.lon, n: 0, articles: 0, time: null, domains: new Set(), url: null, codes: new Map(), links: new Map() };
+    // Articles that report an attack or a battle make the alert; the rest (reactions, arrests, talks, unreadable links)
+    // are kept apart as news about the place, for the newspaper only.
+    const isNews = !isIncident(headlineOf(e.url));
+    const gkey = `${isNews ? "news|" : ""}${key}`;
+    const g = groups.get(gkey) || { news: isNews, approx: e.geoType === "1" || e.geoType === "2" || e.geoType === "5", place: e.place, cc: e.cc, lat: e.lat, lon: e.lon, n: 0, articles: 0, time: null, domains: new Set(), url: null, codes: new Map(), links: new Map() };
     g.n++; g.articles += e.articles;
     g.codes.set(e.code, (g.codes.get(e.code) || 0) + e.articles);
     const t = gdeltTime(e.added);
     if (t && (!g.time || t > g.time)) g.time = t;
     const d = domainOf(e.url);
     if (d) { g.domains.add(d); if (!g.url) g.url = e.url; if (!g.links.has(e.url)) g.links.set(e.url, { outlet: d, url: e.url, title: headlineOf(e.url) || undefined }); }
-    groups.set(key, g);
+    groups.set(gkey, g);
   }
   return [...groups.values()].map((g) => {
     const outlets = [...g.domains];
     const top = [...g.codes.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "";
     const label = CAMEO_LABEL[top] || CAMEO_LABEL[top.slice(0, 3)] || (cat === "atentado" ? "Ataque violento" : "Actividad militar");
     return {
-      id: `gdelt:${cat}:${g.place}:${g.lat.toFixed(1)},${g.lon.toFixed(1)}`, cat,
-      title: `${label}: ${clip(g.place, 90)}`,
+      id: `gdelt:${cat}:${g.news ? "news:" : ""}${g.place}:${g.lat.toFixed(1)},${g.lon.toFixed(1)}`, cat, news: g.news || undefined,
+      title: `${g.news ? "Noticia" : label}: ${clip(g.place, 90)}`,
       desc: `${g.n} ${g.n === 1 ? "suceso" : "sucesos"} codificados por GDELT en ${window}, con ${g.articles} ${g.articles === 1 ? "artículo" : "artículos"} de prensa${outlets.length ? ` (${outlets.slice(0, 4).join(", ")})` : ""}.`,
       lat: g.lat, lon: g.lon, approx: g.approx || undefined, time: g.time || new Date().toISOString(),
       sev: g.articles >= 40 ? 4 : g.articles >= 15 ? 3 : g.articles >= 5 ? 2 : 1,
