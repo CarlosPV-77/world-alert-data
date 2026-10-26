@@ -393,6 +393,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 .tgrow .sub { font-size: 12px; color: var(--muted); }
 .posts { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
 .posts li { border-left: 2px dashed var(--s3); padding: 2px 0 2px 10px; }
+.covh { margin-top: 12px; font-family: var(--font-data); font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 .posts .pmeta { font-family: var(--font-data); font-size: 12px; color: var(--muted); }
 .posts p { margin: 3px 0; font-size: 13px; overflow-wrap: anywhere; }
 .posts a { font-size: 12px; color: var(--accent); }
@@ -1223,12 +1224,153 @@ function passes(e, anyCat) {
   if (from && t < from) return false;
   return inCountries(e);
 }
+// ---------- one story, one entry ----------
+// The same story reaches the map many times: GDELT codes an article at each place it names, the history keeps it
+// from earlier hours, and other outlets, RTVE teletext and the press layers carry it with different wording.
+// News items that share a link, or whose headlines share most of their words near each other in place and time,
+// are one story: it is shown once, from its most reliable entry, with every outlet behind it.
+const STORY_CATS = new Set(["conflicto", "atentado", "teletexto", "aereo", "naval", "redes"]);
+const STORY_HOURS = 36;
+const STOP = new Set(("the and for with from after over into amid says said have has had was were are that this their they his her its who what when how will would could more than new not but about against near "
+  + "del las los una uno unos unas por para con sin sobre tras entre que como mas este esta estos estas ese esa desde hasta han fue son sus segun ante dos tres "
+  + "les des une dans pour avec sur par est aux news live update updates latest video photos breaking watch report reports ultima hora noticia noticias").split(" "));
+const plainText = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const stem = (w) => w.length > 5 && w.endsWith("ing") ? w.slice(0, -3) : w.length > 4 && w.endsWith("ed") ? w.slice(0, -2) : w.length > 4 && w.endsWith("es") ? w.slice(0, -2) : w.length > 3 && w.endsWith("s") ? w.slice(0, -1) : w;
+const wordsOf = (s) => plainText(s).split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && !/^\d+$/.test(w) && !STOP.has(w)).map(stem);
+// Headlines only: GDELT titles without one ("Actividad militar: Gaza") and the press layers' titles are labels, not headlines.
+function storyTexts(e) {
+  const t = [e.headline, e.headlineEs, ...(e.headlines || []).map((h) => h.title), ...(e.links || []).map((l) => l.title)];
+  if (e.cat === "teletexto") t.push(e.title);
+  if (e.social) t.push(String(e.desc || "").slice(0, 200));
+  return t.filter(Boolean);
+}
+// Teletexto links are page numbers that RTVE reuses for other stories, so they say nothing.
+function storyUrls(e) {
+  if (e.cat === "teletexto") return [];
+  const u = [e.url, ...(e.links || []).map((l) => l.url), ...(e.headlines || []).map((h) => h.url), ...(e.posts || []).map((p) => p.url)];
+  return [...new Set(u.filter(Boolean).map((x) => { try { const p = new URL(x); return (p.hostname.replace(/^www\./, "") + p.pathname.replace(/\/+$/, "")).toLowerCase(); } catch { return ""; } }).filter(Boolean))];
+}
+function kmBetween(a, b) {
+  const r = Math.PI / 180, dLat = (b.lat - a.lat) * r, dLon = (b.lon - a.lon) * r;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * r) * Math.cos(b.lat * r) * Math.sin(dLon / 2) ** 2;
+  return 12742 * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+let storyVer = 0;
+const touchStories = () => { storyVer++; };
+const stories = { ver: -1, root: new Map(), members: new Map(), views: new Map() };
+function storyIndex() {
+  if (stories.ver === storyVer) return stories;
+  const items = [...state.events.values()].filter((e) => STORY_CATS.has(e.cat) && Number.isFinite(+e.lat)).map((e) => {
+    const sets = storyTexts(e).map((t) => new Set(wordsOf(t))).filter((x) => x.size);
+    return { e, sets, words: new Set(sets.flatMap((x) => [...x])), urls: storyUrls(e), t: Date.parse(e.updated || e.time) || 0, lat: +e.lat, lon: +e.lon };
+  });
+  // Words that name places: two headlines that each name a place the other does not are about different places.
+  const placeWords = new Set();
+  for (const { e } of items) for (const w of wordsOf(`${paperWhere(e)} ${e.country || ""}`)) placeWords.add(w);
+  const up = items.map((_, i) => i);
+  const find = (i) => { while (up[i] !== i) i = up[i] = up[up[i]]; return i; };
+  const join = (i, j) => { i = find(i); j = find(j); if (i !== j) up[j] = i; };
+  const byUrl = new Map(), byWord = new Map();
+  items.forEach((it, i) => {
+    for (const u of it.urls) { if (byUrl.has(u)) join(byUrl.get(u), i); else byUrl.set(u, i); }
+    for (const w of it.words) (byWord.get(w) || byWord.set(w, []).get(w)).push(i);
+  });
+  const shared = new Map();
+  for (const list of byWord.values()) {
+    if (list.length < 2 || list.length > 150) continue;   // words in every headline ("killed") do not tell stories apart
+    for (let x = 0; x < list.length; x++) for (let y = x + 1; y < list.length; y++) {
+      const k = list[x] * 65536 + list[y];
+      shared.set(k, (shared.get(k) || 0) + 1);
+    }
+  }
+  for (const [k, inter] of shared) {
+    if (inter < 3) continue;
+    const a = items[Math.floor(k / 65536)], b = items[k % 65536];
+    if (Math.abs(a.t - b.t) > STORY_HOURS * HOUR || find(Math.floor(k / 65536)) === find(k % 65536)) continue;
+    // Compared headline by headline too, so a story told in two languages is not diluted by the other one.
+    let ov = inter / Math.min(a.words.size, b.words.size);
+    for (const x of a.sets) for (const y of b.sets) {
+      let n = 0;
+      for (const w of x) if (y.has(w)) n++;
+      if (n >= 3) ov = Math.max(ov, n / Math.min(x.size, y.size));
+    }
+    if (ov < 0.5 || (ov < 0.6 && inter < 4)) continue;
+    // Each naming a place the other does not ("... in Gaza", "... in Lebanon") is two stories, unless they sit
+    // together on the map (a town and its country).
+    const km = kmBetween(a, b);
+    let onlyA = false, onlyB = false;
+    for (const w of a.words) if (!b.words.has(w) && placeWords.has(w)) { onlyA = true; break; }
+    for (const w of b.words) if (!a.words.has(w) && placeWords.has(w)) { onlyB = true; break; }
+    if (onlyA && onlyB && km > 150) continue;
+    // Near each other most shared words are enough; far apart (a capital reacting, a vague place) it takes more.
+    if ((inter >= 4 && ov >= 0.65) || km <= 400) join(Math.floor(k / 65536), k % 65536);
+  }
+  const root = new Map(), members = new Map();
+  items.forEach((it, i) => {
+    const r = items[find(i)].e.id;
+    root.set(it.e.id, r);
+    (members.get(r) || members.set(r, []).get(r)).push(it.e);
+  });
+  Object.assign(stories, { ver: storyVer, root, members, views: new Map() });
+  return stories;
+}
+const storyOf = (e) => { const s = storyIndex(), m = s.members.get(s.root.get(e.id)); return m && m.length > 1 ? m : null; };
+// Everything the story's entries know, on top of the chosen one: outlets, the worst severity, first and last time.
+function storyView(e) {
+  const all = storyOf(e);
+  if (!all) return e;
+  const s = storyIndex();
+  if (s.views.has(e.id)) return s.views.get(e.id);
+  const outlets = new Set();
+  for (const m of all) { if (m.social) continue; (m.outlets || []).forEach((o) => outlets.add(o)); if (m.cat === "teletexto" && m.verified !== false) outlets.add("rtve.es"); }
+  const times = all.map((m) => Date.parse(m.time) || 0).filter(Boolean), last = Math.max(...all.map((m) => Date.parse(m.updated || m.time) || 0));
+  const v = { ...e, sev: Math.max(...all.map((m) => m.sev || 1)), outlets: [...outlets].slice(0, 8), story: all };
+  if (times.length) v.time = new Date(Math.min(...times)).toISOString();
+  if (last > (Date.parse(v.time) || 0)) v.updated = new Date(last).toISOString();
+  // Two or more outlets make a story contrasted, the project's rule; news about the Prime Minister keeps its warning.
+  if (outlets.size >= 2 && !e.caution && !e.social && e.cat !== "teletexto") { v.verified = true; v.vlabel = `${outlets.size} medios`; }
+  s.views.set(e.id, v);
+  return v;
+}
+// One entry per story, at the place of its first entry in the list, shown from its most reliable entry there.
+// A story marked as false in any of its entries is hidden whole.
+function dedupe(list) {
+  const best = new Map();
+  for (const e of list) {
+    const all = storyOf(e);
+    if (!all) continue;
+    const r = storyIndex().root.get(e.id), b = best.get(r);
+    if (!b || paperRank(e, b) < 0) best.set(r, e);
+  }
+  const out = [], done = new Set();
+  for (const e of list) {
+    const all = storyOf(e);
+    if (!all) { out.push(e); continue; }
+    const r = storyIndex().root.get(e.id);
+    if (done.has(r)) continue;
+    done.add(r);
+    if (!all.some(isFalse)) out.push(storyView(best.get(r)));
+  }
+  return out;
+}
+// The outlets behind a story, each with its own headline and link.
+function coverageOf(e) {
+  const out = [], seen = new Set();
+  const add = (outlet, title, url, time) => { const k = url || title; if (!k || seen.has(k)) return; seen.add(k); out.push({ outlet, title, url, time }); };
+  for (const m of e.story || [e]) {
+    if (m.links?.length) m.links.forEach((l) => add(l.outlet, l.title || paperHead(m).es || paperHead(m).orig, l.url, m.time));
+    else if (m.headlines?.length) m.headlines.forEach((h) => add(h.outlet, h.title, h.url, h.time));
+    else if (m.social) add(m.src, String(m.desc || "").slice(0, 160), m.url, m.updated || m.time);
+    else { const h = paperHead(m); add(m.outlets?.[0] || m.src, h.es || h.orig, m.url, m.time); }
+  }
+  return out;
+}
 function visible() {
   // Parse each time once, not on every comparison.
   // Current incidents newest first; warnings that have not started yet go after them, soonest first.
   const now = Date.now();
-  return [...state.events.values()].filter((e) => passes(e)).map((e) => [Date.parse(e.time) || 0, e])
-    .sort((a, b) => (a[0] > now) - (b[0] > now) || (a[0] > now ? a[0] - b[0] : b[0] - a[0])).map((x) => x[1]);
+  return dedupe([...state.events.values()].filter((e) => passes(e)).map((e) => [Date.parse(e.time) || 0, e])
+    .sort((a, b) => (a[0] > now) - (b[0] > now) || (a[0] > now ? a[0] - b[0] : b[0] - a[0])).map((x) => x[1]));
 }
 const isLive = (e) => Object.values(state.live).some((s) => s.has(e.id));
 
@@ -1395,7 +1537,7 @@ function legendShape(cat, color = "currentColor") {
 // Per-layer and per-source counts with the other filters applied, whether or not the layer is on.
 function counts() {
   const n = {};
-  for (const e of state.events.values()) if (passes(e, true)) { n[e.cat] = (n[e.cat] || 0) + 1; const k = `${e.cat}|${sourceOf(e)}`; n[k] = (n[k] || 0) + 1; }
+  for (const e of dedupe([...state.events.values()].filter((x) => passes(x, true)))) { n[e.cat] = (n[e.cat] || 0) + 1; const k = `${e.cat}|${sourceOf(e)}`; n[k] = (n[k] || 0) + 1; }
   return n;
 }
 // "IGN · terremotos en España" -> name "IGN", hint "terremotos en España".
@@ -1560,6 +1702,8 @@ function newsBtn(e) {
 }
 // The latest posts behind a social marker, each linking to the original.
 function postList(e) {
+  const cov = e.story || e.links?.length > 1 ? coverageOf(e) : [];
+  if (cov.length > 1) return `<div class="covh">Misma noticia en ${cov.length} ${e.story?.some((m) => m.social) ? "fuentes" : "artículos"}</div><ol class="posts">${cov.slice(0, 8).map((c) => `<li><div class="pmeta">${esc(c.outlet || "Prensa")}${c.time ? ` · ${esc(rel(c.time))}` : ""}</div>${c.title ? `<p>${esc(c.title)}</p>` : ""}${c.url ? `<a href="${esc(c.url)}" target="_blank" rel="noopener">Abrir noticia</a>` : ""}</li>`).join("")}</ol>`;
   if (e.headlines?.length) return `<ol class="posts">${e.headlines.map((h) => `<li><div class="pmeta">${esc(h.outlet || "Prensa")} · ${esc(rel(h.time))}</div><p>${esc(h.title)}</p>${h.url ? `<a href="${esc(h.url)}" target="_blank" rel="noopener">Abrir noticia</a>` : ""}</li>`).join("")}</ol>`;
   if (!e.posts?.length) return "";
   return `<ol class="posts">${e.posts.map((p) => `<li><div class="pmeta">${esc(p.net)} · ${esc(p.author)} · ${esc(rel(p.time))}</div><p>${esc(p.text)}</p>${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener">Abrir publicación</a>` : ""}</li>`).join("")}</ol>`;
@@ -1572,7 +1716,7 @@ function saveBtn(id) {
 // Saved alerts keep a copy of the event, so they survive after the feed drops it.
 state.saved = new Map((store.get("saved") || []).map((e) => [e.id, e]));
 state.showSaved = false;
-const eventOf = (id) => state.events.get(id) || state.saved.get(id);
+const eventOf = (id) => { const e = state.events.get(id); return e ? storyView(e) : state.saved.get(id); };
 // ---------- false alerts ----------
 // Alerts marked as false (an article or study about a hazard, clickbait, a hoax) and outlets silenced by the
 // viewer. Both live in this browser and hide matching alerts everywhere: map, queue, incoming tab and counts.
@@ -2046,11 +2190,18 @@ function ingest(src, feed, at) {
     ids.add(e.id);
     const old = state.events.get(e.id);
     state.events.set(e.id, e);
+    touchStories();
     if (!old || old.sev !== e.sev || old.updated !== e.updated || old.title !== e.title) markDirty(e);
     if (!baseline && (!old || (e.sev || 1) > (old.sev || 1))) fresh.push([e, old]);
   }
   state.live[src] = ids;
-  if (state.countries.size) for (const [e, old] of fresh) if (passes(e)) notify(e, old);
+  // A new entry of a story already on the map does not arrive as a new alert, and a story arrives once.
+  const told = new Set(), arrived = new Set(fresh.filter(([, old]) => !old).map(([e]) => e.id));
+  if (state.countries.size) for (const [e, old] of fresh) {
+    const all = storyOf(e), r = all && storyIndex().root.get(e.id);
+    if (!old && all && (told.has(r) || all.some((m) => !arrived.has(m.id)))) continue;
+    if (passes(e)) { if (r) told.add(r); notify(e, old); }
+  }
   const st = feed.status?.[src];
   state.srcStatus[src] = st?.ok === false ? { ok: false, at, error: st.error } : { ok: true, at, n: ids.size, stale: st?.stale };
   state.lastUpdate = new Date(at).toISOString();
@@ -2065,7 +2216,7 @@ const dayOf = (e) => (e.time || e.updated || new Date().toISOString()).slice(0, 
 const keyOf = (id) => id.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 120);
 function compact(e) {
   const o = {};
-  for (const k of ["id", "cat", "title", "lat", "lon", "time", "updated", "until", "sev", "mag", "depth", "tsunami", "level", "country", "url", "src", "approx", "verified", "vlabel", "articles", "outlets", "prob", "poly", "pic", "topic", "social", "npost", "nauthor", "posts", "headlines", "headline", "hlang", "headlineEs", "section", "place", "caution"]) if (e[k] != null && e[k] !== "") o[k] = e[k];
+  for (const k of ["id", "cat", "title", "lat", "lon", "time", "updated", "until", "sev", "mag", "depth", "tsunami", "level", "country", "url", "src", "approx", "verified", "vlabel", "articles", "outlets", "prob", "poly", "pic", "topic", "social", "npost", "nauthor", "posts", "headlines", "links", "headline", "hlang", "headlineEs", "section", "place", "caution"]) if (e[k] != null && e[k] !== "") o[k] = e[k];
   if (e.desc) o.desc = String(e.desc).slice(0, 300);
   return o;
 }
@@ -2099,6 +2250,7 @@ async function loadHistory() {
     if (r) q = q.where("d", ">=", new Date(Date.now() - r * 24 * HOUR).toISOString().slice(0, 10));
     const snap = await q.get();
     snap.docs.forEach((d) => { const ev = d.data()?.ev || {}; for (const e of Object.values(ev)) if (!state.events.has(e.id)) state.events.set(e.id, e); });
+    touchStories();
     render();
   } catch (err) { console.warn("No se pudo leer el histórico", err); }
 }
@@ -2267,6 +2419,7 @@ function askClear() {
   document.getElementById("clearYes").onclick = async () => {
     if (db) { try { const s = await db.collection("dias").get(); for (const d of s.docs) await db.doc("dias/" + d.id).delete(); } catch (e) { console.warn(e); } }
     for (const [id, e] of state.events) if (!isLive(e)) state.events.delete(id);
+    touchStories();
     closeSettings(); render();
   };
 }
@@ -2424,7 +2577,7 @@ function tickerItems() {
     else if (inSpainTick(e)) { if (opt.spain && sev >= (e.cat === "aviso_es" || String(e.id).startsWith("meteogalicia:") ? 3 : 2)) spain.push(e); }
     else if (sev >= 3) world.push(e);
   }
-  return [...world.sort(paperRank).slice(0, TICK_WORLD), ...spain.sort(paperRank).slice(0, TICK_SPAIN)].sort(paperRank);
+  return [...dedupe(world.sort(paperRank)).slice(0, TICK_WORLD), ...dedupe(spain.sort(paperRank)).slice(0, TICK_SPAIN)].sort(paperRank);
 }
 function tickerItem(e) {
   const h = paperHead(e), sev = Math.min(4, Math.max(1, e.sev || 1)), unv = e.verified === false;
@@ -2534,8 +2687,9 @@ function paperItem(e, size) {
 const paperNational = (e) => e.cat === "teletexto" ? /^nacional/i.test(e.section || "") : inSpainEv(e);
 function paperPool() {
   const from = Date.now() - PAPER_HOURS * HOUR;
-  return [...state.events.values()].filter((e) => e.cat !== "redes" && !isFalse(e) && (!state.paperVerified || trusted(e))
-    && Math.max(Date.parse(e.time) || 0, Date.parse(e.updated) || 0, Date.parse(e.until) || 0) >= from).sort(paperRank);
+  return dedupe([...state.events.values()].filter((e) => e.cat !== "redes" && !isFalse(e)
+    && Math.max(Date.parse(e.time) || 0, Date.parse(e.updated) || 0, Date.parse(e.until) || 0) >= from).sort(paperRank))
+    .filter((e) => !state.paperVerified || trusted(e)).sort(paperRank);
 }
 // The pages after the front one: each section of each area, split into pages of PAPER_PAGE stories. A section
 // with more than fits keeps the most important ones and says how many more the map has.
