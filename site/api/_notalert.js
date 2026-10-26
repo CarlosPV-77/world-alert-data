@@ -32,14 +32,14 @@ const AFTER = new RegExp("(?<![\\p{L}\\d])(" + [
   "conden(a|an|ó|aron|ado|ados|ada|adas)", "repulsa", "lament(a|an|ó)", "luto", "condolencias?", "p[eé]same", "solidaridad", "homenajes?", "minuto de silencio", "vigilia", "conmemor\\w*", "recuerd(a|an)", "reza(n)? por",
   // justice
   "trials?", "sentenc(e|ed|es|ing)", "verdict", "convicted", "acquitted", "jury", "(in|to|before) court", "court (rules|ruled|hears|orders|case)", "prosecutors?", "case filed", "lawsuit", "sues?", "sued", "inquiry", "probe", "investigat(e|es|ed|ing|ion)", "extradit\\w*",
-  "arrest(s|ed)?", "detain(s|ed)?", "charged", "suspects? (held|in custody)",
+  "arrest(s|ed)?", "detain(s|ed)?", "charged", "suspects?",
   "juicio", "juzga(do|dos|da)?", "sentencia", "veredicto", "absuelt[oa]s?", "jurado", "tribunal(es)?", "fiscal(es|[ií]a)?", "demanda", "investiga(n|ci[oó]n)?", "extradi\\w*",
-  "deten(ido|idos|ida|idas|ci[oó]n)", "detien(e|en)", "arrest(a|an|ado|ados)", "acusad[oa]s?", "imputad[oa]s?", "declara ante",
+  "deten(ido|idos|ida|idas|ci[oó]n)", "detien(e|en)", "arrest(a|an|ado|ados)", "acusad[oa]s?", "imputad[oa]s?", "sospechos[oa]s?", "declara ante",
   // aid and visits
   "donat(e|es|ed|ion|ions)", "donan?", "don[oó]", "donaci[oó]n", "donativos?", "fundrais\\w*", "compensation", "indemniza\\w*", "visit(s|ed)? (the )?(victims|wounded|site)", "visita (a )?(los heridos|las v[ií]ctimas|la zona)",
   // talks and politics
-  "talks", "negotiat\\w*", "summit", "delegations?", "meet(s|ing)?", "agreement", "deal", "sanctions?", "ceasefire (talks|deal|agreement|proposal)", "elections?", "(passes|approves|signs) (a )?(bill|law)", "new law",
-  "conversaciones", "negocia\\w*", "cumbre", "delegaci[oó]n(es)?", "se re[uú]ne(n)?", "reuni[oó]n", "acuerdo", "sanci[oó]n(es)?", "elecci[oó]n(es)?", "campa[nñ]a electoral", "ley", "aprueba(n)?", "votaci[oó]n",
+  "talks", "negotiat\\w*", "summit", "delegations?", "meet(s|ing)?", "agreement", "deal", "sanctions?", "ceasefire (talks|deal|agreement|proposal|begins|starts|holds)", "truce", "elections?", "(passes|approves|signs) (a )?(bill|law)", "new law",
+  "conversaciones", "negocia\\w*", "cumbre", "delegaci[oó]n(es)?", "se re[uú]ne(n)?", "reuni[oó]n", "acuerdo", "tregua", "alto el fuego(?! (roto|violado))", "sanci[oó]n(es)?", "elecci[oó]n(es)?", "campa[nñ]a electoral", "ley", "aprueba(n)?", "votaci[oó]n",
   // fears, threats and denials
   "fears?", "warns?", "warning", "threat(s|ens)?", "potential", "risk of", "denies", "denied",
   "temor(es)?", "advierte(n)?", "amenaza(n)?", "riesgo de", "niega(n)?", "desmiente(n)?",
@@ -54,7 +54,7 @@ const CUE = new RegExp("(?<![\\p{L}\\d])(" + [
   "clash(es|ed)?", "fighting", "offensive", "invasion", "invade[ds]?", "incursion", "siege", "riots?", "unrest", "fires?", "blaze", "wildfires?", "crash(es|ed)?", "collapse[ds]?", "derail\\w*", "sinks?", "sank|capsiz\\w*", "evacuat\\w*", "terror(ist|ists)? attack",
   "muert(o|os|a|as|e|es)", "mueren", "muere", "fallec\\w*", "matan?", "mat[oó]", "asesina\\w*", "herid(o|os|a|as)", "v[ií]ctimas mortales", "masacre", "matanza", "ataque(s)?", "atac(a|an|ó|aron|ado)", "atentados?", "emboscada",
   "bomba(s)?", "bombarde\\w*", "explosi[oó]n(es)?", "explot\\w*", "estall\\w*", "detona\\w*", "deflagraci[oó]n", "misil(es)?", "cohetes?", "drones?", "proyectil(es)?", "artiller[ií]a", "disparos?", "dispar(a|an|ó|aron)", "tiroteos?", "tiros", "acribill\\w*",
-  "apu[nñ]al\\w*", "reh[eé]n(es)?", "secuestr\\w*", "combates?", "enfrentamientos?", "ofensiva", "invasi[oó]n", "incursi[oó]n", "asedio", "disturbios", "incendios?", "fuego", "llamas", "accidente", "choque", "colisi[oó]n", "derrumbe", "se derrumba", "descarril\\w*", "naufrag\\w*", "se hunde", "evacu\\w*",
+  "apu[nñ]al\\w*", "reh[eé]n(es)?", "secuestr\\w*", "combates?", "enfrentamientos?", "ofensiva", "invasi[oó]n", "incursi[oó]n", "asedio", "disturbios", "incendios?", "llamas", "accidente", "choque", "colisi[oó]n", "derrumbe", "se derrumba", "descarril\\w*", "naufrag\\w*", "se hunde", "evacu\\w*",
 ].join("|") + ")(?![\\p{L}\\d])", "iu");
 
 export const aftermath = (text) => !!text && AFTER.test(text);

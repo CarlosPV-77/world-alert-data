@@ -76,7 +76,8 @@ export async function teletexto() {
     const topic = lead || (/GUERRA|CONFLICTO/.test(s.section) ? topicOf("combates") : null);
     // Only a story that reports the event itself is an alert for the map and the ticker; "El Papa condena el atentado",
     // a trial or a war-section story about talks is news, kept for the newspaper.
-    const news = !lead || (lead[0] === "conflicto" || lead[0] === "atentado" ? !isIncident(s.title, first) : notAlert(s.title) || aftermath(s.title));
+    // A story with no hazard topic is an alert only when its headline itself reports one ("24 muertos choque bus en Kenia").
+    const news = !lead ? !isIncident(s.title) : lead[0] === "conflicto" || lead[0] === "atentado" ? !isIncident(s.title, first) : notAlert(s.title) || aftermath(s.title);
     const president = PRESIDENT.test(text);
     const where = place.name && place.name !== place.country ? `${place.name} (${place.country})` : place.country;
     return {
@@ -85,7 +86,7 @@ export async function teletexto() {
       desc: s.body.slice(0, 600), section: [s.area, s.section && s.section !== s.area.toUpperCase() ? s.section : ""].filter(Boolean).join(" · "),
       lat: place.lat, lon: place.lon, approx: true, country: place.country, place: where,
       time: s.hm ? madridTime(s.hm, now) : now.toISOString(),
-      sev: topic ? (["conflicto", "atentado", "tsunami", "sismo", "volcan", "ciclon"].includes(topic[0]) ? 3 : 2) : 1,
+      sev: topic ? (["conflicto", "atentado", "tsunami", "sismo", "volcan", "ciclon"].includes(topic[0]) ? 3 : 2) : news ? 1 : 2,
       url: `${BASE}${s.page}/`, src: "Teletexto RTVE",
       verified: !president, vlabel: president ? undefined : "Teletexto de RTVE",
       caution: president ? "habla del presidente del Gobierno" : undefined,
