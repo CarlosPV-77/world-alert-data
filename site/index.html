@@ -585,8 +585,21 @@ button.plink:hover span:first-child { text-decoration: underline; text-underline
   .actions .lbl-long { display: none; }
   .asheet .body { max-height: 30vh; }
   .asheet .aacts { position: sticky; bottom: -14px; background: var(--panel); padding-bottom: 6px; z-index: 1; }
-  .mapwrap.dock-open .legend { display: none; }
+  .mapwrap.dock-open .legend, .mapwrap.card-open .legend { display: none; }
   .legend { font-size: 12px; padding: 8px 10px; }
+  /* Alert card on a phone: smaller type and spacing, a short summary, and the buttons pinned to its bottom edge. */
+  .mcard .detail { width: min(290px, calc(100vw - 40px)); padding: 10px 12px; gap: 6px; }
+  .mcard .detail h2 { font-size: 15px; }
+  .mcard .detail p { font-size: 12px; line-height: 1.4; max-height: 4.2em; }
+  .mcard .detail dl { font-size: 11px; gap: 2px 10px; }
+  .mcard .detail dt { font-size: 10px; }
+  .mcard .detail .vmark { font-size: 11px; margin-top: 0; }
+  .mcard .detail .vmark svg { width: 15px; height: 15px; }
+  .mcard .detail .aacts { position: sticky; bottom: -10px; margin-bottom: -10px; padding: 6px 0 10px; background: var(--panel-2); z-index: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(76px, 1fr)); gap: 4px; }
+  .mcard .detail .aacts .btn { flex-direction: column; justify-content: center; gap: 3px; padding: 5px 4px; font-size: 10px; letter-spacing: .03em; text-align: center; white-space: normal; }
+  .mcard .detail .aacts > :not(.btn) { grid-column: 1 / -1; }
+  /* While a card is open the image date and the attribution step aside. */
+  .mapwrap.card-open .imgdate, .mapwrap.card-open .maplibregl-ctrl-bottom-right { display: none; }
   .legend .row.cats { display: none; }
 }
 
@@ -2183,9 +2196,15 @@ function mountCard(m, lngLat, html, info, offset = 18) {
   if (aOpen) { aOpen = false; renderAlerts(); }
   const box = document.createElement("div");
   box.className = "detail mcard-body"; box.innerHTML = html;
+  // The card never grows taller than the map leaves room for, so its buttons stay in view.
+  const phone = matchMedia("(max-width: 760px)").matches, h = m.getContainer().clientHeight;
+  box.style.maxHeight = Math.max(150, Math.min(460, innerHeight * 0.6, h - (phone ? 70 : 56))) + "px";
   const popup = new maplibregl.Popup({ className: "mcard", closeButton: false, closeOnClick: false, maxWidth: "340px", offset, focusAfterOpen: false })
     .setLngLat(lngLat).setDOMContent(box).addTo(m);
   card = { ...info, popup };
+  document.getElementById("mapwrap").classList.add("card-open");
+  // On a phone the map is short: the alert moves near the top edge so the card opens below it at full height.
+  if (phone) m.easeTo({ center: lngLat, offset: [0, -(h / 2 - 34)], duration: 350 });
 }
 function openCard(m, e) { mountCard(m, [+e.lon, +e.lat], detailHtml(e), { id: e.id }); }
 function refreshCard() {
@@ -2193,7 +2212,7 @@ function refreshCard() {
   const e = eventOf(card.id), box = card.popup.getElement()?.querySelector(".detail");
   if (e && box) keepFocus(box, () => (box.innerHTML = detailHtml(e)));
 }
-function closeCard() { if (card) { const c = card; card = null; c.popup.remove(); } }
+function closeCard() { if (card) { const c = card; card = null; c.popup.remove(); } document.getElementById("mapwrap").classList.remove("card-open"); }
 for (const id of ["detail"]) document.getElementById(id).addEventListener("click", detailClick);
 function detailClick(ev) {
   const fb = ev.target.closest("[data-false],[data-falsewhy],[data-falsecancel]");
