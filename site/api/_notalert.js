@@ -35,15 +35,17 @@ const AFTER = new RegExp("(?<![\\p{L}\\d])(" + [
   "arrest(s|ed)?", "detain(s|ed)?", "charged", "suspects?",
   "juicio", "juzga(do|dos|da)?", "sentencia", "veredicto", "absuelt[oa]s?", "jurado", "tribunal(es)?", "fiscal(es|[ií]a)?", "demanda", "investiga(n|ci[oó]n)?", "extradi\\w*",
   "deten(ido|idos|ida|idas|ci[oó]n)", "detien(e|en)", "arrest(a|an|ado|ados)", "acusad[oa]s?", "imputad[oa]s?", "sospechos[oa]s?", "declara ante",
+  "suspeit[oa]s?", "julgamento", "homenagem", "cust[oó]dia",
   // aid and visits
   "donat(e|es|ed|ion|ions)", "donan?", "don[oó]", "donaci[oó]n", "donativos?", "fundrais\\w*", "compensation", "indemniza\\w*", "visit(s|ed)? (the )?(victims|wounded|site)", "visita (a )?(los heridos|las v[ií]ctimas|la zona)",
   // talks and politics
-  "talks", "negotiat\\w*", "summit", "delegations?", "meet(s|ing)?", "agreement", "deal", "sanctions?", "ceasefire (talks|deal|agreement|proposal|begins|starts|holds)", "truce", "elections?", "(passes|approves|signs) (a )?(bill|law)", "new law",
-  "conversaciones", "negocia\\w*", "cumbre", "delegaci[oó]n(es)?", "se re[uú]ne(n)?", "reuni[oó]n", "acuerdo", "tregua", "alto el fuego(?! (roto|violado))", "sanci[oó]n(es)?", "elecci[oó]n(es)?", "campa[nñ]a electoral", "ley", "aprueba(n)?", "votaci[oó]n",
+  "talks", "negotiat\\w*", "summit", "delegations?", "meet(s|ing)?", "agreement", "deal", "sanctions?", "ceasefire (talks|deal|agreement|proposal|begins|starts|holds)", "truce", "elections?", "campaigning", "deployment", "exercises", "(passes|approves|signs) (a )?(bill|law)", "new law",
+  "conversaciones", "negocia\\w*", "cumbre", "delegaci[oó]n(es)?", "se re[uú]ne(n)?", "reuni[oó]n", "acuerdo", "tregua", "alto el fuego(?! (roto|violado))", "sanci[oó]n(es)?", "elecci[oó]n(es)?", "campa[nñ]a electoral", "despliegue", "maniobras", "ejercicios militares", "ley", "aprueba(n)?", "votaci[oó]n",
   // fears, threats and denials
   "fears?", "warns?", "warning", "threat(s|ens)?", "potential", "risk of", "denies", "denied",
   "temor(es)?", "advierte(n)?", "amenaza(n)?", "riesgo de", "niega(n)?", "desmiente(n)?",
-  // looking back
+  // looking back: "el 1 de abril de 1937", "in 1994"
+  "(de|in|of|en) (1[89]\\d\\d|200\\d|201\\d)",
   "last (week|month|year)['’]?s?", "(weeks|months|years) (after|later|on)", "la semana pasada", "el (mes|a[nñ]o) pasado", "(semanas|meses|a[nñ]os) despu[eé]s",
 ].join("|") + ")(?![\\p{L}\\d])", "iu");
 // The words that say something is happening: deaths and wounded, attacks, blasts, shots, strikes, fighting, fires, crashes.
