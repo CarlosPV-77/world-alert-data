@@ -869,7 +869,8 @@ const SOURCES = {
 // Neutral news channels in Spanish or English (Carlos's rule, 2026-10-26).
 const TG_DEFAULT = "france24_es, elconfidencial, france24_en, insiderpaper, WorldNews, KyivIndependent_official";
 // Channels dropped from the defaults in that review: in Russian (the "euronews" channel is not the official one),
-// partisan, or spam. Lists saved before it lose them once and gain the new defaults (settings.tgv 2).
+// partisan, or spam. Lists saved before it lose them once and gain the new defaults (settings.tgv 2). A channel the
+// user added through Ajustes carries its title (t) and is never dropped, even when its name is on this list.
 const TG_RETIRED = new Set(["euronews", "elpais", "wartranslated", "cig_telegram", "warmonitors", "middle_east_spectator"]);
 const TG_MAX = 20;
 const tgName = (c) => String(c).trim().replace(/^@|^https?:\/\/(www\.)?t\.me\/(s\/)?/i, "").replace(/[/?#].*$/, "");
@@ -950,7 +951,7 @@ function mergeSettings(s) {
   state.settings.tgList = Array.isArray(s.tgList) ? s.tgList.filter((x) => x && /^\w{4,64}$/.test(x.c)).map((x) => ({ c: x.c, on: !!x.on, t: x.t || "", g: x.g || "" }))
     : splitTg(state.settings.tg).map((c) => ({ c, on: true }));
   if ((s.tgv || 1) < 2) {
-    state.settings.tgList = state.settings.tgList.filter((x) => !TG_RETIRED.has(x.c.toLowerCase()));
+    state.settings.tgList = state.settings.tgList.filter((x) => x.t || !TG_RETIRED.has(x.c.toLowerCase()));
     for (const c of splitTg(TG_DEFAULT)) if (!state.settings.tgList.some((x) => x.c.toLowerCase() === c.toLowerCase())) state.settings.tgList.push({ c, on: true, t: "", g: "" });
   }
   state.settings.tgv = 2;
