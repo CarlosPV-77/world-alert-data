@@ -2706,7 +2706,8 @@ document.getElementById("setSave").onclick = async () => {
   state.settings.tgGroups = tgGrpDraft.map((g) => ({ ...g }));
   const tg = tgActive(state.settings.tgList);
   if (!tg) state.settings.enabled.telegram = false;  // no channel ticked: nothing to read
-  if (tg !== state.settings.tg) { state.settings.tg = tg; delete lastRun.telegram; delete state.live.telegram; }
+  if (tg !== state.settings.tg) { state.settings.tg = tg; delete lastRun.telegram; delete state.live.telegram; state.tgPostsAt = 0; }
+  if (state.mode === "paper") loadTgPosts();
   store.set("settings", state.settings);
   closeSettings();
   if (db) { try { await db.doc("config/ajustes").set(state.settings); } catch (e) { console.warn(e); } }
@@ -2726,6 +2727,7 @@ const PAPER_AREAS = [
     { key: "naturales", name: "Catástrofes y tiempo", kick: "Naturales y meteorológicas", cats: [...NAT, "meteo"] },
     { key: "transporte", name: "Mar y aire", kick: "Navegantes y accidentes", cats: ["maritimo", "naval", "aereo"] },
     { key: "teletexto", name: "Teletexto", kick: "RTVE · nacional", cats: ["teletexto"] },
+    { key: "telegram", name: "Telegram", kick: "Tus canales · sobre España · sin contrastar", cats: ["tgpost"] },
   ] },
   { key: "int", name: "Internacional", kick: "El mundo", secs: [
     { key: "seguridad", name: "Seguridad", kick: "Conflictos y atentados", cats: ["conflicto", "atentado"] },
@@ -2734,10 +2736,11 @@ const PAPER_AREAS = [
     { key: "mar", name: "Mar", kick: "Navegantes y naufragios", cats: ["maritimo", "naval"] },
     { key: "accidentes", name: "Accidentes", kick: "Aéreos", cats: ["aereo"] },
     { key: "teletexto", name: "Teletexto", kick: "RTVE · internacional", cats: ["teletexto"] },
+    { key: "telegram", name: "Telegram", kick: "Tus canales · sin contrastar", cats: ["tgpost"] },
   ] },
 ];
 const PAPER_HOURS = 24, PAPER_PAGE = 12, PAPER_TEASE = 4, PAPER_PARTS = 3;   // a section fills at most PAPER_PARTS pages
-const LANG_NAME = { en: "inglés", fr: "francés", pt: "portugués", de: "alemán", it: "italiano", es: "castellano" };
+const LANG_NAME = { ru: "ruso", en: "inglés", fr: "francés", pt: "portugués", de: "alemán", it: "italiano", es: "castellano" };
 state.mode = "map";
 state.paperOrig = new Set();   // ids shown in their original language
 state.paperVerified = false;
@@ -2905,7 +2908,7 @@ function paperWhere(e) {
   // GDELT places repeat the country: "Hebron, Israel (general), Israel" -> "Hebron, Israel".
   if (e.src === "GDELT (prensa)") return [...new Set(String(e.title).split(": ").slice(1).join(": ").replace(/ \(general\)/g, "").split(", "))].join(", ");
   if (e.cat === "aereo" || e.cat === "naval") return String(e.title).split(" · ")[1] || e.country || "";
-  if (e.cat === "teletexto") return e.place || e.country || "";
+  if (e.cat === "teletexto" || e.cat === "tgpost") return e.place || e.country || "";
   return e.country || "";
 }
 const MAD_DAY = new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit" });
@@ -2934,20 +2937,42 @@ function paperItem(e, size) {
   const where = paperWhere(e);
   const tag = size === "lead" ? "h2" : "h3";
   return `<article class="pitem${size === "lead" ? " lead" : ""}" style="--sev:${sevColor(e.sev)}">
-    <div class="prow"><span class="pp${trusted(e) ? "" : " unv"}" title="Prioridad ${prioOf(e.sev)}: gravedad ${SEV[e.sev || 1].toLowerCase()}">${prioOf(e.sev)}</span><span class="pkick">${esc(CATS[e.cat]?.name || e.cat)}${where ? ` · ${esc(where)}` : ""}</span></div>
+    <div class="prow"><span class="pp${trusted(e) ? "" : " unv"}" title="Prioridad ${prioOf(e.sev)}: gravedad ${SEV[e.sev || 1].toLowerCase()}">${prioOf(e.sev)}</span><span class="pkick">${e.cat === "tgpost" ? `Telegram · ${esc(e.channel)}${e.group ? ` · ${esc(e.group)}` : ""}` : esc(CATS[e.cat]?.name || e.cat)}${where ? ` · ${esc(where)}` : ""}</span></div>
     <${tag} class="phl${orig && foreign ? " orig" : ""}"${orig && foreign ? ` lang="${esc(h.lang)}"` : ""}>${esc(text)}</${tag}>
     ${size === "lead" && e.desc ? `<p class="ptext">${esc(e.desc)}</p>` : ""}
     <div class="prow">${paperTrust(e)}<span class="pmeta">${esc(paperWhen(e.time))}${size === "lead" ? ` · ${esc(e.src)}` : ""}</span>${toggle}</div>
-    ${size === "side" ? "" : `<div class="pacts"><button type="button" class="pbtn${size === "lead" ? " pri" : ""}" data-pmap="${esc(e.id)}">${size === "lead" ? "Ver en el mapa" : "Mapa"}</button>${e.url ? `<a class="pbtn" href="${esc(e.url)}" target="_blank" rel="noopener">${isNews(e) ? (size === "lead" ? "Ir a la noticia" : "Noticia") : "Fuente"}</a>` : ""}${size === "lead" ? `<button type="button" class="pbtn" data-psave="${esc(e.id)}" aria-pressed="${state.saved.has(e.id)}">${state.saved.has(e.id) ? "Guardada" : "Guardar"}</button>` : ""}</div>`}
+    ${size === "side" ? "" : e.cat === "tgpost" ? `<div class="pacts"><a class="pbtn${size === "lead" ? " pri" : ""}" href="${esc(e.url)}" target="_blank" rel="noopener">Ver en Telegram</a></div>` : `<div class="pacts"><button type="button" class="pbtn${size === "lead" ? " pri" : ""}" data-pmap="${esc(e.id)}">${size === "lead" ? "Ver en el mapa" : "Mapa"}</button>${e.url ? `<a class="pbtn" href="${esc(e.url)}" target="_blank" rel="noopener">${isNews(e) ? (size === "lead" ? "Ir a la noticia" : "Noticia") : "Fuente"}</a>` : ""}${size === "lead" ? `<button type="button" class="pbtn" data-psave="${esc(e.id)}" aria-pressed="${state.saved.has(e.id)}">${state.saved.has(e.id) ? "Guardada" : "Guardar"}</button>` : ""}</div>`}
   </article>`;
 }
-// Teletexto says itself whether a story is national; for the rest, Spain is where it happens.
-const paperNational = (e) => e.cat === "teletexto" ? /^nacional/i.test(e.section || "") : inSpainEv(e);
+// Teletexto says itself whether a story is national; Telegram posts are national when they name a place in Spain;
+// for the rest, Spain is where it happens.
+const paperNational = (e) => e.cat === "teletexto" ? /^nacional/i.test(e.section || "") : e.cat === "tgpost" ? e.spain : inSpainEv(e);
 function paperPool() {
   const from = Date.now() - PAPER_HOURS * HOUR;
-  return dedupe([...state.events.values()].filter((e) => e.cat !== "redes" && !isFalse(e)
-    && Math.max(Date.parse(e.time) || 0, Date.parse(e.updated) || 0, Date.parse(e.until) || 0) >= from).sort(paperRank))
+  return [...dedupe([...state.events.values()].filter((e) => e.cat !== "redes" && !isFalse(e)
+    && Math.max(Date.parse(e.time) || 0, Date.parse(e.updated) || 0, Date.parse(e.until) || 0) >= from).sort(paperRank)), ...state.tgPosts]
     .filter((e) => !state.paperVerified || trusted(e)).sort(paperRank);
+}
+// The Telegram section shows every recent post of the ticked channels, not only the ones the map can place.
+// They are fetched apart from the map's sources, at the Telegram interval, and never go into the history.
+state.tgPosts = []; state.tgPostsAt = 0; state.tgPostsNote = "";
+async function loadTgPosts(force) {
+  const on = state.settings.enabled.telegram && state.settings.tg;
+  if (!on) { state.tgPosts = []; state.tgPostsNote = "Telegram está apagado en Ajustes → Fuentes, o no hay canales marcados."; return; }
+  if (!force && Date.now() - state.tgPostsAt < state.settings.intervals.telegram * 60000 - 5000) return;
+  state.tgPostsAt = Date.now();
+  try {
+    const r = await (await fetch(`${BRIDGE}?tgposts=1&tg=${encodeURIComponent(state.settings.tg.replace(/\s+/g, ""))}`, { signal: AbortSignal.timeout(30000) })).json();
+    const groups = new Map(state.settings.tgList.map((x) => [x.c.toLowerCase(), x.g]));
+    state.tgPosts = (r.posts || []).map((p) => {
+      const first = p.text.split("\n").find((l) => l.trim()) || p.text;
+      const head = first.length > 180 ? first.slice(0, first.lastIndexOf(" ", 177) > 80 ? first.lastIndexOf(" ", 177) : 177) + "…" : first;
+      return { id: p.id, cat: "tgpost", title: head, headline: head, hlang: p.lang, desc: p.text, time: p.time, url: p.url, src: "Telegram",
+        channel: p.channel, group: groups.get(String(p.channel).toLowerCase()) || "", place: p.place, spain: !!p.spain, social: true, verified: false, sev: 1 };
+    }).filter((e) => !isFalse(e));
+    state.tgPostsNote = r.ok ? "" : `Telegram no respondió: ${r.error || "sin datos"}.`;
+  } catch (err) { state.tgPostsNote = "No se pudieron leer los canales de Telegram ahora mismo."; state.tgPostsAt = 0; }
+  if (state.mode === "paper") renderPaper();
 }
 // The pages after the front one: each section of each area, split into pages of PAPER_PAGE stories. A section
 // with more than fits keeps the most important ones and says how many more the map has.
@@ -2979,7 +3004,7 @@ function renderPaper() {
   const cur = state.paperPage = Math.min(state.paperPage, pages.length);
   state.paperTotal = pages.length;
   const now = new Date();
-  const strip = `<div class="pstrip"><span class="ptext psmall">${pool.length ? `${pool.length} ${pool.length === 1 ? "noticia" : "noticias"} de las últimas ${PAPER_HOURS} horas, de todas las fuentes salvo las redes, aunque las capas estén apagadas.` : state.lastUpdate ? `No hay noticias de las últimas ${PAPER_HOURS} horas.` : "Trayendo las noticias de todas las fuentes…"}</span>
+  const strip = `<div class="pstrip"><span class="ptext psmall">${pool.length ? `${pool.length} ${pool.length === 1 ? "noticia" : "noticias"} de las últimas ${PAPER_HOURS} horas, de todas las fuentes salvo las redes, aunque las capas estén apagadas. Tus canales de Telegram tienen su propia sección.` : state.lastUpdate ? `No hay noticias de las últimas ${PAPER_HOURS} horas.` : "Trayendo las noticias de todas las fuentes…"}</span>
       <div class="pacts"><button type="button" class="pbtn" data-prefresh="1">Actualizar</button><button type="button" class="pbtn" data-pverified="1" aria-pressed="${state.paperVerified}">Solo contrastadas</button></div></div>`;
   let body, shown;
   if (cur === 0) {
@@ -2996,13 +3021,13 @@ function renderPaper() {
     body = `${lead ? `<section class="pfront" aria-label="Portada"><div class="plead">${paperItem(lead, "lead")}</div>${side.length ? `<aside class="pside" aria-label="Lo más grave ahora"><div class="pkick">Lo más grave ahora</div>${side.map((e) => paperItem(e, "side")).join("")}</aside>` : ""}</section>` : ""}
       <div class="pgrid two">${PAPER_AREAS.map(teaser).join("")}</div>
       <section class="pindex" aria-labelledby="pidx"><h2 class="psect" id="pidx">En este número</h2>
-        <div class="pidxcols">${PAPER_AREAS.map((a) => `<div><div class="pkick">${a.name}</div><ol>${index.filter((x) => x.area === a).map((x) => `<li>${x.page ? `<button type="button" class="plink" data-ppage="${x.page}"><span>${x.sec.name}</span><span class="pmeta">${x.n} · p. ${x.page + 1}</span></button>` : `<span class="plink off"><span>${x.sec.name}</span><span class="pmeta">sin noticias</span></span>`}</li>`).join("")}</ol></div>`).join("")}</div></section>`;
+        <div class="pidxcols">${PAPER_AREAS.map((a) => `<div><div class="pkick">${a.name}</div><ol>${index.filter((x) => x.area === a).map((x) => `<li>${x.page ? `<button type="button" class="plink" data-ppage="${x.page}"><span>${x.sec.name}</span><span class="pmeta">${x.n} · p. ${x.page + 1}</span></button>` : `<span class="plink off"><span>${x.sec.name}</span><span class="pmeta">${x.sec.key === "telegram" && state.tgPostsNote ? (state.settings.enabled.telegram && state.settings.tg ? "sin respuesta" : "apagado en Ajustes") : "sin noticias"}</span></span>`}</li>`).join("")}</ol></div>`).join("")}</div></section>`;
   } else {
     const pg = pages[cur - 1];
     shown = pg.items;
     body = `<section class="psec ppage" aria-labelledby="pp_title"><div class="psech"><h2 class="psect" id="pp_title" tabindex="-1"><span class="parea">${pg.area.name}</span> · ${pg.sec.name}${pg.parts > 1 ? ` <span class="pmeta">(${pg.part} de ${pg.parts})</span>` : ""}</h2><span class="pkick">${pg.sec.kick}</span></div>
       <div class="pgrid">${pg.items.map((e) => paperItem(e)).join("")}</div>
-      ${pg.more > 0 ? `<p class="ptext pempty">Y ${pg.more} ${pg.more === 1 ? "noticia menos grave" : "noticias menos graves"} más en esta sección. Míralas en el mapa encendiendo sus capas.</p>` : ""}</section>`;
+      ${pg.more > 0 ? `<p class="ptext pempty">${pg.sec.key === "telegram" ? `Y ${pg.more} ${pg.more === 1 ? "publicación más antigua" : "publicaciones más antiguas"} en tus canales.` : `Y ${pg.more} ${pg.more === 1 ? "noticia menos grave" : "noticias menos graves"} más en esta sección. Míralas en el mapa encendiendo sus capas.`}</p>` : ""}</section>`;
   }
   const html = `<div class="sheetp">
     <div class="pdate"><span class="pkick">${esc(now.toLocaleDateString("es-ES", { timeZone: "Europe/Madrid", weekday: "long", day: "numeric", month: "long", year: "numeric" }))}</span><span class="pkick">Edición de las ${MAD_HM.format(now)} · Madrid</span></div>
@@ -3029,7 +3054,7 @@ function setMode(mode, focus = true) {
   document.querySelector(".app").dataset.mode = mode;
   document.getElementById("paper").hidden = mode !== "paper";
   for (const b of document.querySelectorAll("#modesw button")) b.setAttribute("aria-pressed", String(b.dataset.mode === mode));
-  if (mode === "paper") { renderPaper(); tick(); if (focus) document.getElementById("paper").focus({ preventScroll: true }); }
+  if (mode === "paper") { renderPaper(); tick(); loadTgPosts(); if (focus) document.getElementById("paper").focus({ preventScroll: true }); }
   else { layout(); render(); }
 }
 document.getElementById("modesw").addEventListener("click", (ev) => { const b = ev.target.closest("button[data-mode]"); if (b && b.dataset.mode !== state.mode) setMode(b.dataset.mode); });
@@ -3039,7 +3064,7 @@ document.getElementById("paper").addEventListener("click", (ev) => {
   if (d.plang) { state.paperOrig.has(d.plang) ? state.paperOrig.delete(d.plang) : state.paperOrig.add(d.plang); renderPaper(); }
   else if (d.ppage) turnPage(+d.ppage);
   else if (d.pverified) { state.paperVerified = !state.paperVerified; renderPaper(); }
-  else if (d.prefresh) tick(true);
+  else if (d.prefresh) { tick(true); loadTgPosts(true); }
   else if (d.psave) { toggleSave(d.psave); renderPaper(); }
   else if (d.pmap) { setMode("map", false); select(d.pmap, true); }
 });
