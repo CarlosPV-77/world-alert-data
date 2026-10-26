@@ -394,8 +394,11 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 .tggrp { border: 1px solid var(--line); border-radius: var(--r); }
 .tggrp.drop { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
 .tghead { display: grid; grid-template-columns: auto auto 1fr auto; gap: 8px; align-items: center; padding: 4px 8px; background: var(--panel-2); }
-.tghead .gname { font-weight: 600; }
-.tghead .gname .cnt { font-weight: 400; color: var(--muted); font-family: var(--font-data); font-size: 12px; margin-left: 6px; }
+.tghead .gline { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.tghead .gname { width: auto; flex: 0 0 auto; justify-content: center; background: none; border: 0; padding: 4px; color: inherit; display: inline-grid; place-items: center; }
+.tghead .gtitle { font-family: var(--font-sign); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; font-size: 13px; overflow-wrap: anywhere; user-select: none; }
+.tghead [data-gtitle] { cursor: text; }
+.tghead .gtitle .cnt { letter-spacing: 0; text-transform: none; font-weight: 400; color: var(--muted); font-family: var(--font-data); font-size: 12px; margin-left: 6px; }
 .tghead input[type="text"] { min-width: 0; font: inherit; padding: 4px 6px; background: var(--room); border: 1px solid var(--accent); border-radius: var(--r); }
 .tgkids { padding: 0 8px 0 22px; min-height: 30px; }
 .tgkids[hidden] { display: none; }
@@ -408,7 +411,7 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 .tghandle:active { cursor: grabbing; }
 .tgghost { position: fixed; z-index: 1000; pointer-events: none; padding: 4px 10px; background: var(--panel-3); border: 1px solid var(--accent); border-radius: var(--r); font-family: var(--font-data); font-size: 13px; }
 .tgtools { display: inline-flex; gap: 6px; align-items: center; }
-.tgtools select { max-width: 120px; }
+.tgtools select { max-width: 160px; }
 @media (max-width: 600px) {
   .tgch { grid-template-columns: auto auto 1fr; }
   .tgch .tgtools, .tghead .tgtools { grid-column: 2 / -1; flex-wrap: wrap; }
@@ -2446,12 +2449,13 @@ const CHEV = '<span class="chev" aria-hidden="true"><svg viewBox="0 0 12 12" wid
 function tgNote(msg, err) { const m = document.getElementById("tgMsg"); m.textContent = msg; m.classList.toggle("err", !!err); }
 const tgOnCount = () => tgDraft.filter((x) => x.on).length;
 function tgRow(x) {
-  const opts = [["", "Sin grupo"], ...tgGrpDraft.map((g) => [g.n, g.n])];
+  // "Mover a grupo" lists every group but the channel's own; it is disabled until a group exists.
+  const opts = [...tgGrpDraft.map((g) => [g.n, g.n]), ...(tgGrpDraft.length ? [["", "Sin grupo"]] : [])].filter(([v]) => v !== x.g);
   return `<div class="tgch" data-c="${esc(x.c)}">
     <button type="button" class="tghandle" data-hdl="${esc(x.c)}" aria-label="Mover ${esc(x.c)}. Arrastra, o usa las flechas arriba y abajo">${TG_HANDLE}</button>
     <input type="checkbox" id="tgc_${esc(x.c)}" data-tgc="${esc(x.c)}" ${x.on ? "checked" : ""}>
     <label for="tgc_${esc(x.c)}"><span class="nm">${esc(x.c)}</span>${x.t && x.t !== x.c ? `<span class="sub">${esc(x.t)}</span>` : ""}</label>
-    <span class="tgtools">${tgGrpDraft.length ? `<select data-move="${esc(x.c)}" aria-label="Grupo de ${esc(x.c)}">${opts.map(([v, n]) => `<option value="${esc(v)}" ${v === x.g ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>` : ""}
+    <span class="tgtools"><select data-move="${esc(x.c)}" aria-label="Mover ${esc(x.c)} a otro grupo" ${opts.length ? "" : 'disabled title="Crea un grupo primero"'}><option value="\u2026" selected disabled hidden>Mover a grupo…</option>${opts.map(([v, n]) => `<option value="${esc(v)}">${esc(n)}</option>`).join("")}</select>
       <a href="https://t.me/s/${encodeURIComponent(x.c)}" target="_blank" rel="noopener">ver</a>
       <button type="button" class="btn" data-tgdel="${esc(x.c)}" aria-label="Eliminar el canal ${esc(x.c)}">Eliminar</button></span></div>`;
 }
@@ -2465,7 +2469,7 @@ function renderTg() {
       const kids = tgDraft.filter((x) => x.g === g.n), on = kids.filter((x) => x.on).length, name = g.n || "Sin grupo";
       const head = tgRenaming === g.n && g.n
         ? `<input type="text" data-grename="${esc(g.n)}" value="${esc(g.n)}" maxlength="40" aria-label="Nuevo nombre del grupo ${esc(g.n)}">`
-        : `<button type="button" class="gname" data-gtoggle="${esc(g.n)}" aria-expanded="${g.open}">${CHEV}${esc(name)}<span class="cnt">${on}/${kids.length}</span></button>`;
+        : `<span class="gline"><button type="button" class="gname" data-gtoggle="${esc(g.n)}" aria-expanded="${g.open}" aria-label="${g.open ? "Plegar" : "Desplegar"} ${esc(name)}">${CHEV}</button><span class="gtitle"${g.n ? ` data-gtitle="${esc(g.n)}" title="Doble clic para renombrar"` : ""}>${esc(name)}<span class="cnt">${on}/${kids.length}</span></span></span>`;
       return `<div class="tggrp" data-zone="${esc(g.n)}">
         <div class="tghead"><span></span><input type="checkbox" data-gall="${esc(g.n)}" aria-label="Marcar todos los canales de ${esc(name)}" ${kids.length ? "" : "disabled"}>${head}
           <span class="tgtools">${g.n ? `<button type="button" class="btn" data-gren="${esc(g.n)}">Renombrar</button><button type="button" class="btn" data-gdel="${esc(g.n)}" aria-label="Quitar el grupo ${esc(g.n)}">Quitar</button>` : ""}</span></div>
@@ -2503,7 +2507,7 @@ tgBox.addEventListener("change", (e) => {
     if (t.checked && tgOnCount() >= TG_MAX) { t.checked = false; return tgNote(`Como mucho se consultan ${TG_MAX} canales a la vez. Desmarca otro primero.`, true); }
     x.on = t.checked; tgNote(""); renderTg();
   } else if (d.gall != null) tgSet(tgDraft.filter((x) => x.g === d.gall), t.checked);
-  else if (d.move != null) { tgMove(d.move, t.value); tgNote(`${d.move} pasa a ${t.value || "Sin grupo"}.`); }
+  else if (d.move != null) { const g = t.value; tgMove(d.move, g); tgNote(`${d.move} pasa a ${g || "Sin grupo"}.`); }
 });
 tgBox.addEventListener("click", (e) => {
   const b = e.target.closest("[data-tgdel],[data-gtoggle],[data-gren],[data-gdel]"); if (!b) return;
@@ -2544,6 +2548,8 @@ tgBox.addEventListener("keydown", (e) => {
   tgNote(`${x.c} en ${x.g || "Sin grupo"}, puesto ${tgDraft.filter((y) => y.g === x.g).indexOf(x) + 1}.`);
   tgBox.querySelector(`[data-hdl="${CSS.escape(x.c)}"]`)?.focus();
 });
+// Double-clicking a group's name renames it, like the Renombrar button.
+tgBox.addEventListener("dblclick", (e) => { const t = e.target.closest("[data-gtitle]"); if (t) { tgRenaming = t.dataset.gtitle; renderTg(); } });
 tgBox.addEventListener("focusout", (e) => { if (e.target.dataset.grename != null && tgRenaming != null) tgRename(e.target, true); });
 // Dragging by the handle works with mouse, pen and touch alike (pointer events, not HTML drag and drop).
 tgBox.addEventListener("pointerdown", (e) => {
