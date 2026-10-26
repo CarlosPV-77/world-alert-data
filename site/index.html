@@ -2364,7 +2364,26 @@ async function tick(force = false) {
       : err instanceof TypeError ? "no se pudo contactar con el servidor"
       : err.message || String(err);
     banner(`No se pudieron traer las alertas: ${esc(why)}.`, "warn", { label: "Reintentar", onClick: () => tick(true) });
-  } finally { running = false; setRefreshing(false); renderStatus(); if (again) { again = false; tick(); } }
+  } finally { running = false; setRefreshing(false); renderStatus(); flyToWorst(); if (again) { again = false; tick(); } }
+}
+// On opening, the globe turns to the country of the most alarming alert (the first one of the ticker), once,
+// unless the viewer has already moved the map or gone to the newspaper.
+const opening = { done: false };
+map.on("movestart", (ev) => { if (ev.originalEvent) opening.done = true; });
+async function flyToWorst() {
+  if (performance.now() > 120000) opening.done = true;   // a feed that arrives late must not yank the map away
+  if (opening.done || !state.ov.ticker || state.mode === "paper") return;
+  const e = tickerItems().find((x) => Number.isFinite(+x.lat) && Number.isFinite(+x.lon) && (+x.lat || +x.lon));
+  if (!e) return;
+  opening.done = true;
+  await mapReady;
+  const f = BY_ISO.get([...countriesOf(e)][0])?.f;
+  const [[w, s], [n0, n]] = f ? d3.geoBounds(f) : [[0, 0], [-1, 0]];
+  // Very wide countries (Russia, the United States with Alaska) or ones across the date line: centre on the alert instead.
+  const cam = f && w <= n0 && n0 - w <= 70 && map.cameraForBounds([[w, Math.max(s, -80)], [n0, Math.min(n, 82)]], { padding: 60 });
+  // cameraForBounds ignores maxZoom here, so tiny countries (Monaco, Malta) are capped by hand.
+  map.flyTo(cam ? { center: cam.center, zoom: Math.min(cam.zoom, 6.5), duration: 2600 } : { center: [+e.lon, +e.lat], zoom: f ? 3 : 4.5, duration: 2600 });
+  map.once("moveend", () => { if (state.mode !== "paper" && state.view !== "split" && eventOf(e.id)) openCard(map, e); });
 }
 function sourceOf(e) { if (String(e.id).startsWith("gdelt:")) return e.cat === "atentado" ? "atentados" : "conflictos"; return { usgs: "usgs", gdacs: "gdacs", tsunami: "tsunami", nhc: "nhc", nga: "navarea", gvp: "volcanes", nws: "nws", aemet: "aemet", mastodon: "mastodon", bluesky: "bluesky", telegram: "telegram", teletexto: "teletexto", aereo: "aereos", naval: "maritimos", ign: "ign", dgt: "dgt", cat: "catalunya", canarias: "canarias", meteogalicia: "meteogalicia", euskadi: "euskadi", madrid: "madrid" }[String(e.id).split(":")[0]]; }
 function setRefreshing(on) {
