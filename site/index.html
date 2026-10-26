@@ -264,7 +264,7 @@ aside.side { background: var(--panel); border-left: 1px solid var(--line-2); dis
 .label::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .cpick { display: grid; gap: 6px; position: relative; }
 .cpick input { background: var(--room); border: 1px solid var(--line-2); border-radius: var(--r); padding: 7px 9px; width: 100%; }
-.tgrow input { background: var(--room); border: 1px solid var(--line-2); border-radius: var(--r); padding: 7px 9px; width: 100%; font-family: var(--font-data); font-size: 13px; }
+.tgadd input { background: var(--room); border: 1px solid var(--line-2); border-radius: var(--r); padding: 7px 9px; width: 100%; font-family: var(--font-data); font-size: 13px; }
 .cpick input::placeholder { color: var(--muted); }
 .cpick .opts { position: absolute; top: 100%; left: 0; right: 0; margin-top: 2px; background: var(--panel); border: 1px solid var(--line-2); border-radius: var(--r); z-index: 8; max-height: 240px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
 .cpick .opts button { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 7px 10px; font-size: 13px; }
@@ -389,7 +389,40 @@ select { background: var(--room); border: 1px solid var(--line-2); border-radius
 .tkcats legend { padding: 0; margin-bottom: 4px; font-size: 13px; color: var(--muted); }
 .tkcats label { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; cursor: pointer; }
 @media (pointer: coarse) { .tkcats label { min-height: 44px; } }
-.tgrow label { font-weight: 500; }
+.allrow { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); font-weight: 500; cursor: pointer; }
+.tglist { display: grid; gap: 6px; }
+.tggrp { border: 1px solid var(--line); border-radius: var(--r); }
+.tggrp.drop { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.tghead { display: grid; grid-template-columns: auto auto 1fr auto; gap: 8px; align-items: center; padding: 4px 8px; background: var(--panel-2); }
+.tghead .gname { font-weight: 600; }
+.tghead .gname .cnt { font-weight: 400; color: var(--muted); font-family: var(--font-data); font-size: 12px; margin-left: 6px; }
+.tghead input[type="text"] { min-width: 0; font: inherit; padding: 4px 6px; background: var(--room); border: 1px solid var(--accent); border-radius: var(--r); }
+.tgkids { padding: 0 8px 0 22px; min-height: 30px; }
+.tgkids[hidden] { display: none; }
+.tgkids .empty { display: block; padding: 6px 0; font-size: 12px; color: var(--muted); }
+.tgch { display: grid; grid-template-columns: auto auto 1fr auto; gap: 8px; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.tgch:last-child { border-bottom: 0; }
+.tgch.before { box-shadow: inset 0 2px 0 var(--accent); }
+.tgch.dragging { opacity: .4; }
+.tghandle { cursor: grab; touch-action: none; color: var(--muted); background: none; border: 0; padding: 4px 2px; display: inline-grid; place-items: center; }
+.tghandle:active { cursor: grabbing; }
+.tgghost { position: fixed; z-index: 1000; pointer-events: none; padding: 4px 10px; background: var(--panel-3); border: 1px solid var(--accent); border-radius: var(--r); font-family: var(--font-data); font-size: 13px; }
+.tgtools { display: inline-flex; gap: 6px; align-items: center; }
+.tgtools select { max-width: 120px; }
+@media (max-width: 600px) {
+  .tgch { grid-template-columns: auto auto 1fr; }
+  .tgch .tgtools, .tghead .tgtools { grid-column: 2 / -1; flex-wrap: wrap; }
+  .tghead { grid-template-columns: auto auto 1fr; }
+  .tgkids { padding-left: 8px; }
+}
+.tgch label { display: flex; flex-direction: column; min-width: 0; cursor: pointer; }
+.tgch .nm { font-family: var(--font-data); font-size: 13px; overflow-wrap: anywhere; }
+.tgch .sub { font-size: 12px; }
+.tgch a { color: var(--muted); font-size: 12px; }
+.tgadd { display: flex; gap: 8px; }
+.tgadd input { flex: 1; min-width: 0; }
+.tgrow .linkish { justify-self: start; }
+#tgMsg.err { color: var(--s3); }
 .tgrow .sub { font-size: 12px; color: var(--muted); }
 .posts { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; }
 .posts li { border-left: 2px dashed var(--s3); padding: 2px 0 2px 10px; }
@@ -484,8 +517,9 @@ button.plink:hover span:first-child { text-decoration: underline; text-underline
 
 /* Touch screens: every control at least 44 px, text fields at 16 px so iOS does not zoom. */
 @media (pointer: coarse) {
-  .btn, select, .cpick input, .tgrow input { min-height: 44px; }
-  select, .cpick input, .tgrow input { font-size: 16px; }
+  .btn, select, .cpick input, .tgadd input, .allrow, .tgch { min-height: 44px; }
+  .tghandle { min-width: 36px; min-height: 44px; }
+  select, .cpick input, .tgadd input { font-size: 16px; }
   .litem, .lghead { min-height: 44px; }
   .gname, .gtoggle { min-height: 44px; }
   .viewsw button { min-height: 44px; }
@@ -652,11 +686,23 @@ button.plink:hover span:first-child { text-decoration: underline; text-underline
     </div>
     <div class="setpan" role="tabpanel" id="pan-fuentes" aria-labelledby="tab-fuentes" hidden>
     <p class="hint">Cada fuente solo se consulta mientras tienes el mapa abierto y alguna de sus capas activada. Al abrir la página todas las capas empiezan apagadas. Elige cada cuánto consulta cada fuente.</p>
+    <label class="allrow"><input type="checkbox" id="srcAll"><span>Seleccionar todo</span></label>
     <div id="srcRows"></div>
     <div class="tgrow">
-      <label for="tgChans">Canales de Telegram</label>
-      <input type="text" id="tgChans" spellcheck="false" autocomplete="off" aria-describedby="tgHint">
-      <span class="sub" id="tgHint">Nombres de canales públicos separados por comas, tal como aparecen en t.me/nombre. Máximo 20.</span>
+      <div class="label">Canales de Telegram</div>
+      <span class="sub">Solo canales públicos, que se leen sin cuenta. Se consultan los marcados, hasta 20 a la vez. Si no marcas ninguno, la fuente Telegram se apaga. Arrastra un canal por su asa para llevarlo a otro grupo o cambiarlo de sitio.</span>
+      <label class="allrow"><input type="checkbox" id="tgAll"><span>Seleccionar todo</span></label>
+      <div class="tglist" id="tgList"></div>
+      <form class="tgadd" id="tgAdd">
+        <input type="text" id="tgNew" spellcheck="false" autocomplete="off" placeholder="nombre, @nombre o enlace t.me/nombre" aria-label="Canal de Telegram para añadir">
+        <button class="btn" type="submit" id="tgAddBtn">Añadir</button>
+      </form>
+      <form class="tgadd" id="tgGrpAdd">
+        <input type="text" id="tgGrpNew" autocomplete="off" maxlength="40" placeholder="Nombre del grupo nuevo" aria-label="Nombre del grupo nuevo">
+        <button class="btn" type="submit">Crear grupo</button>
+      </form>
+      <span class="sub" id="tgMsg" role="status"></span>
+      <button class="btn linkish" type="button" id="tgReset">Volver a los canales de serie</button>
     </div>
     </div>
     <div class="setpan" role="tabpanel" id="pan-rotulo" aria-labelledby="tab-rotulo" hidden>
@@ -816,8 +862,12 @@ const SOURCES = {
   telegram:   { name: "Telegram · canales públicos", def: 10, opts: [5, 10, 15, 30, 60] },
   teletexto:  { name: "Teletexto RTVE · noticias nacionales e internacionales (Información de rtve.es)", def: 10, opts: [5, 10, 15, 30, 60] },
 };
-// Public Telegram channels read by default; Ajustes lets you change the list.
+// Public Telegram channels read by default; Ajustes lets you switch each one off, add more and remove them.
 const TG_DEFAULT = "euronews, france24_en, elpais, insiderpaper, WorldNews, wartranslated, CIG_telegram, warmonitors, Middle_East_Spectator, KyivIndependent_official";
+const TG_MAX = 20;
+const tgName = (c) => String(c).trim().replace(/^@|^https?:\/\/(www\.)?t\.me\/(s\/)?/i, "").replace(/[/?#].*$/, "");
+const splitTg = (s) => String(s || "").split(/[\s,]+/).map(tgName).filter((c) => /^\w{4,64}$/.test(c));
+const tgActive = (list) => list.filter((x) => x.on).map((x) => x.c).join(", ");
 // Layers each source feeds. A source is only queried while at least one of its layers is on.
 const SOURCE_CATS = {
   usgs: ["sismo"], gdacs: ["sismo", "volcan", "tsunami", "ciclon", "inundacion", "incendio", "sequia"], tsunami: ["tsunami"],
@@ -868,7 +918,7 @@ const state = {
   ov: { ...Object.fromEntries(Object.keys(OVERLAYS).map((k) => [k, k === "ticker"])), ships: false },
   countries: new Set(),        // ISO3 codes the viewer is following; empty = whole world
   open: { naturales: true, meteo: true, mar: false, seguridad: true, mapa: true },
-  settings: { intervals: Object.fromEntries(Object.entries(SOURCES).map(([k, v]) => [k, v.def])), enabled: Object.fromEntries(Object.keys(SOURCES).map((k) => [k, !SOURCES[k].off])), retention: 90, tg: TG_DEFAULT, ticker: { v: 2, pos: "top", speed: 70, show: "all", spain: true, cats: Object.fromEntries(TICK_KINDS.map((c) => [c, !TICK_KINDS_OFF.includes(c)])) } },
+  settings: { intervals: Object.fromEntries(Object.entries(SOURCES).map(([k, v]) => [k, v.def])), enabled: Object.fromEntries(Object.keys(SOURCES).map((k) => [k, !SOURCES[k].off])), retention: 90, tg: TG_DEFAULT, tgList: splitTg(TG_DEFAULT).map((c) => ({ c, on: true, g: "" })), tgGroups: [], ticker: { v: 2, pos: "top", speed: 70, show: "all", spain: true, cats: Object.fromEntries(TICK_KINDS.map((c) => [c, !TICK_KINDS_OFF.includes(c)])) } },
   lastUpdate: null,
 };
 const store = {
@@ -889,6 +939,12 @@ function mergeSettings(s) {
   Object.assign(state.settings.enabled, s.enabled || {});
   if (s.retention != null) state.settings.retention = s.retention;
   if (typeof s.tg === "string") state.settings.tg = s.tg;
+  // Lists saved before channels had checkboxes come in with every channel switched on.
+  state.settings.tgList = Array.isArray(s.tgList) ? s.tgList.filter((x) => x && /^\w{4,64}$/.test(x.c)).map((x) => ({ c: x.c, on: !!x.on, t: x.t || "", g: x.g || "" }))
+    : splitTg(state.settings.tg).map((c) => ({ c, on: true }));
+  state.settings.tgGroups = Array.isArray(s.tgGroups) ? s.tgGroups.filter((g) => g && typeof g.n === "string" && g.n).map((g) => ({ n: g.n, open: g.open !== false })) : [];
+  for (const x of state.settings.tgList) if (!state.settings.tgGroups.some((g) => g.n === x.g)) x.g = "";
+  state.settings.tg = tgActive(state.settings.tgList);
   // Settings saved before the ticker moved to the top (v2) keep their other choices but take the new position.
   if (s.ticker) { const { cats, ...rest } = s.ticker; if (rest.v !== 2) delete rest.pos; Object.assign(state.settings.ticker, rest); Object.assign(state.settings.ticker.cats, cats || {}); }
 }
@@ -1555,7 +1611,7 @@ function layerRows(c, n) {
 }
 const sw = '<span class="tg" aria-hidden="true"></span>';
 // Redraws replace the buttons; keep keyboard focus on the same control afterwards.
-const FOCUS_KEYS = ["data-pane", "data-plang", "data-ppage", "data-pverified", "data-psave", "data-prefresh", "data-cat", "data-csrc", "data-group", "data-open", "data-ov", "data-id", "data-save", "data-act", "data-del", "data-false", "data-falsewhy", "data-unfalse", "data-unmute", "id"];
+const FOCUS_KEYS = ["data-pane", "data-plang", "data-ppage", "data-pverified", "data-psave", "data-prefresh", "data-cat", "data-csrc", "data-group", "data-open", "data-ov", "data-id", "data-save", "data-act", "data-del", "data-false", "data-falsewhy", "data-unfalse", "data-unmute", "data-tgc", "data-hdl", "data-move", "data-gall", "data-gtoggle", "data-gren", "data-gdel", "id"];
 function keepFocus(box, redraw) {
   const f = document.activeElement;
   const key = f && box.contains(f) ? FOCUS_KEYS.map((a) => f.getAttribute(a) && `[${a}="${CSS.escape(f.getAttribute(a))}"]`).find(Boolean) : null;
@@ -2356,7 +2412,11 @@ function openSettings() {
   document.getElementById("fBase").innerHTML = Object.entries(BASES).map(([k, b]) => `<option value="${k}" ${k === state.base ? "selected" : ""}>${b.name}</option>`).join("");
   document.getElementById("fProj").value = state.globe ? "globe" : "flat";
   document.getElementById("retention").value = String(state.settings.retention);
-  document.getElementById("tgChans").value = state.settings.tg;
+  syncSrcAll();
+  tgDraft = state.settings.tgList.map((x) => ({ ...x }));
+  tgGrpDraft = state.settings.tgGroups.map((g) => ({ ...g })); tgRenaming = null;
+  tgNote(""); document.getElementById("tgNew").value = "";
+  renderTg();
   const tks = state.settings.ticker;
   document.getElementById("tkPos").value = tks.pos; document.getElementById("tkSpeed").value = String(tks.speed);
   document.getElementById("tkShow").value = tks.show; document.getElementById("tkSpain").value = tks.spain ? "1" : "0";
@@ -2368,6 +2428,194 @@ function openSettings() {
   document.getElementById("clearBtn").onclick = askClear;
   if (sheet.hidden) { settingsReturn = document.activeElement; sheet.hidden = false; document.getElementById("setTitle").focus(); }
 }
+// "Seleccionar todo" boxes: checked when every item is, half-checked when only some are.
+function syncAll(all, boxes) {
+  const n = boxes.filter((b) => b.checked).length;
+  all.checked = !!boxes.length && n === boxes.length; all.indeterminate = n > 0 && n < boxes.length;
+}
+const srcBoxes = () => [...document.querySelectorAll('#srcRows input[type="checkbox"]')];
+const syncSrcAll = () => syncAll(document.getElementById("srcAll"), srcBoxes());
+document.getElementById("srcAll").addEventListener("change", (e) => { for (const b of srcBoxes()) b.checked = e.target.checked; syncSrcAll(); });
+document.getElementById("srcRows").addEventListener("change", (e) => { if (e.target.type === "checkbox") syncSrcAll(); });
+
+// Telegram channels being edited, as a tree of groups; Guardar keeps them, Cancelar drops them.
+// Each channel carries its group name in g ("" is "Sin grupo"); the order of tgDraft is the order inside each group.
+let tgDraft = [], tgGrpDraft = [], tgRenaming = null;
+const TG_HANDLE = '<svg viewBox="0 0 10 16" width="10" height="16" aria-hidden="true"><g fill="currentColor"><circle cx="2.5" cy="3" r="1.4"/><circle cx="7.5" cy="3" r="1.4"/><circle cx="2.5" cy="8" r="1.4"/><circle cx="7.5" cy="8" r="1.4"/><circle cx="2.5" cy="13" r="1.4"/><circle cx="7.5" cy="13" r="1.4"/></g></svg>';
+const CHEV = '<span class="chev" aria-hidden="true"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M4.5 2.5 8 6l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="square"/></svg></span>';
+function tgNote(msg, err) { const m = document.getElementById("tgMsg"); m.textContent = msg; m.classList.toggle("err", !!err); }
+const tgOnCount = () => tgDraft.filter((x) => x.on).length;
+function tgRow(x) {
+  const opts = [["", "Sin grupo"], ...tgGrpDraft.map((g) => [g.n, g.n])];
+  return `<div class="tgch" data-c="${esc(x.c)}">
+    <button type="button" class="tghandle" data-hdl="${esc(x.c)}" aria-label="Mover ${esc(x.c)}. Arrastra, o usa las flechas arriba y abajo">${TG_HANDLE}</button>
+    <input type="checkbox" id="tgc_${esc(x.c)}" data-tgc="${esc(x.c)}" ${x.on ? "checked" : ""}>
+    <label for="tgc_${esc(x.c)}"><span class="nm">${esc(x.c)}</span>${x.t && x.t !== x.c ? `<span class="sub">${esc(x.t)}</span>` : ""}</label>
+    <span class="tgtools">${tgGrpDraft.length ? `<select data-move="${esc(x.c)}" aria-label="Grupo de ${esc(x.c)}">${opts.map(([v, n]) => `<option value="${esc(v)}" ${v === x.g ? "selected" : ""}>${esc(n)}</option>`).join("")}</select>` : ""}
+      <a href="https://t.me/s/${encodeURIComponent(x.c)}" target="_blank" rel="noopener">ver</a>
+      <button type="button" class="btn" data-tgdel="${esc(x.c)}" aria-label="Eliminar el canal ${esc(x.c)}">Eliminar</button></span></div>`;
+}
+function renderTg() {
+  const box = document.getElementById("tgList");
+  const zones = [...tgGrpDraft, ...(tgGrpDraft.length || !tgDraft.length ? [{ n: "", open: true }] : [])];
+  keepFocus(box, () => box.innerHTML = !tgDraft.length && !tgGrpDraft.length
+    ? `<span class="sub">No hay canales. Añade alguno o vuelve a los de serie.</span>`
+    : !tgGrpDraft.length ? `<div class="tgkids" data-zone="" style="padding:0">${tgDraft.map(tgRow).join("")}</div>`
+    : zones.map((g) => {
+      const kids = tgDraft.filter((x) => x.g === g.n), on = kids.filter((x) => x.on).length, name = g.n || "Sin grupo";
+      const head = tgRenaming === g.n && g.n
+        ? `<input type="text" data-grename="${esc(g.n)}" value="${esc(g.n)}" maxlength="40" aria-label="Nuevo nombre del grupo ${esc(g.n)}">`
+        : `<button type="button" class="gname" data-gtoggle="${esc(g.n)}" aria-expanded="${g.open}">${CHEV}${esc(name)}<span class="cnt">${on}/${kids.length}</span></button>`;
+      return `<div class="tggrp" data-zone="${esc(g.n)}">
+        <div class="tghead"><span></span><input type="checkbox" data-gall="${esc(g.n)}" aria-label="Marcar todos los canales de ${esc(name)}" ${kids.length ? "" : "disabled"}>${head}
+          <span class="tgtools">${g.n ? `<button type="button" class="btn" data-gren="${esc(g.n)}">Renombrar</button><button type="button" class="btn" data-gdel="${esc(g.n)}" aria-label="Quitar el grupo ${esc(g.n)}">Quitar</button>` : ""}</span></div>
+        <div class="tgkids" ${g.open ? "" : "hidden"}>${kids.map(tgRow).join("") || `<span class="empty">Arrastra aquí canales${tgGrpDraft.length ? " o elige este grupo en su desplegable" : ""}.</span>`}</div></div>`;
+    }).join(""));
+  for (const g of zones) {
+    const all = box.querySelector(`[data-gall="${CSS.escape(g.n)}"]`);
+    if (all) syncAll(all, tgDraft.filter((x) => x.g === g.n).map((x) => ({ checked: x.on })));
+  }
+  syncAll(document.getElementById("tgAll"), tgDraft.map((x) => ({ checked: x.on })));
+  box.querySelector("[data-grename]")?.focus();
+}
+// Switches channels on or off, never leaving more than TG_MAX on.
+function tgSet(list, on) {
+  let room = TG_MAX - tgOnCount() + list.filter((x) => x.on).length, cut = false;
+  for (const x of list) { if (!on) x.on = false; else if (room > 0) { x.on = true; room--; } else { cut = !x.on || cut; x.on = false; } }
+  tgNote(cut ? `Como mucho se consultan ${TG_MAX} canales a la vez; los demás se quedan sin marcar.` : "", cut);
+  renderTg();
+}
+// Moves a channel to a group, before another channel of that group or at its end.
+function tgMove(c, g, before) {
+  const i = tgDraft.findIndex((x) => x.c === c); if (i < 0) return;
+  const [x] = tgDraft.splice(i, 1); x.g = g;
+  let j = before ? tgDraft.findIndex((y) => y.c === before) : -1;
+  if (j < 0) { j = tgDraft.length; for (let k = tgDraft.length - 1; k >= 0; k--) if (tgDraft[k].g === g) { j = k + 1; break; } }
+  tgDraft.splice(j, 0, x);
+  const grp = tgGrpDraft.find((y) => y.n === g); if (grp) grp.open = true;
+  renderTg();
+}
+const tgBox = document.getElementById("tgList");
+tgBox.addEventListener("change", (e) => {
+  const t = e.target, d = t.dataset;
+  if (d.tgc != null) {
+    const x = tgDraft.find((y) => y.c === d.tgc);
+    if (t.checked && tgOnCount() >= TG_MAX) { t.checked = false; return tgNote(`Como mucho se consultan ${TG_MAX} canales a la vez. Desmarca otro primero.`, true); }
+    x.on = t.checked; tgNote(""); renderTg();
+  } else if (d.gall != null) tgSet(tgDraft.filter((x) => x.g === d.gall), t.checked);
+  else if (d.move != null) { tgMove(d.move, t.value); tgNote(`${d.move} pasa a ${t.value || "Sin grupo"}.`); }
+});
+tgBox.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-tgdel],[data-gtoggle],[data-gren],[data-gdel]"); if (!b) return;
+  const d = b.dataset;
+  if (d.tgdel != null) {
+    tgDraft.splice(tgDraft.findIndex((x) => x.c === d.tgdel), 1); renderTg();
+    tgNote(`${d.tgdel} eliminado. Se aplica al pulsar Guardar.`);
+    (tgBox.querySelector("[data-tgdel]") || document.getElementById("tgNew")).focus();
+  } else if (d.gtoggle != null) { const g = tgGrpDraft.find((x) => x.n === d.gtoggle) || null; if (g) g.open = !g.open; else return; renderTg(); }
+  else if (d.gren != null) { tgRenaming = d.gren; renderTg(); }
+  else if (d.gdel != null) {
+    tgGrpDraft = tgGrpDraft.filter((g) => g.n !== d.gdel);
+    for (const x of tgDraft) if (x.g === d.gdel) x.g = "";
+    renderTg(); tgNote(`Grupo ${d.gdel} quitado; sus canales pasan a Sin grupo.`);
+    document.getElementById("tgGrpNew").focus();
+  }
+});
+function tgRename(input, keep) {
+  const old = input.dataset.grename, n = input.value.trim().slice(0, 40);
+  tgRenaming = null;
+  if (keep && n && n !== old) {
+    if (tgGrpDraft.some((g) => g.n === n)) tgNote(`Ya hay un grupo llamado ${n}.`, true);
+    else { tgGrpDraft.find((g) => g.n === old).n = n; for (const x of tgDraft) if (x.g === old) x.g = n; tgNote(""); }
+  }
+  renderTg();
+  tgBox.querySelector(`[data-gtoggle="${CSS.escape(keep && n && !tgGrpDraft.some((g) => g.n === old) ? n : old)}"]`)?.focus();
+}
+tgBox.addEventListener("keydown", (e) => {
+  const t = e.target;
+  if (t.dataset.grename != null && (e.key === "Enter" || e.key === "Escape")) { e.preventDefault(); e.stopPropagation(); tgRename(t, e.key === "Enter"); return; }
+  // The arrows move a channel up or down, crossing into the next group at the edges.
+  if (t.dataset.hdl == null || (e.key !== "ArrowUp" && e.key !== "ArrowDown")) return;
+  e.preventDefault();
+  const order = [...tgGrpDraft.map((g) => g.n), ""], x = tgDraft.find((y) => y.c === t.dataset.hdl);
+  const mates = tgDraft.filter((y) => y.g === x.g), i = mates.indexOf(x), up = e.key === "ArrowUp";
+  if (up ? i > 0 : i < mates.length - 1) tgMove(x.c, x.g, up ? mates[i - 1].c : mates[i + 2]?.c);
+  else { const gi = order.indexOf(x.g) + (up ? -1 : 1); if (gi < 0 || gi >= order.length || !tgGrpDraft.length) return; tgMove(x.c, order[gi]); }
+  tgNote(`${x.c} en ${x.g || "Sin grupo"}, puesto ${tgDraft.filter((y) => y.g === x.g).indexOf(x) + 1}.`);
+  tgBox.querySelector(`[data-hdl="${CSS.escape(x.c)}"]`)?.focus();
+});
+tgBox.addEventListener("focusout", (e) => { if (e.target.dataset.grename != null && tgRenaming != null) tgRename(e.target, true); });
+// Dragging by the handle works with mouse, pen and touch alike (pointer events, not HTML drag and drop).
+tgBox.addEventListener("pointerdown", (e) => {
+  const h = e.target.closest("[data-hdl]"); if (!h || e.button > 0) return;
+  e.preventDefault();
+  const c = h.dataset.hdl, row = h.closest(".tgch"), ghost = document.createElement("div");
+  ghost.className = "tgghost"; ghost.textContent = c; document.body.append(ghost);
+  row.classList.add("dragging"); h.setPointerCapture(e.pointerId);
+  let target = null, lastY = e.clientY, raf = 0;
+  // Near the top or bottom edge of the settings panel, the panel scrolls so far groups can be reached.
+  const pane = sheet.querySelector(".setpanels");
+  const scroll = () => {
+    const r = pane.getBoundingClientRect(), d = lastY < r.top + 40 ? -10 : lastY > r.bottom - 40 ? 10 : 0;
+    if (d) pane.scrollTop += d;
+    raf = requestAnimationFrame(scroll);
+  };
+  raf = requestAnimationFrame(scroll);
+  const clear = () => tgBox.querySelectorAll(".drop,.before").forEach((el) => el.classList.remove("drop", "before"));
+  const move = (ev) => {
+    lastY = ev.clientY;
+    ghost.style.left = ev.clientX + 12 + "px"; ghost.style.top = ev.clientY + 8 + "px";
+    const el = document.elementFromPoint(ev.clientX, ev.clientY), zone = el?.closest("[data-zone]");
+    clear(); target = null;
+    if (!zone || !tgBox.contains(zone)) return;
+    const over = el.closest(".tgch[data-c]");
+    let before = null;
+    if (over && over.dataset.c !== c) { const r = over.getBoundingClientRect(); before = ev.clientY < r.top + r.height / 2 ? over.dataset.c : [...zone.querySelectorAll(".tgch[data-c]")].map((n) => n.dataset.c)[[...zone.querySelectorAll(".tgch[data-c]")].indexOf(over) + 1] || null; }
+    zone.classList.add("drop");
+    if (before) zone.querySelector(`.tgch[data-c="${CSS.escape(before)}"]`)?.classList.add("before");
+    target = { g: zone.dataset.zone, before };
+  };
+  const end = () => {
+    h.removeEventListener("pointermove", move); h.removeEventListener("pointerup", end); h.removeEventListener("pointercancel", end);
+    cancelAnimationFrame(raf); ghost.remove(); clear(); row.classList.remove("dragging");
+    if (target && !(target.before === c)) { tgMove(c, target.g, target.before); tgNote(`${c} en ${target.g || (tgGrpDraft.length ? "Sin grupo" : "la lista")}.`); tgBox.querySelector(`[data-hdl="${CSS.escape(c)}"]`)?.focus(); }
+  };
+  move(e);
+  h.addEventListener("pointermove", move); h.addEventListener("pointerup", end); h.addEventListener("pointercancel", end);
+});
+document.getElementById("tgAll").addEventListener("change", (e) => tgSet(tgDraft, e.target.checked));
+document.getElementById("tgReset").addEventListener("click", () => {
+  tgDraft = splitTg(TG_DEFAULT).map((c) => ({ c, on: true, g: "" })); tgGrpDraft = []; renderTg();
+  tgNote("Vuelven los canales de serie, sin grupos. Se aplica al pulsar Guardar.");
+});
+document.getElementById("tgGrpAdd").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const input = document.getElementById("tgGrpNew"), n = input.value.trim().slice(0, 40);
+  if (!n) return;
+  if (tgGrpDraft.some((g) => g.n === n)) return tgNote(`Ya hay un grupo llamado ${n}.`, true);
+  tgGrpDraft.push({ n, open: true }); input.value = ""; renderTg();
+  tgNote(`Grupo ${n} creado. Arrastra canales a él o elígelo en el desplegable de cada canal.`);
+});
+// A new channel is checked with the server first: only public channels can be read without an account.
+document.getElementById("tgAdd").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const input = document.getElementById("tgNew"), btn = document.getElementById("tgAddBtn"), c = tgName(input.value);
+  if (!c) return;
+  if (!/^\w{4,64}$/.test(c)) return tgNote("Ese nombre no vale: los canales usan entre 4 y 64 letras, números o guiones bajos.", true);
+  const have = tgDraft.find((x) => x.c.toLowerCase() === c.toLowerCase());
+  if (have) return tgNote(`${have.c} ya está en la lista.`, true);
+  btn.disabled = true; tgNote(`Comprobando ${c} en Telegram…`);
+  let r;
+  try { r = await (await fetch(`${BRIDGE}?tgcheck=${encodeURIComponent(c)}`, { signal: AbortSignal.timeout(15000) })).json(); }
+  catch (err) { r = { ok: false, error: "No se pudo comprobar el canal ahora mismo. Prueba otra vez en un rato." }; }
+  btn.disabled = false;
+  if (!r.ok) return tgNote(`${c}: ${r.error}`, true);
+  const on = tgDraft.filter((x) => x.on).length < TG_MAX;
+  tgDraft.push({ c: r.channel || c, on, t: r.title || "", g: "" }); input.value = ""; renderTg();
+  tgNote(`${r.channel || c}${r.title && r.title !== c ? ` (${r.title})` : ""} añadido${on ? "" : " sin marcar, porque ya hay 20 marcados"}.${r.posts ? "" : " Ahora mismo no muestra mensajes públicos."} Se aplica al pulsar Guardar.`);
+  input.focus();
+});
+
 // Marked-false alerts and silenced outlets, each with a way back. Changes apply at once.
 function renderFalseZone() {
   const box = document.getElementById("falseZone");
@@ -2448,8 +2696,11 @@ document.getElementById("setSave").onclick = async () => {
   state.settings.ticker = { v: 2, pos: document.getElementById("tkPos").value, speed: +document.getElementById("tkSpeed").value,
     show: document.getElementById("tkShow").value, spain: document.getElementById("tkSpain").value === "1",
     cats: Object.fromEntries(TICK_KINDS.map((c) => [c, document.getElementById("tkc_" + c).checked])) };
-  const tg = document.getElementById("tgChans").value.split(/[\s,]+/).map((c) => c.replace(/^@|^https?:\/\/t\.me\/(s\/)?/, "")).filter((c) => /^\w{4,64}$/.test(c));
-  if (tg.join(", ") !== state.settings.tg) { state.settings.tg = tg.length ? tg.join(", ") : TG_DEFAULT; delete lastRun.telegram; delete state.live.telegram; }
+  state.settings.tgList = tgDraft.map((x) => ({ ...x }));
+  state.settings.tgGroups = tgGrpDraft.map((g) => ({ ...g }));
+  const tg = tgActive(state.settings.tgList);
+  if (!tg) state.settings.enabled.telegram = false;  // no channel ticked: nothing to read
+  if (tg !== state.settings.tg) { state.settings.tg = tg; delete lastRun.telegram; delete state.live.telegram; }
   store.set("settings", state.settings);
   closeSettings();
   if (db) { try { await db.doc("config/ajustes").set(state.settings); } catch (e) { console.warn(e); } }

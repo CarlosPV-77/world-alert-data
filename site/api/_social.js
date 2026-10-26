@@ -132,6 +132,18 @@ async function telegram(q) {
   }));
 }
 
+// Tells whether a name is a public Telegram channel that can be read without an account, and its title.
+// t.me/s/ answers 200 only for public channels; groups, users, private and missing channels redirect.
+export async function checkTelegram(name) {
+  const ch = String(name || "").trim().replace(/^@|^https?:\/\/t\.me\/(s\/)?/, "").replace(/\/.*$/, "");
+  if (!/^\w{4,64}$/.test(ch)) return { ok: false, channel: ch, error: "Nombre no válido: entre 4 y 64 letras, números o guiones bajos." };
+  const r = await fetch(`https://t.me/s/${ch}`, { headers: { "User-Agent": UA }, redirect: "manual", signal: AbortSignal.timeout(8000) });
+  if (r.status !== 200) return { ok: false, channel: ch, error: "No es un canal público de Telegram o no existe." };
+  const html = await r.text();
+  const title = clean(html.match(/<meta property="og:title" content="([^"]*)"/)?.[1] || ch);
+  return { ok: true, channel: ch, title, posts: html.includes("tgme_widget_message_wrap") };
+}
+
 // Groups posts about the same topic and place into one map marker.
 function toEvents(posts, net) {
   const groups = new Map(), now = Date.now();
