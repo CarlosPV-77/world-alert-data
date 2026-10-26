@@ -932,7 +932,7 @@ const SOURCES = {
 const TG_GROUP_WAR = "Alerta guerras";
 const TG_DEFAULT_GROUPS = [TG_GROUP_WAR];
 const TG_DEFAULTS = [
-  { c: "france24_es", t: "France 24 Español", g: "" }, { c: "elconfidencial", t: "El Confidencial", g: "" },
+  { c: "france24_es", t: "France 24 Español", g: "" },
   { c: "france24_en", t: "France 24 English", g: "" }, { c: "insiderpaper", t: "Insider Paper", g: "" },
   { c: "WorldNews", t: "World News", g: "" }, { c: "KyivIndependent_official", t: "The Kyiv Independent", g: "" },
   { c: "guerrasdelmundo24h", t: "Noticias del Mundo 24h - Israel | Iran | Gaza | Palestina | Rusia | Ucrania", g: TG_GROUP_WAR },
@@ -1002,7 +1002,7 @@ const state = {
   ov: { ...Object.fromEntries(Object.keys(OVERLAYS).map((k) => [k, k === "ticker"])), ships: false },
   countries: new Set(),        // ISO3 codes the viewer is following; empty = whole world
   open: { naturales: true, meteo: true, mar: false, seguridad: true, mapa: true },
-  settings: { intervals: Object.fromEntries(Object.entries(SOURCES).map(([k, v]) => [k, v.def])), enabled: Object.fromEntries(Object.keys(SOURCES).map((k) => [k, !SOURCES[k].off])), retention: 90, tg: TG_DEFAULT, tgv: 3, tgList: tgDefaultList(), tgGroups: tgDefaultGroups(), ticker: { v: 2, pos: "top", speed: 70, show: "all", spain: true, cats: Object.fromEntries(TICK_KINDS.map((c) => [c, !TICK_KINDS_OFF.includes(c)])) } },
+  settings: { intervals: Object.fromEntries(Object.entries(SOURCES).map(([k, v]) => [k, v.def])), enabled: Object.fromEntries(Object.keys(SOURCES).map((k) => [k, !SOURCES[k].off])), retention: 90, tg: TG_DEFAULT, tgv: 4, tgList: tgDefaultList(), tgGroups: tgDefaultGroups(), ticker: { v: 2, pos: "top", speed: 70, show: "all", spain: true, cats: Object.fromEntries(TICK_KINDS.map((c) => [c, !TICK_KINDS_OFF.includes(c)])) } },
   lastUpdate: null,
 };
 const store = {
@@ -1039,7 +1039,9 @@ function mergeSettings(s) {
       else L.push({ c: d.c, t: d.t, g: grp(d.g) || "", on: L.filter((x) => x.on).length < TG_MAX });
     }
   }
-  state.settings.tgv = 3;
+  // elconfidencial was a default for one release; Carlos asked to drop it (tgv 4).
+  if ((s.tgv || 1) < 4) state.settings.tgList = state.settings.tgList.filter((x) => x.c.toLowerCase() !== "elconfidencial");
+  state.settings.tgv = 4;
   for (const x of state.settings.tgList) if (!state.settings.tgGroups.some((g) => g.n === x.g)) x.g = "";
   state.settings.tg = tgActive(state.settings.tgList);
   // Settings saved before the ticker moved to the top (v2) keep their other choices but take the new position.
