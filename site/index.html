@@ -914,6 +914,9 @@ const SOURCES = {
   canarias: { name: "Gobierno de Canarias · prealertas y alertas", def: 15, opts: [10, 15, 30, 60] },
   meteogalicia: { name: "MeteoGalicia · avisos por concello", def: 15, opts: [10, 15, 30, 60] },
   euskadi:  { name: "Tráfico Euskadi · accidentes e incidencias graves", def: 5, opts: [2, 5, 10, 15, 30] },
+  clm112:   { name: "112 Castilla-La Mancha · incidentes atendidos", def: 10, opts: [5, 10, 15, 30, 60] },
+  clmplanes: { name: "Protección Civil de Castilla-La Mancha · planes activados", def: 15, opts: [10, 15, 30, 60] },
+  cyl112:   { name: "112 Castilla y León · incidentes destacados", def: 10, opts: [5, 10, 15, 30, 60] },
   madrid:   { name: "Ayuntamiento de Madrid · accidentes, cortes y contaminación", def: 10, opts: [5, 10, 15, 30, 60] },
   conflictos: { name: "GDELT · noticias de conflictos armados", def: 15, opts: [15, 30, 60] },
   atentados:  { name: "GDELT · noticias de atentados", def: 15, opts: [15, 30, 60] },
@@ -952,7 +955,8 @@ const tgActive = (list) => list.filter((x) => x.on).map((x) => x.c).join(", ");
 const SOURCE_CATS = {
   usgs: ["sismo"], gdacs: ["sismo", "volcan", "tsunami", "ciclon", "inundacion", "incendio", "sequia"], tsunami: ["tsunami"],
   nhc: ["ciclon"], navarea: ["maritimo"], volcanes: ["volcan"], nws: ["meteo"], aemet: ["aviso_es"],
-  ign: ["es_nac"], dgt: ["es_nac"], catalunya: ["es_aut"], canarias: ["es_aut"], meteogalicia: ["es_aut"], euskadi: ["es_aut"], madrid: ["es_loc"],
+  ign: ["es_nac"], dgt: ["es_nac"], catalunya: ["es_aut"], canarias: ["es_aut"], meteogalicia: ["es_aut"], euskadi: ["es_aut"],
+  clm112: ["es_aut"], clmplanes: ["es_aut"], cyl112: ["es_aut"], madrid: ["es_loc"],
   conflictos: ["conflicto"], atentados: ["atentado"],
   aereos: ["aereo"], maritimos: ["naval"],
   mastodon: ["redes"], bluesky: ["redes"], telegram: ["redes"], teletexto: ["teletexto"],
@@ -2541,7 +2545,7 @@ async function flyToWorst() {
   map.flyTo(cam ? { center: cam.center, zoom: Math.min(cam.zoom, 6.5), duration: 2600 } : { center: [+e.lon, +e.lat], zoom: f ? 3 : 4.5, duration: 2600 });
   map.once("moveend", () => { if (state.mode !== "paper" && state.view !== "split" && eventOf(e.id)) openCard(map, e); });
 }
-function sourceOf(e) { if (String(e.id).startsWith("gdelt:")) return e.cat === "atentado" ? "atentados" : "conflictos"; return { usgs: "usgs", gdacs: "gdacs", tsunami: "tsunami", nhc: "nhc", nga: "navarea", gvp: "volcanes", nws: "nws", aemet: "aemet", mastodon: "mastodon", bluesky: "bluesky", telegram: "telegram", teletexto: "teletexto", aereo: "aereos", naval: "maritimos", ign: "ign", dgt: "dgt", cat: "catalunya", canarias: "canarias", meteogalicia: "meteogalicia", euskadi: "euskadi", madrid: "madrid" }[String(e.id).split(":")[0]]; }
+function sourceOf(e) { if (String(e.id).startsWith("gdelt:")) return e.cat === "atentado" ? "atentados" : "conflictos"; return { usgs: "usgs", gdacs: "gdacs", tsunami: "tsunami", nhc: "nhc", nga: "navarea", gvp: "volcanes", nws: "nws", aemet: "aemet", mastodon: "mastodon", bluesky: "bluesky", telegram: "telegram", teletexto: "teletexto", aereo: "aereos", naval: "maritimos", ign: "ign", dgt: "dgt", cat: "catalunya", canarias: "canarias", meteogalicia: "meteogalicia", euskadi: "euskadi", clm112: "clm112", clmplan: "clmplanes", cyl112: "cyl112", madrid: "madrid" }[String(e.id).split(":")[0]]; }
 function setRefreshing(on) {
   const b = document.getElementById("refreshBtn");
   b.disabled = on; b.innerHTML = on ? "Actualizando…" : 'Actualizar<span class="lbl-long"> ahora</span>';

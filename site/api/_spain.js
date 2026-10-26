@@ -1,4 +1,4 @@
-// Official Spanish alerts by level: national (IGN, DGT), regional (Catalonia, Canarias, Galicia, Euskadi)
+// Official Spanish alerts by level: national (IGN, DGT), regional (Catalonia, Canarias, Galicia, Euskadi, Castilla-La Mancha, Castilla y León)
 // and local (Madrid city). All open feeds without a key; each event says which level and body issued it.
 import { XMLParser } from "fast-xml-parser";
 import { readFileSync } from "node:fs";
@@ -209,6 +209,86 @@ async function meteogalicia() {
   });
 }
 
+// Castilla-La Mancha: the 112 publishes the incidents it handles, each placed on a map, and a feed of its
+// emergency plans (METEOCAM, INFOCAM…) whose "Activa" field says whether the plan is still on.
+const CLM_PROV = { albacete: [38.99, -1.86], "ciudad real": [38.98, -3.93], cuenca: [40.07, -2.13], guadalajara: [40.63, -3.16], toledo: [39.86, -4.02] };
+const CLM_PIC = [[/tr[aá]fico|atropello|veh[ií]culo|colisi/i, "car"], [/incendio/i, "fire"], [/inundaci|riada|lluvia/i, "flood"], [/nieve|nevada/i, "snow"], [/viento/i, "wind"]];
+const unent = (s) => String(s || "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+
+async function clm112() {
+  const base = "https://112.castillalamancha.es";
+  const html = await get(`${base}/112/emergencias-e-incidencias/buscador-de-incidentes`, "text");
+  const out = [];
+  for (const m of html.matchAll(/data-lat="([-\d.]+)" data-lng="([-\d.]+)"[\s\S]*?<\/article>/g)) {
+    const b = m[0];
+    const title = unent(b.match(/<h3>([\s\S]*?)<\/h3>/)?.[1]).trim();
+    const href = b.match(/<a href="(\/112\/incidentes\/[^"]+)"/)?.[1];
+    const body = unent(b.match(/field--name-body[^>]*>([\s\S]*?)<\/div>/)?.[1]).replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+    const type = unent(b.match(/field--name-incident-type[\s\S]*?field__item">([^<]+)</)?.[1]).trim();
+    const time = b.match(/<time datetime="([^"]+)"/)?.[1];
+    if (!title || !time || !(Date.parse(time) > Date.now() - 48 * HOUR)) continue;
+    const text = `${title} ${type} ${body}`;
+    out.push({
+      id: `clm112:${href || title + time}`, cat: "es_aut", pic: CLM_PIC.find(([re]) => re.test(text))?.[1] || "siren",
+      title, desc: clip(body, 500), lat: +m[1], lon: +m[2], time: iso(time),
+      sev: /fallec|muert|sin vida|cr[ií]tico|grave/i.test(body) ? 3 : 2, level: type || "Incidente",
+      country: `${title.split(".")[0]} (España)`, url: href ? base + href : `${base}/112`, src: "112 Castilla-La Mancha",
+    });
+  }
+  return out;
+}
+
+async function clmPlanes() {
+  const d = await get("https://112.castillalamancha.es/rss.xml", "xml");
+  const out = [];
+  for (const it of arr(d?.rss?.channel?.item)) {
+    const t = Date.parse(txt(it.pubDate));
+    if (!(t > Date.now() - 30 * 24 * HOUR)) continue;
+    const raw = unent(txt(it.description));
+    const plain = raw.replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").trim();
+    const active = plain.match(/\bActiva:?\s+(Activad[oa]|Desactivad[oa]|S[ií]|No)\b/i)?.[1] || "";
+    if (!active || /desactiv|^no$/i.test(active)) continue;
+    const title = txt(it.title), [plan, places = ""] = title.split(/\.\s*/, 2);
+    const provs = Object.keys(CLM_PROV).filter((k) => places.toLowerCase().includes(k));
+    const pts = provs.length ? provs.map((k) => CLM_PROV[k]) : [[39.5, -3.0]];
+    const phase = /fase de emergencia|emergencia/i.test(plain) ? "Emergencia" : /prealerta/i.test(plain) && !/\balerta\b/i.test(plain.replace(/prealerta/gi, "")) ? "Prealerta" : "Alerta";
+    out.push({
+      id: `clmplan:${txt(it.guid) || title}`, cat: "es_aut", pic: { INFOCAM: "fire", PRICAM: "flood", NEVICAM: "snow" }[plan.toUpperCase()] || undefined,
+      title: `${plan} activado · ${places || "Castilla-La Mancha"}`, desc: clip(plain, 600),
+      lat: pts.reduce((a, p) => a + p[0], 0) / pts.length, lon: pts.reduce((a, p) => a + p[1], 0) / pts.length, approx: true,
+      time: iso(txt(it.pubDate)), sev: PHASE_SEV[phase.toLowerCase()] || 3, level: phase,
+      country: provs.length === 1 ? `${titleCase(provs[0])} (España)` : "Castilla-La Mancha (España)", url: txt(it.link), src: "Protección Civil de Castilla-La Mancha",
+    });
+  }
+  return out;
+}
+
+// Castilla y León: the 112 syndicates its notable incidents ("Un fallecido al colisionar…") as RSS. Each one
+// names its town and province; it is placed at the province, since the feed has no coordinates.
+const CYL_PROV = { "ávila": [40.66, -4.7], burgos: [42.34, -3.7], "león": [42.6, -5.57], palencia: [42.01, -4.53], salamanca: [40.97, -5.66], segovia: [40.95, -4.12], soria: [41.76, -2.46], valladolid: [41.65, -4.72], zamora: [41.5, -5.75] };
+const ACUTE = { a: "á", e: "é", i: "í", o: "ó", u: "ú", A: "Á", E: "É", I: "Í", O: "Ó", U: "Ú" };
+const deHtml = (s) => unent(unent(s)).replace(/&([aeiouAEIOU])acute;/g, (_, v) => ACUTE[v]).replace(/&ntilde;/g, "ñ").replace(/&Ntilde;/g, "Ñ")
+  .replace(/&uuml;/g, "ü").replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n)).replace(/&nbsp;/g, " ");
+
+async function cyl112() {
+  const d = await get("https://112.jcyl.es/web/jcyl/112/es/PlantillaGeneracionContenidoIncidenteSindicadoComponente/1284178030391/_/1284739950810/Estructura", "xml");
+  return arr(d?.rss?.channel?.item).map((it) => {
+    const title = deHtml(txt(it.title)), desc = deHtml(txt(it.description));
+    const t = Date.parse(txt(it.pubDate));
+    if (!(t > Date.now() - 72 * HOUR)) return null;
+    const [, town = "", prov = ""] = desc.match(/^\s*(.+?)\s*\(([^()]+)\)\s*-/) || [];
+    const pt = CYL_PROV[prov.toLowerCase()] || [41.75, -4.6];
+    const text = `${title} ${desc}`;
+    return {
+      id: `cyl112:${txt(it.link).match(/Incidente\/(\d+)/)?.[1] || title}`, cat: "es_aut", pic: CLM_PIC.find(([re]) => re.test(text))?.[1] || "siren",
+      title, desc: clip(desc.replace(/^[^-]+-\s*/, ""), 500), lat: pt[0], lon: pt[1], approx: true, time: iso(txt(it.pubDate)),
+      sev: /fallec|muert|sin vida|cr[ií]tico|grave/i.test(text) ? 3 : 2, level: "Incidente",
+      country: town ? `${town.replace(/^(.+?) \((La|El|Los|Las)\)$/, "$2 $1")}, ${prov} (España)` : "Castilla y León (España)",
+      url: txt(it.link).split("?")[0], src: "112 Castilla y León",
+    };
+  }).filter(Boolean);
+}
+
 // Euskadi: Tráfico del Gobierno Vasco, the roads DGT does not cover. The API lists every incident opened
 // today with no end time, so only those of the last twelve hours with a colour level or an accident are kept.
 const EUS_SEV = { Amarillo: 2, Rojo: 3, Negro: 4 };
@@ -264,4 +344,4 @@ async function madridCity() {
   }).filter(Boolean);
 }
 
-export const SPAIN_SOURCES = { ign, dgt, catalunya, canarias, meteogalicia, euskadi, madrid: madridCity };
+export const SPAIN_SOURCES = { ign, dgt, catalunya, canarias, meteogalicia, euskadi, clm112, clmplanes: clmPlanes, cyl112, madrid: madridCity };
