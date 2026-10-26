@@ -201,6 +201,21 @@ main { display: grid; grid-template-columns: 1fr minmax(320px, 380px); min-heigh
 .tip { position: absolute; pointer-events: none; background: var(--panel); border: 1px solid var(--line-2); border-radius: var(--r); padding: 6px 9px; font-size: 12px; max-width: 280px; z-index: 5; box-shadow: 0 6px 18px rgba(0,0,0,.5); }
 .tip b { display: block; font-weight: 600; }
 .tip span { color: var(--muted); }
+/* Markers stacked on the same spot unfold into a list, P1 first. Items slide out of the marker one after another. */
+.fan { position: absolute; z-index: 6; width: min(320px, calc(100% - 16px)); display: flex; flex-direction: column; gap: 4px; pointer-events: auto; max-height: calc(100% - 16px); overflow-y: auto; padding: 2px 10px 12px 2px; margin: -2px; scrollbar-width: thin; }
+.fan.up { flex-direction: column-reverse; }
+.fan .fhead { align-self: flex-start; font-family: var(--font-sign); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; background: var(--rail, var(--panel)); color: var(--rail-fg, var(--fg)); border: 1px solid var(--line-2); border-radius: var(--r); padding: 3px 8px; box-shadow: 0 6px 18px rgba(0,0,0,.5); opacity: 0; transition: opacity .15s; }
+.fan .fitem { --dir: 1; display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 8px; width: 100%; text-align: left; font: inherit; color: var(--fg); background: var(--panel-2); border: 1px solid var(--line-2); border-left: 4px solid var(--sev); border-radius: var(--r); padding: 5px 8px; cursor: pointer; box-shadow: 0 6px 18px rgba(0,0,0,.5);
+  opacity: 0; transform: translateY(calc(var(--i) * var(--dir) * -100% - var(--dir) * 12px)) scale(.6); transform-origin: 18px 50%;
+  transition: transform .26s cubic-bezier(.2,.8,.2,1) calc(var(--i) * 40ms), opacity .2s ease calc(var(--i) * 40ms), background .12s; }
+.fan.up .fitem { --dir: -1; }
+.fan.open .fhead, .fan.open .fitem { opacity: 1; transform: none; }
+.fan .fitem:hover, .fan .fitem:focus-visible { background: var(--panel-3); outline: none; border-color: var(--accent); border-left-color: var(--sev); }
+.fan .fp { font-family: var(--font-mono, monospace); font-weight: 700; font-size: 12px; color: var(--ink); background: var(--sev); border-radius: 3px; padding: 1px 5px; }
+.fan .ft { min-width: 0; }
+.fan .ft b { display: block; font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fan .ft span { display: block; color: var(--muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (pointer: coarse) { .fan .fitem { min-height: 48px; } }
 .litem .sun-ic { fill: var(--sun); }
 
 .banner { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); background: var(--panel); border: 1px solid var(--accent); border-radius: var(--r); padding: 10px 14px; display: flex; gap: 12px; align-items: center; max-width: min(560px, calc(100% - 24px)); z-index: 6; font-size: 13px; }
@@ -515,7 +530,7 @@ button.plink:hover span:first-child { text-decoration: underline; text-underline
 
 @media (prefers-reduced-motion: reduce) {
   .brand .dot.live, .ebadge.pulse, .dock.new .atab, .tlabel i { animation: none; }
-  .asheet, .atab .chev, .gname .chev, .tg::after { transition: none; }
+  .asheet, .atab .chev, .gname .chev, .tg::after, .fan .fitem, .fan .fhead { transition: none; }
 }
 
 /* Touch screens: every control at least 44 px, text fields at 16 px so iOS does not zoom. */
@@ -612,6 +627,7 @@ button.plink:hover span:first-child { text-decoration: underline; text-underline
         <div class="asheet" id="asheet"><div><div class="body" id="abody"></div></div></div>
       </div>
       <div class="tip" id="tip" hidden></div>
+      <div class="fan" id="fan" role="menu" aria-label="Alertas en el mismo punto" hidden></div>
       <div class="sr" id="announcer" role="status" aria-live="polite"></div>
       <div class="legend" aria-label="Leyenda">
         <div class="row cats" id="legendCats"></div>
@@ -1082,7 +1098,7 @@ const empty = { type: "FeatureCollection", features: [] };
 // One marker per pictogram and severity: a square badge in the severity colour with the pictogram in ink.
 // Unverified items ("-u") are hollow: dark badge, dashed coloured edge, coloured pictogram.
 function iconImage(key, sev, unv) {
-  const px = 2, size = 28, root = getComputedStyle(document.documentElement);
+  const px = 4, size = 28, root = getComputedStyle(document.documentElement);
   const ink = root.getPropertyValue("--ink").trim() || "#05080c";
   const path = new Path2D(PICS[key]);
   {
@@ -1104,14 +1120,14 @@ function iconImage(key, sev, unv) {
 }
 function addIcons(m = map) {
   for (const key of Object.keys(PICS)) for (const sev of [1, 2, 3, 4]) for (const unv of [false, true])
-    m.addImage(`${key}-${sev}${unv ? "-u" : ""}`, iconImage(key, sev, unv), { pixelRatio: 2 });
+    m.addImage(`${key}-${sev}${unv ? "-u" : ""}`, iconImage(key, sev, unv), { pixelRatio: 4 });
 }
 // Maps that copy the main style draw each marker image the first time it is needed.
 function iconsOnDemand(m) {
   m.on("styleimagemissing", ({ id }) => {
     if (SHIP_ICONS[id] && !m.hasImage(id)) return m.addImage(id, shipIcon(id), { pixelRatio: 2, sdf: true });
     const [, key, sev, u] = String(id).match(/^(\w+)-([1-4])(-u)?$/) || [];
-    if (PICS[key] && !m.hasImage(id)) m.addImage(id, iconImage(key, +sev, !!u), { pixelRatio: 2 });
+    if (PICS[key] && !m.hasImage(id)) m.addImage(id, iconImage(key, +sev, !!u), { pixelRatio: 4 });
   });
 }
 map.on("load", () => {
@@ -1141,11 +1157,11 @@ map.on("load", () => {
   addShipLayers(map);
   addIcons();
   map.addSource("events", { type: "geojson", data: empty });
-  map.addLayer({ id: "crit", type: "circle", source: "events", filter: ["==", ["get", "pulse"], 1], paint: { "circle-radius": 15, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": tok("--s4"), "circle-stroke-width": 2, "circle-stroke-opacity": 0.8 } });
+  map.addLayer({ id: "crit", type: "circle", source: "events", filter: ["==", ["get", "pulse"], 1], paint: { "circle-radius": ["+", 5, ["*", 14, ["get", "scale"]]], "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": tok("--s4"), "circle-stroke-width": 2, "circle-stroke-opacity": 0.8 } });
   map.addLayer({ id: "events", type: "symbol", source: "events", layout: {
     "icon-image": ["get", "icon"], "icon-size": ["get", "scale"], "icon-allow-overlap": true, "icon-ignore-placement": true, "symbol-sort-key": ["get", "sev"],
   }, paint: { "icon-opacity": ["get", "op"] } });
-  map.addLayer({ id: "sel", type: "circle", source: "events", filter: ["==", ["get", "id"], ""], paint: { "circle-radius": 13, "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": tok("--rail-fg"), "circle-stroke-width": 2.5 } });
+  map.addLayer({ id: "sel", type: "circle", source: "events", filter: ["==", ["get", "id"], ""], paint: { "circle-radius": ["+", 3, ["*", 14, ["get", "scale"]]], "circle-color": "rgba(0,0,0,0)", "circle-stroke-color": tok("--rail-fg"), "circle-stroke-width": 2.5 } });
   // Place names sit above the night shading and alert zones, below the alert markers.
   for (const id of LABEL_LAYERS) if (map.getLayer(id)) map.moveLayer(id, "crit");
   applyBase(); applyOverlays(); applyCountries(false); renderNight(); renderMarkers();
@@ -1282,14 +1298,21 @@ function hover(ev) {
   const sh = !hit.find((f) => f.layer.id === "events") && hit.find((f) => f.layer.id === "ships");
   map.getCanvas().style.cursor = e || sh ? "pointer" : "";
   if (sh) { const x = SHIPS.get(sh.properties.mmsi); if (x) return showTip(ev.originalEvent, `<b>${esc(x.name || `MMSI ${x.mmsi}`)}</b><span>${esc(shipLine(x))}</span>`); }
+  const st = e?.layer.id === "events" && stackAt(map, e);
+  if (st && st.length > 1) { hideTip(); return fanSoon(map, e, st); }
+  fanSoon(null);
   if (e) { const d = state.events.get(e.properties.id); if (d) return showTip(ev.originalEvent, `<b>${esc(d.title)}</b><span>${esc(CATS[d.cat]?.name || d.cat)} · ${rel(d.time)} · ${esc(d.src)}</span>`); }
   if (dsp) return showTip(ev.originalEvent, `<b>${esc(dsp.properties.n)} · territorio disputado</b><span>${esc(dsp.properties.note || "Soberanía en disputa")}</span>`);
   if (c) return showTip(ev.originalEvent, `<b>${esc(c.properties.n)}</b>`);
   hideTip();
 }
-map.on("mouseout", () => { cancelAnimationFrame(moveFrame); moveFrame = 0; hideTip(); });
+map.on("movestart", () => { if (fan.map === map) closeFan(); });
+map.on("mouseout", (ev) => { cancelAnimationFrame(moveFrame); moveFrame = 0; hideTip(); if (!fan.touch && !fan.el.contains(ev.originalEvent?.relatedTarget)) fanSoon(null); });
 map.on("click", (ev) => {
   const e = map.getLayer("events") && (map.queryRenderedFeatures(ev.point, { layers: ["events"] })[0] || map.queryRenderedFeatures(ev.point, { layers: ["zones-fill"] })[0]);
+  const st = e?.layer.id === "events" && stackAt(map, e);
+  if (st && st.length > 1) { hideTip(); return openFan(map, e, st); }
+  closeFan();
   if (e) { hideTip(); select(e.properties.id, false); const d = eventOf(e.properties.id); if (d) openCard(map, d); return; }
   const sh = map.getLayer("ships") && map.queryRenderedFeatures(ev.point, { layers: ["ships"] })[0];
   if (sh) { hideTip(); const x = SHIPS.get(sh.properties.mmsi); if (x) openShipCard(map, x); return; }
@@ -1298,6 +1321,59 @@ map.on("click", (ev) => {
 });
 }
 bindMapUi(map);
+
+// ---------- stacked markers ----------
+// Alerts at the same city cover each other. Hovering the pile (or tapping it on a touch screen) unfolds
+// them as a list, most serious first (P1 → P4), to pick the one wanted.
+const fan = { el: document.getElementById("fan"), map: null, key: "", timer: 0, touch: false };
+// A tap ends with a synthetic mouseout; on touch screens the list stays until another tap or Escape.
+addEventListener("pointerdown", (ev) => { fan.touch = ev.pointerType === "touch"; }, true);
+addEventListener("pointermove", (ev) => { if (ev.pointerType === "mouse") fan.touch = false; }, true);
+function stackAt(m, f) {
+  const p = m.project(f.geometry.coordinates), r = 14 * (f.properties.scale || 1);
+  const ids = new Set(m.queryRenderedFeatures([[p.x - r, p.y - r], [p.x + r, p.y + r]], { layers: ["events"] }).map((x) => x.properties.id));
+  const now = Date.now(), t = (e) => Math.min(now, Date.parse(e.time) || 0);
+  return [...ids].map(eventOf).filter(Boolean)
+    .sort((a, b) => (b.sev || 1) - (a.sev || 1) || (a.verified === false) - (b.verified === false) || t(b) - t(a));
+}
+function fanSoon(m, f, st) {
+  clearTimeout(fan.timer);
+  if (!m) { if (!fan.el.hidden) fan.timer = setTimeout(closeFan, 260); return; }
+  const key = st.map((e) => e.id).join("|");
+  if (fan.map === m && fan.key === key && !fan.el.hidden) return;
+  fan.timer = setTimeout(() => openFan(m, f, st), 110);
+}
+function openFan(m, f, st) {
+  clearTimeout(fan.timer);
+  const key = st.map((e) => e.id).join("|");
+  if (fan.map === m && fan.key === key && !fan.el.hidden) return;
+  fan.map = m; fan.key = key;
+  const el = fan.el, wrap = document.getElementById("mapwrap").getBoundingClientRect(), box = m.getContainer().getBoundingClientRect();
+  const p = m.project(f.geometry.coordinates), r = 14 * (f.properties.scale || 1);
+  const x = p.x + box.left - wrap.left, y = p.y + box.top - wrap.top;
+  el.innerHTML = `<div class="fhead">${st.length} alertas aquí</div>` + st.map((e, i) => `<button type="button" class="fitem" role="menuitem" data-id="${esc(e.id)}" style="--i:${i + 1};--sev:${sevColor(e.sev)}">
+    <span class="fp">${prioOf(e.sev)}</span>${eventBadge(e, "sm")}<span class="ft"><b>${esc(e.title)}</b><span>${esc(CATS[e.cat]?.name || e.cat)} · ${rel(e.time)} · ${esc(e.src)}</span></span></button>`).join("");
+  el.classList.remove("open", "up"); el.hidden = false;
+  // The list hangs from the marker; near the bottom edge it grows upwards, near the right edge it moves left.
+  const w = el.offsetWidth, h = el.offsetHeight, up = y + h + 8 > wrap.height && y - h > 8;
+  el.classList.toggle("up", up);
+  el.style.left = Math.max(8, Math.min(x - r - 2, wrap.width - w - 8)) + "px";
+  el.style.top = Math.max(8, up ? y + r + 2 - h : Math.min(y - r - 2, wrap.height - h - 8)) + "px";
+  void el.offsetWidth; el.classList.add("open");
+}
+function closeFan() { clearTimeout(fan.timer); fan.el.hidden = true; fan.el.classList.remove("open"); fan.el.innerHTML = ""; fan.key = ""; }
+fan.el.addEventListener("mouseenter", () => clearTimeout(fan.timer));
+fan.el.addEventListener("mouseleave", () => fanSoon(null));
+fan.el.addEventListener("click", (ev) => {
+  const b = ev.target.closest(".fitem"); if (!b) return;
+  const m = fan.map, d = eventOf(b.dataset.id);
+  closeFan(); hideTip();
+  select(b.dataset.id, false); if (d) openCard(m, d);
+});
+fan.el.addEventListener("keydown", (ev) => {
+  const items = [...fan.el.querySelectorAll(".fitem")], i = items.indexOf(document.activeElement);
+  if (ev.key === "ArrowDown" || ev.key === "ArrowUp") { ev.preventDefault(); items[(i + (ev.key === "ArrowDown" ? 1 : items.length - 1)) % items.length]?.focus(); }
+});
 
 function markerSize(e) {
   if ((e.cat === "sismo" || e.pic === "quake") && e.mag) return Math.max(18, Math.pow(e.mag, 2.2) * 4);
@@ -1471,7 +1547,7 @@ function renderMarkers(v = visible()) {
   const features = v.map((e) => {
     const sev = Math.min(4, Math.max(1, e.sev || 1)), live = isLive(e);
     return { type: "Feature", geometry: { type: "Point", coordinates: [+e.lon, +e.lat] }, properties: {
-      id: e.id, sev, icon: `${picOf(e)}-${sev}${e.verified === false ? "-u" : ""}`, scale: Math.min(1.5, Math.max(0.8, Math.sqrt(markerSize(e) / 150) * 1.05)), op: live ? 0.95 : 0.5,
+      id: e.id, sev, icon: `${picOf(e)}-${sev}${e.verified === false ? "-u" : ""}`, scale: Math.min(1.8, Math.max(1.05, Math.sqrt(markerSize(e) / 150) * 1.35)), op: live ? 0.95 : 0.5,
       pulse: sev >= 4 && live && Date.now() - Date.parse(e.time) < 24 * HOUR ? 1 : 0 } };
   });
   feed("events", { type: "FeatureCollection", features });
@@ -2733,6 +2809,7 @@ document.getElementById("setCancel").onclick = closeSettings;
 sheet.addEventListener("click", (e) => { if (e.target === sheet) closeSettings(); });
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
+  if (!fan.el.hidden) { const inFan = fan.el.contains(document.activeElement); closeFan(); if (inFan) map.getCanvas().focus(); return; }
   if (!document.getElementById("settings").hidden) return closeSettings();
   if (card) { const inCard = card.popup.getElement()?.contains(document.activeElement); closeCard(); if (inCard) map.getCanvas().focus(); return; }
   if (aOpen) { aOpen = false; renderAlerts(); document.getElementById("atab").focus(); }
