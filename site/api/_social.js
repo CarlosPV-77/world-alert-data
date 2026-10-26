@@ -116,7 +116,7 @@ async function bluesky() {
 }
 
 // Neutral news channels in Spanish or English and Carlos's war alert channels; the list can be changed in Ajustes.
-export const TELEGRAM_DEFAULT = ["france24_es", "elconfidencial", "france24_en", "insiderpaper", "WorldNews", "KyivIndependent_official",
+export const TELEGRAM_DEFAULT = ["france24_es", "france24_en", "insiderpaper", "WorldNews", "KyivIndependent_official",
   "guerrasdelmundo24h", "Zona_militar", "descifrandolaguerra", "entre_guerras", "ULTIMA_HORA", "warmonitors", "wartranslated"];
 async function telegram(q) {
   const chans = String(q.tg || "").split(",").map((s) => s.trim().replace(/^@|^https?:\/\/t\.me\/(s\/)?/g, "")).filter((s) => /^\w{4,64}$/.test(s));
