@@ -866,11 +866,25 @@ const SOURCES = {
   teletexto:  { name: "Teletexto RTVE · noticias nacionales e internacionales (Información de rtve.es)", def: 10, opts: [5, 10, 15, 30, 60] },
 };
 // Public Telegram channels read by default; Ajustes lets you switch each one off, add more and remove them.
-// Neutral news channels in Spanish or English (Carlos's rule, 2026-10-26).
-const TG_DEFAULT = "france24_es, elconfidencial, france24_en, insiderpaper, WorldNews, KyivIndependent_official";
-// Channels dropped from the defaults in that review: in Russian (the "euronews" channel is not the official one),
-// partisan, or spam. Lists saved before it lose them once and gain the new defaults (settings.tgv 2).
-const TG_RETIRED = new Set(["euronews", "elpais", "wartranslated", "cig_telegram", "warmonitors", "middle_east_spectator"]);
+// Neutral news channels in Spanish or English, plus Carlos's own "Alerta guerras" group (his rules, 2026-10-26).
+const TG_GROUP_WAR = "Alerta guerras";
+const TG_DEFAULT_GROUPS = [TG_GROUP_WAR];
+const TG_DEFAULTS = [
+  { c: "france24_es", t: "France 24 Español", g: "" }, { c: "elconfidencial", t: "El Confidencial", g: "" },
+  { c: "france24_en", t: "France 24 English", g: "" }, { c: "insiderpaper", t: "Insider Paper", g: "" },
+  { c: "WorldNews", t: "World News", g: "" }, { c: "KyivIndependent_official", t: "The Kyiv Independent", g: "" },
+  { c: "guerrasdelmundo24h", t: "Noticias del Mundo 24h - Israel | Iran | Gaza | Palestina | Rusia | Ucrania", g: TG_GROUP_WAR },
+  { c: "Zona_militar", t: "Noticias de Guerra", g: TG_GROUP_WAR }, { c: "descifrandolaguerra", t: "Descifrando la Guerra", g: TG_GROUP_WAR },
+  { c: "entre_guerras", t: "ENTRE GUERRAS", g: TG_GROUP_WAR }, { c: "ULTIMA_HORA", t: "🔴 ÚLTIMA HORA", g: TG_GROUP_WAR },
+  { c: "warmonitors", t: "War Monitor", g: TG_GROUP_WAR }, { c: "wartranslated", t: "WarTranslated", g: TG_GROUP_WAR },
+];
+const TG_DEFAULT = TG_DEFAULTS.map((x) => x.c).join(", ");
+const tgDefaultList = () => TG_DEFAULTS.map((x) => ({ ...x, on: true }));
+const tgDefaultGroups = () => TG_DEFAULT_GROUPS.map((n) => ({ n, open: true }));
+// Channels dropped from the defaults in that review: in Russian (the "euronews" channel is not the official one) or
+// partisan. Lists saved before it lose them once (settings.tgv 2). A channel the user added through Ajustes carries
+// its title (t) and is never dropped, even when its name is on this list.
+const TG_RETIRED = new Set(["euronews", "elpais", "cig_telegram", "middle_east_spectator"]);
 const TG_MAX = 20;
 const tgName = (c) => String(c).trim().replace(/^@|^https?:\/\/(www\.)?t\.me\/(s\/)?/i, "").replace(/[/?#].*$/, "");
 const splitTg = (s) => String(s || "").split(/[\s,]+/).map(tgName).filter((c) => /^\w{4,64}$/.test(c));
@@ -925,7 +939,7 @@ const state = {
   ov: { ...Object.fromEntries(Object.keys(OVERLAYS).map((k) => [k, k === "ticker"])), ships: false },
   countries: new Set(),        // ISO3 codes the viewer is following; empty = whole world
   open: { naturales: true, meteo: true, mar: false, seguridad: true, mapa: true },
-  settings: { intervals: Object.fromEntries(Object.entries(SOURCES).map(([k, v]) => [k, v.def])), enabled: Object.fromEntries(Object.keys(SOURCES).map((k) => [k, !SOURCES[k].off])), retention: 90, tg: TG_DEFAULT, tgv: 2, tgList: splitTg(TG_DEFAULT).map((c) => ({ c, on: true, g: "" })), tgGroups: [], ticker: { v: 2, pos: "top", speed: 70, show: "all", spain: true, cats: Object.fromEntries(TICK_KINDS.map((c) => [c, !TICK_KINDS_OFF.includes(c)])) } },
+  settings: { intervals: Object.fromEntries(Object.entries(SOURCES).map(([k, v]) => [k, v.def])), enabled: Object.fromEntries(Object.keys(SOURCES).map((k) => [k, !SOURCES[k].off])), retention: 90, tg: TG_DEFAULT, tgv: 3, tgList: tgDefaultList(), tgGroups: tgDefaultGroups(), ticker: { v: 2, pos: "top", speed: 70, show: "all", spain: true, cats: Object.fromEntries(TICK_KINDS.map((c) => [c, !TICK_KINDS_OFF.includes(c)])) } },
   lastUpdate: null,
 };
 const store = {
@@ -949,12 +963,20 @@ function mergeSettings(s) {
   // Lists saved before channels had checkboxes come in with every channel switched on.
   state.settings.tgList = Array.isArray(s.tgList) ? s.tgList.filter((x) => x && /^\w{4,64}$/.test(x.c)).map((x) => ({ c: x.c, on: !!x.on, t: x.t || "", g: x.g || "" }))
     : splitTg(state.settings.tg).map((c) => ({ c, on: true }));
-  if ((s.tgv || 1) < 2) {
-    state.settings.tgList = state.settings.tgList.filter((x) => !TG_RETIRED.has(x.c.toLowerCase()));
-    for (const c of splitTg(TG_DEFAULT)) if (!state.settings.tgList.some((x) => x.c.toLowerCase() === c.toLowerCase())) state.settings.tgList.push({ c, on: true, t: "", g: "" });
-  }
-  state.settings.tgv = 2;
   state.settings.tgGroups = Array.isArray(s.tgGroups) ? s.tgGroups.filter((g) => g && typeof g.n === "string" && g.n).map((g) => ({ n: g.n, open: g.open !== false })) : [];
+  // Lists saved before the current defaults (tgv 3) gain the default channels and groups once, keeping the user's own:
+  // a default channel already there keeps its group unless it had none.
+  if ((s.tgv || 1) < 3) {
+    const L = state.settings.tgList, G = state.settings.tgGroups, low = (x) => x.toLowerCase();
+    if ((s.tgv || 1) < 2) { const keep = L.filter((x) => x.t || !TG_RETIRED.has(low(x.c))); L.length = 0; L.push(...keep); }
+    const grp = (n) => n && (G.find((g) => low(g.n) === low(n)) || (G.push({ n, open: true }), G[G.length - 1])).n;
+    for (const d of TG_DEFAULTS) {
+      const have = L.find((x) => low(x.c) === low(d.c));
+      if (have) { if (!have.g && d.g) have.g = grp(d.g); if (!have.t) have.t = d.t; }
+      else L.push({ c: d.c, t: d.t, g: grp(d.g) || "", on: L.filter((x) => x.on).length < TG_MAX });
+    }
+  }
+  state.settings.tgv = 3;
   for (const x of state.settings.tgList) if (!state.settings.tgGroups.some((g) => g.n === x.g)) x.g = "";
   state.settings.tg = tgActive(state.settings.tgList);
   // Settings saved before the ticker moved to the top (v2) keep their other choices but take the new position.
@@ -2619,8 +2641,8 @@ tgBox.addEventListener("pointerdown", (e) => {
 });
 document.getElementById("tgAll").addEventListener("change", (e) => tgSet(tgDraft, e.target.checked));
 document.getElementById("tgReset").addEventListener("click", () => {
-  tgDraft = splitTg(TG_DEFAULT).map((c) => ({ c, on: true, g: "" })); tgGrpDraft = []; renderTg();
-  tgNote("Vuelven los canales de serie, sin grupos. Se aplica al pulsar Guardar.");
+  tgDraft = tgDefaultList(); tgGrpDraft = tgDefaultGroups(); renderTg();
+  tgNote("Vuelven los canales y grupos de serie. Se aplica al pulsar Guardar.");
 });
 document.getElementById("tgGrpAdd").addEventListener("submit", (e) => {
   e.preventDefault();
